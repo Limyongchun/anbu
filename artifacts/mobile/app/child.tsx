@@ -105,12 +105,16 @@ function TopBar({ tab, onTab, topInset, isMap, familyCode, isConnected }: {
   );
 }
 
-// ─── 구글 지도 화면 ───────────────────────────────────────────────────────────
+// ─── 지도 화면 ────────────────────────────────────────────────────────────────
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
-  const [locs, setLocs]     = useState<LocationData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const cardAnim  = useRef(new Animated.Value(80)).current;
-  const cardAlpha = useRef(new Animated.Value(0)).current;
+  const [locs, setLocs]         = useState<LocationData[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+
+  // 배너 슬라이드 애니메이션
+  const bannerY     = useRef(new Animated.Value(120)).current;
+  const bannerAlpha = useRef(new Animated.Value(0)).current;
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     if (!familyCode) return;
@@ -126,15 +130,37 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   }, [familyCode, load]);
 
   const parentLoc = locs.find(l => l.role === "parent" && l.isSharing) ?? null;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(cardAnim,  { toValue: parentLoc ? 0 : 80, useNativeDriver: false }),
-      Animated.timing(cardAlpha, { toValue: parentLoc ? 1 : 0, duration: 350, useNativeDriver: false }),
-    ]).start();
-  }, [!!parentLoc]);
-
   const { latitude: lat = 37.5665, longitude: lon = 126.978 } = parentLoc ?? {};
+
+  // 배너 열기/닫기
+  const openBanner = useCallback(() => {
+    setShowBanner(true);
+    Animated.parallel([
+      Animated.spring(bannerY,     { toValue: 0,   useNativeDriver: false, tension: 80, friction: 10 }),
+      Animated.timing(bannerAlpha, { toValue: 1, duration: 200, useNativeDriver: false }),
+    ]).start();
+    // 6초 후 자동 닫기
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    dismissTimer.current = setTimeout(closeBanner, 6000);
+  }, []);
+
+  const closeBanner = useCallback(() => {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    Animated.parallel([
+      Animated.timing(bannerY,     { toValue: 120, duration: 260, useNativeDriver: false }),
+      Animated.timing(bannerAlpha, { toValue: 0,   duration: 200, useNativeDriver: false }),
+    ]).start(() => setShowBanner(false));
+  }, []);
+
+  // web: Leaflet 마커 클릭 → postMessage → 배너 표시
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === "markerClick") parentLoc ? openBanner() : null;
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [parentLoc, openBanner]);
 
   const openMaps = () => {
     const url = Platform.OS === "ios"
@@ -146,121 +172,127 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`));
   };
 
-  // Leaflet + CartoDB Voyager (Google Maps 스타일) — srcdoc으로 X-Frame 우회
+  const minsAgo = parentLoc
+    ? Math.floor((Date.now() - new Date(parentLoc.updatedAt).getTime()) / 60000)
+    : 0;
+  const isRecent = minsAgo < 5;
+
+  // 개발바 높이 확보
+  const BOTTOM_SAFE = bottomInset + 44;
+
+  // Leaflet + CartoDB Voyager — 마커 클릭 시 postMessage 전송
   const mapHtml = `<!DOCTYPE html><html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>*{margin:0;padding:0;box-sizing:border-box}#map{width:100vw;height:100vh}.leaflet-control-attribution{display:none}</style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+#map{width:100vw;height:100vh}
+.leaflet-control-attribution{display:none}
+.pin-wrap{cursor:pointer;position:relative;width:22px;height:22px}
+.pin-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;background:rgba(66,133,244,0.2);border-radius:50%;animation:pulse 1.5s ease-out infinite}
+.pin-dot{width:22px;height:22px;background:#4285F4;border-radius:50%;border:3.5px solid #fff;box-shadow:0 2px 12px rgba(66,133,244,0.6)}
+.pin-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:#1a2230;color:#fff;font-size:11px;font-family:sans-serif;white-space:nowrap;padding:4px 10px;border-radius:12px;pointer-events:none;opacity:0;transition:opacity 0.2s}
+.pin-wrap:hover .pin-label{opacity:1}
+@keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0}}
+</style>
 </head><body><div id="map"></div><script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${lat},${lon}],16);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
-var pulse=document.createElement('div');
-pulse.style.cssText='position:relative;width:18px;height:18px';
-pulse.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;background:rgba(66,133,244,0.22);border-radius:50%;animation:p 1.4s ease-out infinite"></div><div style="width:18px;height:18px;background:#4285F4;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 10px rgba(66,133,244,0.55)"></div>';
-var s=document.createElement('style');
-s.textContent='@keyframes p{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.2);opacity:0}}';
-document.head.appendChild(s);
-L.marker([${lat},${lon}],{icon:L.divIcon({className:'',html:pulse.outerHTML,iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map);
+${parentLoc ? `
+var pinHtml='<div class="pin-wrap"><div class="pin-ring"></div><div class="pin-dot"></div><div class="pin-label">탭하여 정보 보기</div></div>';
+var marker=L.marker([${lat},${lon}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
+marker.on('click',function(){window.parent.postMessage('markerClick','*');});
+` : ""}
 </script></body></html>`;
-
-  const minsAgo = parentLoc ? Math.floor((Date.now() - new Date(parentLoc.updatedAt).getTime()) / 60000) : 0;
-  const isRecent = minsAgo < 5;
-
-  // 개발바 + 네비바 높이 확보용 bottom offset
-  const BOTTOM_SAFE = bottomInset + 34 + 10; // dev bar height
 
   return (
     <View style={StyleSheet.absoluteFillObject}>
-      {/* ── Leaflet 지도 (srcdoc) ── */}
+      {/* ── Leaflet 지도 ── */}
       {Platform.OS === "web" ? (
         <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
           {/* @ts-ignore */}
-          <iframe
-            srcDoc={mapHtml}
-            style={{ width: "100%", height: "100%", border: "none" }}
-            title="부모님 위치"
-          />
+          <iframe srcDoc={mapHtml} style={{ width: "100%", height: "100%", border: "none" }} title="부모님 위치" />
         </View>
       ) : (
-        // Native: 구글 지도 스타일 패턴 (실제 앱에서는 react-native-maps로 교체)
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#e5e3df" }]}>
-          {/* 도로 패턴 */}
+        // Native 폴백 지도
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#e8e6e1" }]}>
           {Array.from({ length: 8 }).map((_, i) => (
-            <View key={`r${i}`} style={{ position: "absolute", left: 0, right: 0, top: `${12 + i * 11}%` as any, height: i % 3 === 0 ? 3 : 1.5, backgroundColor: i % 3 === 0 ? "#ffffff" : "rgba(255,255,255,0.6)" }} />
+            <View key={`r${i}`} style={{ position: "absolute", left: 0, right: 0, top: `${12 + i * 11}%` as any, height: i % 3 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
           ))}
           {Array.from({ length: 6 }).map((_, i) => (
-            <View key={`c${i}`} style={{ position: "absolute", top: 0, bottom: 0, left: `${10 + i * 16}%` as any, width: i % 2 === 0 ? 3 : 1.5, backgroundColor: i % 2 === 0 ? "#ffffff" : "rgba(255,255,255,0.6)" }} />
-          ))}
-          {/* 블록들 */}
-          {[{ x: "8%", y: "20%", w: "25%", h: "15%" }, { x: "38%", y: "20%", w: "20%", h: "10%" }, { x: "62%", y: "22%", w: "30%", h: "12%" }, { x: "8%", y: "42%", w: "28%", h: "18%" }, { x: "42%", y: "38%", w: "16%", h: "14%" }, { x: "64%", y: "40%", w: "28%", h: "18%" }].map((b, i) => (
-            <View key={`b${i}`} style={{ position: "absolute", left: b.x as any, top: b.y as any, width: b.w as any, height: b.h as any, backgroundColor: "#d6d3ce", borderRadius: 4 }} />
+            <View key={`c${i}`} style={{ position: "absolute", top: 0, bottom: 0, left: `${10 + i * 16}%` as any, width: i % 2 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
           ))}
           {parentLoc && (
-            <View style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}>
+            <Pressable style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}
+              onPress={openBanner}>
               <PulsingPin />
-            </View>
+              <View style={mp.pinHint}>
+                <Text style={mp.pinHintText}>탭하여 정보 보기</Text>
+              </View>
+            </Pressable>
           )}
         </View>
       )}
 
-      {/* ── 하단 그라디언트 (카드 배경) ── */}
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 240 + BOTTOM_SAFE, backgroundColor: "rgba(26,34,48,0.6)" }} pointerEvents="none" />
-
-      {/* ── 연결 안내 (가족 미연결) — 하단 배치 ── */}
+      {/* ── 연결 안내 카드 (미연결 상태) ── */}
       {!loading && !parentLoc && (
-        <View style={[mp.infoCard, { bottom: BOTTOM_SAFE + 16 }]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(212,242,0,0.15)", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="location-outline" size={20} color={COLORS.neon} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={mp.infoName}>{!familyCode ? "가족을 연결해주세요" : "위치 기다리는 중"}</Text>
-              <Text style={mp.infoAddr}>{!familyCode ? "가족 코드로 부모님과 연결하세요" : "부모님이 앱을 실행하면 표시됩니다"}</Text>
-            </View>
-            {!familyCode && (
-              <Pressable style={mp.emptyBtn} onPress={() => router.push("/setup")}>
-                <Text style={mp.emptyBtnText}>연결</Text>
-              </Pressable>
-            )}
+        <View style={[mp.connectCard, { bottom: BOTTOM_SAFE + 16 }]}>
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(212,242,0,0.15)", alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="location-outline" size={18} color={COLORS.neon} />
           </View>
+          <View style={{ flex: 1 }}>
+            <Text style={mp.infoName}>{!familyCode ? "가족을 연결해주세요" : "위치 기다리는 중"}</Text>
+            <Text style={mp.infoAddr}>{!familyCode ? "가족 코드로 부모님과 연결하세요" : "부모님이 앱을 실행하면 표시됩니다"}</Text>
+          </View>
+          {!familyCode && (
+            <Pressable style={mp.connectBtn} onPress={() => router.push("/setup")}>
+              <Text style={mp.connectBtnText}>연결</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
-      {/* ── 로딩 인디케이터 ── */}
+      {/* ── 로딩 ── */}
       {loading && (
-        <View style={{ position: "absolute", bottom: BOTTOM_SAFE + 140, left: 0, right: 0, alignItems: "center" }}>
+        <View style={{ position: "absolute", bottom: BOTTOM_SAFE + 60, left: 0, right: 0, alignItems: "center" }}>
           <ActivityIndicator color={COLORS.neon} />
         </View>
       )}
 
-      {/* ── 부모님 정보 카드 (하단) ── */}
-      {parentLoc && (
-        <Animated.View style={[mp.infoCard, { bottom: BOTTOM_SAFE + 16, transform: [{ translateY: cardAnim }], opacity: cardAlpha }]}>
-          {/* 상단: 상태 + 업데이트 시간 */}
-          <View style={mp.infoTop}>
-            <View style={[mp.dot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
-            <Text style={mp.infoStatus}>{isRecent ? "안전 · 실시간 공유 중" : `${minsAgo}분 전 업데이트`}</Text>
-            {loading && <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" style={{ marginLeft: 6 }} />}
+      {/* ── 위치 핀 클릭 힌트 (연결됐을 때) ── */}
+      {!loading && parentLoc && !showBanner && (
+        <View style={[mp.hintPill, { bottom: BOTTOM_SAFE + 16 }]}>
+          <Ionicons name="location" size={13} color={COLORS.neon} />
+          <Text style={mp.hintText}>{parentLoc.memberName}의 위치 아이콘을 탭하세요</Text>
+        </View>
+      )}
+
+      {/* ── 슬라이드업 배너 ── */}
+      {showBanner && parentLoc && (
+        <Animated.View style={[mp.banner, { bottom: BOTTOM_SAFE + 12, transform: [{ translateY: bannerY }], opacity: bannerAlpha }]}>
+          {/* 닫기 버튼 */}
+          <Pressable style={mp.bannerClose} onPress={closeBanner}>
+            <Ionicons name="close" size={14} color="rgba(255,255,255,0.5)" />
+          </Pressable>
+
+          {/* 왼쪽: 상태 + 이름 + 주소 */}
+          <View style={{ flex: 1, gap: 3 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={[mp.dot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
+              <Text style={mp.bannerStatus}>{isRecent ? "안전 · 실시간" : `${minsAgo}분 전`}</Text>
+            </View>
+            <Text style={mp.bannerName}>{parentLoc.memberName}</Text>
+            <Text style={mp.bannerAddr} numberOfLines={1}>
+              {parentLoc.address || `${lat.toFixed(4)}, ${lon.toFixed(4)}`}
+            </Text>
           </View>
 
-          {/* 이름 + 주소 + 액션 버튼 행 */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={mp.infoName}>{parentLoc.memberName}</Text>
-              <Text style={mp.infoAddr} numberOfLines={2}>
-                <Ionicons name="location" size={11} color={COLORS.neon} />{"  "}
-                {parentLoc.address || `${lat.toFixed(5)}, ${lon.toFixed(5)}`}
-                {parentLoc.accuracy != null ? `  ±${Math.round(parentLoc.accuracy)}m` : ""}
-              </Text>
-            </View>
-
-            {/* 액션 아이콘 3개 — 오른쪽 세로 */}
-            <View style={mp.actionCol}>
-              <CircleBtn icon="call"     size={16} bg="rgba(212,242,0,0.2)"  color={COLORS.neon}             style={mp.actionBtn} onPress={() => Linking.openURL("tel:")} />
-              <CircleBtn icon="navigate" size={16} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.85)" style={mp.actionBtn} onPress={openMaps} />
-              <CircleBtn icon="refresh"  size={16} bg="rgba(255,255,255,0.07)" color="rgba(255,255,255,0.4)"  style={mp.actionBtn} onPress={load} />
-            </View>
+          {/* 오른쪽: 액션 아이콘 가로 배열 */}
+          <View style={mp.bannerActions}>
+            <CircleBtn icon="call"     size={15} bg="rgba(212,242,0,0.2)"   color={COLORS.neon}             style={mp.bannerBtn} onPress={() => Linking.openURL("tel:")} />
+            <CircleBtn icon="navigate" size={15} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.8)"  style={mp.bannerBtn} onPress={openMaps} />
+            <CircleBtn icon="refresh"  size={15} bg="rgba(255,255,255,0.07)" color="rgba(255,255,255,0.4)" style={mp.bannerBtn} onPress={() => { load(); closeBanner(); }} />
           </View>
         </Animated.View>
       )}
@@ -662,20 +694,32 @@ const tb = StyleSheet.create({
 
 // 지도
 const mp = StyleSheet.create({
-  emptyWrap:    { position: "absolute", top: "35%", left: 0, right: 0, alignItems: "center" },
-  emptyCard:    { alignItems: "center", backgroundColor: "rgba(26,34,48,0.85)", borderRadius: 24, padding: 28, marginHorizontal: 32, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)" },
-  emptyTitle:   { fontFamily: "Inter_700Bold",   fontSize: 17, color: COLORS.white, textAlign: "center", marginBottom: 8 },
-  emptySub:     { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.5)", textAlign: "center", lineHeight: 20, marginBottom: 16 },
-  emptyBtn:     { backgroundColor: COLORS.neon, paddingHorizontal: 22, paddingVertical: 11, borderRadius: 22 },
-  emptyBtnText: { fontFamily: "Inter_700Bold",   fontSize: 14, color: COLORS.neonText },
-  infoCard:     { position: "absolute", left: 16, right: 16, backgroundColor: "rgba(22,30,44,0.92)", borderRadius: 22, padding: 18, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)", backdropFilter: "blur(12px)" as any },
-  infoTop:      { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 10 },
-  dot:          { width: 8, height: 8, borderRadius: 4 },
-  infoStatus:   { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.6)" },
-  infoName:     { fontFamily: "Inter_700Bold",   fontSize: 18, color: COLORS.white, marginBottom: 4 },
-  infoAddr:     { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 18 },
-  actionCol:    { alignItems: "center", gap: 8 },
-  actionBtn:    { width: 38, height: 38, borderRadius: 19 },
+  // 상태 점
+  dot:            { width: 8, height: 8, borderRadius: 4 },
+
+  // 미연결 카드
+  connectCard:    { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(22,30,44,0.93)", borderRadius: 22, padding: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)" },
+  connectBtn:     { backgroundColor: COLORS.neon, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 50 },
+  connectBtnText: { fontFamily: "Inter_700Bold",   fontSize: 13, color: COLORS.neonText },
+  infoName:       { fontFamily: "Inter_700Bold",   fontSize: 15, color: COLORS.white, marginBottom: 2 },
+  infoAddr:       { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 16 },
+
+  // 힌트 필 (핀 클릭 유도)
+  hintPill:       { position: "absolute", left: 0, right: 0, alignItems: "center" },
+  hintText:       { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white, backgroundColor: "rgba(22,30,44,0.82)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50, overflow: "hidden" },
+
+  // 슬라이드업 배너
+  banner:         { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(20,28,42,0.96)", borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.18)" },
+  bannerClose:    { position: "absolute", top: 10, right: 12, padding: 4 },
+  bannerStatus:   { fontFamily: "Inter_500Medium", fontSize: 11, color: "rgba(255,255,255,0.55)" },
+  bannerName:     { fontFamily: "Inter_700Bold",   fontSize: 16, color: COLORS.white },
+  bannerAddr:     { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)" },
+  bannerActions:  { flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 4 },
+  bannerBtn:      { width: 36, height: 36, borderRadius: 18 },
+
+  // Native 핀 힌트
+  pinHint:        { position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: "rgba(22,30,44,0.82)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7 },
+  pinHintText:    { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white },
 });
 
 // 안부
