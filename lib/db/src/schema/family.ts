@@ -1,6 +1,5 @@
 import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
 
 export const familyGroupsTable = pgTable("family_groups", {
   code: text("code").primaryKey(),
@@ -33,9 +32,11 @@ export const familyLocationsTable = pgTable("family_locations", {
 export const familyMessagesTable = pgTable("family_messages", {
   id: serial("id").primaryKey(),
   familyCode: text("family_code").notNull().references(() => familyGroupsTable.code),
+  deviceId: text("device_id"),
   fromName: text("from_name").notNull(),
   fromRole: text("from_role").notNull(),
-  text: text("text").notNull(),
+  text: text("text").notNull().default(""),
+  photoData: text("photo_data"),
   hearts: integer("hearts").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

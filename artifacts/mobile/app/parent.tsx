@@ -5,6 +5,8 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -83,6 +85,7 @@ export default function ParentScreen() {
   const [messages, setMessages] = useState<FamilyMessage[]>([]);
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -152,8 +155,22 @@ export default function ParentScreen() {
 
   const childLocations = locations.filter(l => l.isSharing);
 
+  const { height } = Dimensions.get("window");
+
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
+      {/* Full-screen photo viewer */}
+      <Modal visible={!!viewerUri} transparent animationType="fade" onRequestClose={() => setViewerUri(null)}>
+        <View style={styles.viewerOverlay}>
+          <Pressable style={styles.viewerClose} onPress={() => setViewerUri(null)}>
+            <Ionicons name="close-circle" size={36} color={COLORS.white} />
+          </Pressable>
+          {viewerUri && (
+            <Image source={{ uri: viewerUri }} style={[styles.viewerImg, { height: height * 0.72 }]} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
+
       {floatingHearts.map((h) => (
         <HeartParticle key={h.id} heart={h} />
       ))}
@@ -293,17 +310,28 @@ export default function ParentScreen() {
 
           {messages.map((msg) => (
             <View key={msg.id} style={styles.msgCard}>
-              <View style={styles.msgAvatar}>
-                <Text style={styles.msgAvatarText}>{msg.fromName[0]}</Text>
+              <View style={styles.msgCardTop}>
+                <View style={styles.msgAvatar}>
+                  <Text style={styles.msgAvatarText}>{msg.fromName[0]}</Text>
+                </View>
+                <View style={styles.msgBody}>
+                  <Text style={styles.msgSender}>{msg.fromName} · {formatTime(msg.createdAt)}</Text>
+                  {!!msg.text && <Text style={styles.msgText}>{msg.text}</Text>}
+                </View>
+                <Pressable onPress={() => heartMessage(msg)} style={styles.msgHeartBtn}>
+                  <Ionicons name="heart" size={22} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.3)"} />
+                  <Text style={styles.msgHeartCount}>{msg.hearts}</Text>
+                </Pressable>
               </View>
-              <View style={styles.msgBody}>
-                <Text style={styles.msgSender}>{msg.fromName} · {formatTime(msg.createdAt)}</Text>
-                <Text style={styles.msgText}>{msg.text}</Text>
-              </View>
-              <Pressable onPress={() => heartMessage(msg)} style={styles.msgHeartBtn}>
-                <Ionicons name="heart" size={22} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.3)"} />
-                <Text style={styles.msgHeartCount}>{msg.hearts}</Text>
-              </Pressable>
+              {msg.photoData && (
+                <Pressable onPress={() => setViewerUri(msg.photoData!)} style={styles.msgPhotoWrap}>
+                  <Image source={{ uri: msg.photoData }} style={styles.msgPhoto} resizeMode="cover" />
+                  <View style={styles.msgPhotoOverlay}>
+                    <Ionicons name="expand" size={16} color={COLORS.white} />
+                    <Text style={styles.msgPhotoHint}>탭하면 크게 볼 수 있어요</Text>
+                  </View>
+                </Pressable>
+              )}
             </View>
           ))}
         </View>
@@ -520,14 +548,17 @@ const styles = StyleSheet.create({
   },
   setupBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.white },
   msgCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
     backgroundColor: COLORS.parent.bgCard,
     borderWidth: 1,
     borderColor: COLORS.parent.bgCardBorder,
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
+    overflow: "hidden",
+  },
+  msgCardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
   },
   msgAvatar: {
@@ -541,4 +572,20 @@ const styles = StyleSheet.create({
   msgText: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.parent.text, lineHeight: 22 },
   msgHeartBtn: { alignItems: "center", paddingTop: 2, gap: 3 },
   msgHeartCount: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.coral },
+  msgPhotoWrap: { marginTop: 12, borderRadius: 14, overflow: "hidden", position: "relative" },
+  msgPhoto: { width: "100%", height: 200, borderRadius: 14 },
+  msgPhotoOverlay: {
+    position: "absolute", bottom: 8, right: 8,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10,
+  },
+  msgPhotoHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.white },
+
+  // Photo viewer
+  viewerOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center", alignItems: "center",
+  },
+  viewerClose: { position: "absolute", top: 54, right: 20, zIndex: 10 },
+  viewerImg: { width: "100%", borderRadius: 16, paddingHorizontal: 16 },
 });

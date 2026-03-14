@@ -46,9 +46,11 @@ export interface LocationData {
 export interface FamilyMessage {
   id: number;
   familyCode: string;
+  deviceId?: string | null;
   fromName: string;
   fromRole: string;
   text: string;
+  photoData?: string | null;
   hearts: number;
   createdAt: string;
 }
@@ -95,15 +97,20 @@ export const api = {
 
   sendMessage: (
     code: string,
+    deviceId: string,
     fromName: string,
     fromRole: string,
-    text: string
+    text: string,
+    photoData?: string | null
   ): Promise<FamilyMessage> =>
     request(`/family/${code}/messages`, {
       method: "POST",
-      body: JSON.stringify({ fromName, fromRole, text }),
+      body: JSON.stringify({ deviceId, fromName, fromRole, text, photoData }),
     }),
 
   heartMessage: (code: string, messageId: number): Promise<FamilyMessage> =>
     request(`/family/${code}/messages/${messageId}/heart`, { method: "POST" }),
+
+  deleteMessage: (code: string, messageId: number, deviceId: string): Promise<{ success: boolean }> =>
+    request(`/family/${code}/messages/${messageId}?deviceId=${encodeURIComponent(deviceId)}`, { method: "DELETE" }),
 };
