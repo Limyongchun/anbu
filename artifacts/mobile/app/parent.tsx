@@ -151,8 +151,7 @@ export default function ParentScreen() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [curIdx,     setCurIdx]     = useState(0);
   const [nextIdx,    setNextIdx]    = useState<number | null>(null);
-  const [isPlaying,  setIsPlaying]  = useState(true);
-  const [isPaused,   setIsPaused]   = useState(false); // finger-hold pause
+  const [isPaused,      setIsPaused]      = useState(false); // finger-hold pause
   const [transitioning, setTransitioning] = useState(false);
 
   // ── 애니메이션 ──
@@ -286,15 +285,15 @@ export default function ParentScreen() {
     progressRef.current?.stop();
   }, []);
 
-  // ── 자동 재생 ──
+  // ── 자동 재생 (항상 켜짐, 손가락 홀드 or 전환 중에만 일시정지) ──
   useEffect(() => {
-    if (isPlaying && !isPaused && !transitioning && total > 0) {
+    if (!isPaused && !transitioning && total > 0) {
       startProgress();
     } else {
       stopProgress();
     }
     return stopProgress;
-  }, [isPlaying, isPaused, transitioning, curIdx, total]);
+  }, [isPaused, transitioning, curIdx, total]);
 
   // ── 터치 핸들러 ──
   const onTouchStart = (e: any) => {
@@ -307,9 +306,9 @@ export default function ParentScreen() {
     const endY = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
     const delta = endY - touchStartY.current;
     setIsPaused(false);
-    if (delta < -60)      goNext();   // 위로 스와이프 → 다음
-    else if (delta > 60)  goPrev();   // 아래로 스와이프 → 이전
-    else if (!transitioning && isPlaying) startProgress();
+    if (delta < -60)     goNext();   // 위로 스와이프 → 다음
+    else if (delta > 60) goPrev();   // 아래로 스와이프 → 이전
+    else if (!transitioning) startProgress();
   };
 
   // ── 하트 ──
@@ -395,18 +394,37 @@ export default function ParentScreen() {
               </Animated.View>
             )}
 
-            {/* 일시정지 오버레이 */}
+            {/* Stories 스타일 상단 진행 바 */}
+            {total > 1 && (
+              <View style={p.storyBars} pointerEvents="none">
+                {slides.map((_, i) => (
+                  <View key={i} style={p.storyBar}>
+                    <Animated.View style={[
+                      p.storyBarFill,
+                      {
+                        width: i < curIdx
+                          ? "100%"
+                          : i === curIdx
+                          ? progressWidth
+                          : "0%",
+                      },
+                    ]} />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* 일시정지 배지 */}
             {isPaused && !transitioning && (
               <View style={p.pauseOverlay} pointerEvents="none">
                 <View style={p.pauseBadge}>
-                  <Ionicons name="pause" size={16} color="rgba(255,255,255,0.9)" />
+                  <Ionicons name="pause" size={14} color="rgba(255,255,255,0.9)" />
                   <Text style={p.pauseText}>일시정지</Text>
                 </View>
               </View>
             )}
           </>
         ) : (
-          /* 빈 상태 */
           <View style={p.emptyWrap}>
             <Ionicons name="chatbubble-ellipses-outline" size={48} color="rgba(255,255,255,0.2)" />
             <Text style={p.emptyTitle}>아직 메시지가 없어요</Text>
@@ -419,50 +437,6 @@ export default function ParentScreen() {
           </View>
         )}
       </View>
-
-      {/* ── 하단 컨트롤 ── */}
-      {total > 0 && (
-        <View style={p.controls}>
-          {/* 프로그레스 바 */}
-          <View style={p.progressTrack}>
-            <Animated.View style={[p.progressFill, { width: progressWidth }]} />
-          </View>
-
-          <View style={p.controlRow}>
-            {/* 인덱스 표시 */}
-            <Text style={p.countText}>{curIdx + 1} / {total}</Text>
-
-            <View style={{ flex: 1 }} />
-
-            {/* 이전 */}
-            <Pressable style={p.ctrlBtn} onPress={goPrev}>
-              <Ionicons name="chevron-up" size={20} color="rgba(255,255,255,0.8)" />
-            </Pressable>
-
-            {/* 재생 / 일시정지 */}
-            <Pressable style={[p.ctrlBtn, p.ctrlBtnMain]} onPress={() => {
-              const next = !isPlaying;
-              setIsPlaying(next);
-              if (!next) stopProgress(); else startProgress();
-            }}>
-              <Ionicons name={isPlaying ? "pause" : "play"} size={20} color={COLORS.neonText} />
-            </Pressable>
-
-            {/* 다음 */}
-            <Pressable style={p.ctrlBtn} onPress={goNext}>
-              <Ionicons name="chevron-down" size={20} color="rgba(255,255,255,0.8)" />
-            </Pressable>
-          </View>
-
-          {/* 점 인디케이터 */}
-          <View style={p.dots}>
-            {slides.map((_, i) => (
-              <Pressable key={i} onPress={() => goTo(i, i > curIdx ? "up" : "down")}
-                style={[p.dot, { width: i === curIdx ? 22 : 6, backgroundColor: i === curIdx ? COLORS.neon : "rgba(255,255,255,0.25)" }]} />
-            ))}
-          </View>
-        </View>
-      )}
 
       {/* ── 개발 스위처 ── */}
       <View style={dev.bar}>
@@ -517,18 +491,12 @@ const p = StyleSheet.create({
   codeText:     { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: 1 },
   backBtn:      { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
 
-  slideWrap:    { flex: 1, overflow: "hidden", borderRadius: 0, position: "relative", backgroundColor: "#111" },
+  slideWrap:    { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#111" },
 
-  // 컨트롤
-  controls:     { backgroundColor: "rgba(22,30,44,0.98)", paddingTop: 10, paddingBottom: 4, paddingHorizontal: 20, gap: 8 },
-  progressTrack:{ height: 3, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 2, overflow: "hidden" },
-  progressFill: { height: "100%", backgroundColor: COLORS.neon, borderRadius: 2 },
-  controlRow:   { flexDirection: "row", alignItems: "center", gap: 10 },
-  countText:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "rgba(255,255,255,0.5)" },
-  ctrlBtn:      { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.09)", alignItems: "center", justifyContent: "center" },
-  ctrlBtnMain:  { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.neon },
-  dots:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingBottom: 4 },
-  dot:          { height: 6, borderRadius: 3 },
+  // Stories 스타일 상단 진행 바
+  storyBars:    { position: "absolute", top: 12, left: 12, right: 12, flexDirection: "row", gap: 4, zIndex: 50 },
+  storyBar:     { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", overflow: "hidden" },
+  storyBarFill: { height: "100%", backgroundColor: COLORS.white, borderRadius: 2 },
 
   // 일시정지 오버레이
   pauseOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "flex-start", paddingTop: 18 },

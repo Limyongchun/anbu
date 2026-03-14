@@ -382,7 +382,9 @@ function AnbuScreen({ familyCode, myName, myRole, deviceId, topBarH }: {
       setMsgs(p => [m, ...p]);
       setText(""); setPhoto(null); setSent(true); setShowCompose(false);
       setTimeout(() => setSent(false), 2500);
-    } catch {}
+    } catch (e: any) {
+      Alert.alert("전송 실패", e?.message === "request entity too large" ? "사진 크기가 너무 큽니다. 더 작은 사진을 선택해 주세요." : "전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    }
     finally { setSending(false); }
   };
 
