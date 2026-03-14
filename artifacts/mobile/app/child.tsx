@@ -419,33 +419,52 @@ function AnbuScreen({ familyCode, myName, myRole, deviceId, topBarH }: {
       </Modal>
 
       <Modal visible={showCompose} transparent animationType="slide" onRequestClose={() => setShowCompose(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }} onPress={() => setShowCompose(false)}>
-          <View style={ab.sheet}>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          {/* 배경 탭 → 닫기 (sheet 내부 터치와 분리) */}
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowCompose(false)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} />
+          </Pressable>
+          {/* 시트 — 내부 터치가 배경 Pressable로 전파되지 않도록 Pressable로 감쌈 */}
+          <Pressable onPress={() => {}} style={ab.sheet}>
             <View style={ab.handle} />
             <Text style={ab.sheetTitle}>안부 보내기</Text>
             {photo && (
-              <View style={{ borderRadius: 14, overflow: "hidden", marginBottom: 12, height: 140, position: "relative" }}>
+              <View style={{ borderRadius: 14, overflow: "hidden", marginBottom: 12, height: 140 }}>
                 <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                <Pressable style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} onPress={() => setPhoto(null)}>
+                <Pressable
+                  style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 16 }}
+                  onPress={() => setPhoto(null)}>
                   <Ionicons name="close-circle" size={22} color="#fff" />
                 </Pressable>
               </View>
             )}
-            <TextInput style={ab.input} value={text} onChangeText={setText}
-              placeholder="부모님께 안부를 전해요..." placeholderTextColor={COLORS.textMuted}
-              multiline maxLength={200} autoFocus />
+            <TextInput
+              style={ab.input}
+              value={text}
+              onChangeText={setText}
+              placeholder="부모님께 안부를 전해요..."
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              maxLength={200}
+            />
             <View style={ab.sheetBar}>
-              <CircleBtn icon="camera" size={17} bg={COLORS.child.accentSoft} color={COLORS.neonText} style={{ width: 38, height: 38, borderRadius: 19 }} onPress={pickCamera} />
-              <CircleBtn icon="images" size={17} bg={COLORS.child.accentSoft} color={COLORS.neonText} style={{ width: 38, height: 38, borderRadius: 19 }} onPress={pickLibrary} />
+              <Pressable style={ab.attachBtn} onPress={pickCamera}>
+                <Ionicons name="camera" size={18} color={COLORS.neonText} />
+              </Pressable>
+              <Pressable style={ab.attachBtn} onPress={pickLibrary}>
+                <Ionicons name="images" size={18} color={COLORS.neonText} />
+              </Pressable>
               <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, marginLeft: 4 }}>{text.length}/200</Text>
               <View style={{ flex: 1 }} />
               <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
                 style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
-                {sending ? <ActivityIndicator size="small" color={COLORS.neonText} /> : <Ionicons name="send" size={17} color={COLORS.neonText} />}
+                {sending
+                  ? <ActivityIndicator size="small" color={COLORS.neonText} />
+                  : <Ionicons name="send" size={17} color={COLORS.neonText} />}
               </Pressable>
             </View>
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
       </Modal>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
@@ -733,7 +752,8 @@ const ab = StyleSheet.create({
   sheetTitle:   { fontFamily: "Inter_700Bold",   fontSize: 17, color: COLORS.textDark, marginBottom: 16 },
   input:        { width: "100%", backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: COLORS.textDark, minHeight: 80, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
   sheetBar:     { width: "100%", flexDirection: "row", alignItems: "center", gap: 8 },
-  sendBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: COLORS.neon, paddingVertical: 13, paddingHorizontal: 24, borderRadius: 50, width: "100%", gap: 8 },
+  attachBtn:    { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center" },
+  sendBtn:      { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center" },
   hdr:          { marginBottom: 20 },
   pill:         { alignSelf: "flex-start", backgroundColor: COLORS.navPill, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 10 },
   pillText:     { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.8)", letterSpacing: 0.5 },

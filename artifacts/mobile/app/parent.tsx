@@ -70,21 +70,17 @@ function SlideCard({ slide, onHeart }: { slide: Slide; onHeart: () => void }) {
   if (slide.kind === "demo") {
     return (
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: slide.bg }]}>
-        {/* 장식 원 */}
-        <View style={[sl.decoCircle1, { borderColor: "rgba(212,242,0,0.08)" }]} />
-        <View style={[sl.decoCircle2, { borderColor: "rgba(212,242,0,0.05)" }]} />
-        {/* 중앙 콘텐츠 */}
+        <View style={sl.filmTop} />
+        <View style={sl.filmBottom} />
+        <View style={sl.decoCircle1} />
+        <View style={sl.decoCircle2} />
         <View style={sl.textCenter}>
-          <Text style={{ fontSize: 72, marginBottom: 24, textAlign: "center" }}>{slide.emoji}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 22 }}>
-            <View style={sl.avatarWrap}><Text style={sl.avatarText}>{slide.name[0]}</Text></View>
-            <Text style={sl.fromName}>{slide.name}</Text>
-          </View>
+          <Text style={{ fontSize: 80, marginBottom: 36, textAlign: "center" }}>{slide.emoji}</Text>
           <Text style={sl.bigQuote}>"</Text>
           <Text style={sl.bigText}>{slide.text}</Text>
           <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
         </View>
-        <Pressable style={[sl.heartBtn, { bottom: 32 }]} onPress={onHeart}>
+        <Pressable style={sl.heartBtn} onPress={onHeart}>
           <Ionicons name="heart" size={26} color={COLORS.coral} />
         </Pressable>
       </View>
@@ -97,43 +93,39 @@ function SlideCard({ slide, onHeart }: { slide: Slide; onHeart: () => void }) {
   if (hasPhoto) {
     return (
       <View style={StyleSheet.absoluteFillObject}>
+        {/* 사진 — 오버레이 없이 밝게 표시 */}
         <Image source={{ uri: msg.photoData! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-        <View style={sl.overlay} />
-        <View style={sl.bottomInfo}>
-          <View style={sl.avatarWrap}><Text style={sl.avatarText}>{msg.fromName[0]}</Text></View>
-          <View style={{ flex: 1 }}>
-            <Text style={sl.fromName}>{msg.fromName}</Text>
-            <Text style={sl.timeText}>{formatTime(msg.createdAt)}</Text>
-            {!!msg.text && <Text style={sl.msgText} numberOfLines={3}>{msg.text}</Text>}
+        <View style={sl.filmTop} />
+        <View style={sl.filmBottom} />
+        {/* 텍스트가 있을 때만 하단 반투명 바 */}
+        {!!msg.text && (
+          <View style={sl.photoBottomBar}>
+            <Text style={sl.photoText} numberOfLines={3}>{msg.text}</Text>
+            <Text style={sl.timeSmall}>{formatTime(msg.createdAt)}</Text>
           </View>
-        </View>
+        )}
         <Pressable style={sl.heartBtn} onPress={onHeart}>
-          <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.45)"} />
+          <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.55)"} />
           {msg.hearts > 0 && <Text style={sl.heartN}>{msg.hearts}</Text>}
         </Pressable>
       </View>
     );
   }
 
-  // 텍스트 전용 슬라이드
+  // 텍스트 전용 슬라이드 (이름·아바타 없음)
   return (
     <View style={[StyleSheet.absoluteFillObject, sl.textSlideBg]}>
-      {/* 배경 장식 */}
+      <View style={sl.filmTop} />
+      <View style={sl.filmBottom} />
       <View style={sl.decoCircle1} />
       <View style={sl.decoCircle2} />
       <View style={sl.textCenter}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 22 }}>
-          <View style={sl.avatarWrap}><Text style={sl.avatarText}>{msg.fromName[0]}</Text></View>
-          <View>
-            <Text style={sl.fromName}>{msg.fromName}</Text>
-            <Text style={sl.timeText}>{formatTime(msg.createdAt)}</Text>
-          </View>
-        </View>
         <Text style={sl.bigQuote}>"</Text>
         <Text style={sl.bigText}>{msg.text}</Text>
         <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
+        <Text style={sl.timeSmall2}>{formatTime(msg.createdAt)}</Text>
       </View>
-      <Pressable style={[sl.heartBtn, { bottom: 32 }]} onPress={onHeart}>
+      <Pressable style={sl.heartBtn} onPress={onHeart}>
         <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.3)"} />
         {msg.hearts > 0 && <Text style={sl.heartN}>{msg.hearts}</Text>}
       </Pressable>
@@ -457,23 +449,27 @@ export default function ParentScreen() {
 
 // ── 슬라이드 스타일 ───────────────────────────────────────────────────────────
 const sl = StyleSheet.create({
-  overlay:      { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.28)" },
-  bottomInfo:   { position: "absolute", bottom: 0, left: 0, right: 70, padding: 24, flexDirection: "row", alignItems: "flex-end", gap: 14 },
-  avatarWrap:   { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.coral, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  avatarText:   { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.white },
-  fromName:     { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white, marginBottom: 3 },
-  timeText:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 4 },
-  msgText:      { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 20 },
-  heartBtn:     { position: "absolute", right: 20, bottom: 28, alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.35)", borderRadius: 30, paddingHorizontal: 14, paddingVertical: 10 },
-  heartN:       { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.white },
+  // 필름 프레임 효과 — 상/하단 얇은 검정 바
+  filmTop:        { position: "absolute", top: 0, left: 0, right: 0, height: 4, backgroundColor: "#000", zIndex: 10 },
+  filmBottom:     { position: "absolute", bottom: 0, left: 0, right: 0, height: 4, backgroundColor: "#000", zIndex: 10 },
 
-  // 텍스트 전용 슬라이드
-  textSlideBg:  { backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
-  decoCircle1:  { position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, borderWidth: 30, borderColor: "rgba(212,242,0,0.07)" },
-  decoCircle2:  { position: "absolute", left: -80, bottom: -80, width: 300, height: 300, borderRadius: 150, borderWidth: 30, borderColor: "rgba(212,242,0,0.05)" },
-  textCenter:   { paddingHorizontal: 32, paddingVertical: 24, maxWidth: 340 },
-  bigQuote:     { fontFamily: "Inter_700Bold", fontSize: 52, color: COLORS.neon, lineHeight: 52 },
-  bigText:      { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white, lineHeight: 32, marginTop: -8 },
+  // 사진 슬라이드
+  photoBottomBar: { position: "absolute", bottom: 4, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.52)", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16 },
+  photoText:      { fontFamily: "Inter_400Regular", fontSize: 16, color: COLORS.white, lineHeight: 23, marginBottom: 4 },
+  timeSmall:      { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)" },
+
+  // 공통
+  heartBtn:       { position: "absolute", right: 20, bottom: 32, alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.38)", borderRadius: 30, paddingHorizontal: 14, paddingVertical: 10 },
+  heartN:         { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.white },
+
+  // 텍스트 전용 슬라이드 (이름·아바타 없음)
+  textSlideBg:    { backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
+  decoCircle1:    { position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, borderWidth: 30, borderColor: "rgba(212,242,0,0.07)" },
+  decoCircle2:    { position: "absolute", left: -80, bottom: -80, width: 300, height: 300, borderRadius: 150, borderWidth: 30, borderColor: "rgba(212,242,0,0.05)" },
+  textCenter:     { paddingHorizontal: 36, paddingVertical: 24, maxWidth: 360 },
+  bigQuote:       { fontFamily: "Inter_700Bold", fontSize: 56, color: COLORS.neon, lineHeight: 56 },
+  bigText:        { fontFamily: "Inter_700Bold", fontSize: 24, color: COLORS.white, lineHeight: 34, marginTop: -10 },
+  timeSmall2:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 18, alignSelf: "flex-end" },
 });
 
 // ── 부모님 화면 스타일 ────────────────────────────────────────────────────────
