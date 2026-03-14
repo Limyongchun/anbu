@@ -585,6 +585,23 @@ function GiftTab() {
   );
 }
 
+// ─── 개발용 화면 전환 ─────────────────────────────────────────────────────────
+function DevSwitcher() {
+  return (
+    <View style={devStyles.bar}>
+      <View style={devStyles.label}><Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.4)" /><Text style={devStyles.labelText}>개발 모드</Text></View>
+      <Pressable onPress={() => router.replace("/parent")} style={({ pressed }) => [devStyles.btn, { opacity: pressed ? 0.7 : 1 }]}>
+        <Ionicons name="home" size={13} color="rgba(255,255,255,0.8)" />
+        <Text style={devStyles.btnText}>부모님 화면</Text>
+      </Pressable>
+      <Pressable onPress={() => router.replace("/")} style={({ pressed }) => [devStyles.btn, devStyles.btnHome, { opacity: pressed ? 0.7 : 1 }]}>
+        <Ionicons name="apps" size={13} color="rgba(255,255,255,0.8)" />
+        <Text style={devStyles.btnText}>홈</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 // ─── 메인 ─────────────────────────────────────────────────────────────────────
 export default function ChildScreen() {
   const insets = useSafeAreaInsets();
@@ -610,7 +627,7 @@ export default function ChildScreen() {
     <View style={[styles.container, { paddingTop: topInset, paddingBottom: bottomInset }]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>마음잇기</Text>
+          <Text style={styles.headerTitle}>DUGO</Text>
           <Text style={styles.headerGreeting}>{myName ? `${myName}님, 안녕하세요` : "부모님의 위치를 확인하세요"}</Text>
         </View>
         <View style={styles.headerRight}>
@@ -640,6 +657,8 @@ export default function ChildScreen() {
       {activeTab === "지도" && <LocationTab familyCode={familyCode} />}
       {activeTab === "안부" && <AnbuTab familyCode={familyCode} myName={myName} myRole={myRole} deviceId={deviceId} />}
       {activeTab === "선물샵" && <GiftTab />}
+
+      <DevSwitcher />
     </View>
   );
 }
@@ -819,4 +838,13 @@ const styles = StyleSheet.create({
   purchaseBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.white },
   cancelBtn: { paddingVertical: 12 },
   cancelBtnText: { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.child.textMuted },
+});
+
+const devStyles = StyleSheet.create({
+  bar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.65)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  label: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: 4 },
+  labelText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)" },
+  btn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.12)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  btnHome: { backgroundColor: "rgba(232,133,106,0.18)", borderColor: "rgba(232,133,106,0.25)" },
+  btnText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.8)" },
 });

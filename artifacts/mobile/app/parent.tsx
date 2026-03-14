@@ -60,6 +60,22 @@ function formatTime(dateStr: string): string {
   return `${Math.floor(diffHr / 24)}일 전`;
 }
 
+function DevSwitcher() {
+  return (
+    <View style={devStyles.bar}>
+      <View style={devStyles.label}><Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.4)" /><Text style={devStyles.labelText}>개발 모드</Text></View>
+      <Pressable onPress={() => router.replace("/child")} style={({ pressed }) => [devStyles.btn, { opacity: pressed ? 0.7 : 1 }]}>
+        <Ionicons name="people" size={13} color="rgba(255,255,255,0.8)" />
+        <Text style={devStyles.btnText}>자녀 화면</Text>
+      </Pressable>
+      <Pressable onPress={() => router.replace("/")} style={({ pressed }) => [devStyles.btn, devStyles.btnHome, { opacity: pressed ? 0.7 : 1 }]}>
+        <Ionicons name="apps" size={13} color="rgba(255,255,255,0.8)" />
+        <Text style={devStyles.btnText}>홈</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, myName, deviceId, isConnected } = useFamilyContext();
@@ -201,7 +217,7 @@ export default function ParentScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>마음잇기</Text>
+          <Text style={styles.headerTitle}>DUGO</Text>
           {myName && <Text style={styles.headerSub}>{myName} · 부모님 화면</Text>}
         </View>
         <View style={styles.headerRight}>
@@ -345,6 +361,8 @@ export default function ParentScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <DevSwitcher />
     </View>
   );
 }
@@ -429,4 +447,13 @@ const styles = StyleSheet.create({
   viewerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   viewerClose: { position: "absolute", top: 54, right: 20, zIndex: 10 },
   viewerImg: { width: "100%", borderRadius: 16 },
+});
+
+const devStyles = StyleSheet.create({
+  bar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  label: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: 4 },
+  labelText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)" },
+  btn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  btnHome: { backgroundColor: "rgba(232,133,106,0.18)", borderColor: "rgba(232,133,106,0.25)" },
+  btnText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.75)" },
 });

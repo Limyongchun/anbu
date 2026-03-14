@@ -127,7 +127,7 @@ export default function SplashScreen() {
         </View>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>마음잇기</Text>
+          <Text style={styles.title}>DUGO</Text>
           <Text style={styles.subtitle}>부모님과 자녀를 잇는 따뜻한 연결</Text>
         </View>
 
