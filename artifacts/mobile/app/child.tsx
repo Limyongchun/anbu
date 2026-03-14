@@ -832,7 +832,7 @@ export default function ChildScreen() {
               <Text style={styles.connectedText}>{familyCode}</Text>
             </View>
           )}
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.replace("/")} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={18} color={COLORS.child.textSub} />
             <Text style={styles.backBtnText}>나가기</Text>
           </Pressable>
