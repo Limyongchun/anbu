@@ -157,12 +157,21 @@ router.put("/family/:code/location", async (req, res) => {
 router.get("/family/:code/locations", async (req, res) => {
   try {
     const { code } = req.params;
-    const locs = await db.select().from(familyLocationsTable)
-      .where(eq(familyLocationsTable.familyCode, code))
-      .orderBy(desc(familyLocationsTable.updatedAt));
+    const [locs, members] = await Promise.all([
+      db.select().from(familyLocationsTable)
+        .where(eq(familyLocationsTable.familyCode, code))
+        .orderBy(desc(familyLocationsTable.updatedAt)),
+      db.select().from(familyMembersTable)
+        .where(eq(familyMembersTable.familyCode, code)),
+    ]);
+    const roleByDeviceId = new Map(members.map(m => [m.deviceId, m.role]));
     const seen = new Set<string>();
     const unique = locs.filter(l => { if (seen.has(l.deviceId)) return false; seen.add(l.deviceId); return true; });
-    return res.json(unique.map(l => ({ ...l, updatedAt: l.updatedAt.toISOString() })));
+    return res.json(unique.map(l => ({
+      ...l,
+      role: roleByDeviceId.get(l.deviceId) || "unknown",
+      updatedAt: l.updatedAt.toISOString(),
+    })));
   } catch (e) {
     return res.status(500).json({ error: "Failed to get locations" });
   }

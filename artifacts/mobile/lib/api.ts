@@ -34,6 +34,7 @@ export interface LocationData {
   familyCode: string;
   deviceId: string;
   memberName: string;
+  role?: string;
   latitude: number;
   longitude: number;
   address?: string;

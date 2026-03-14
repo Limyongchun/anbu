@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActionSheetIOS,
@@ -18,17 +17,16 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
-import { api, FamilyMessage } from "@/lib/api";
+import { api, FamilyMessage, LocationData } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
-const TABS = ["안부", "위치", "선물샵"] as const;
+const TABS = ["지도", "안부", "선물샵"] as const;
 type Tab = typeof TABS[number];
 
 const GIFTS = [
@@ -52,63 +50,278 @@ function formatTime(dateStr: string): string {
   return `${Math.floor(diffHr / 24)}일 전`;
 }
 
-// ─── 사진 뷰어 모달 ────────────────────────────────────────────────────────────
-function PhotoViewer({
-  uri,
-  visible,
-  onClose,
-  onDelete,
-  canDelete,
-}: {
-  uri: string;
-  visible: boolean;
-  onClose: () => void;
-  onDelete?: () => void;
-  canDelete?: boolean;
-}) {
-  const opacity = useRef(new Animated.Value(0)).current;
-
+// ─── 지도 탭 ──────────────────────────────────────────────────────────────────
+function PulsingDot({ color }: { color: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: visible ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [visible]);
+    const anim = Animated.loop(Animated.sequence([
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 1.8, duration: 1000, useNativeDriver: false }),
+        Animated.timing(opacity, { toValue: 0, duration: 1000, useNativeDriver: false }),
+      ]),
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: false }),
+        Animated.timing(opacity, { toValue: 0.6, duration: 0, useNativeDriver: false }),
+      ]),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  return (
+    <View style={{ alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={{ position: "absolute", width: 40, height: 40, borderRadius: 20, backgroundColor: color, transform: [{ scale }], opacity }} />
+      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: color, borderWidth: 3, borderColor: COLORS.white, zIndex: 2 }} />
+    </View>
+  );
+}
 
-  if (!visible) return null;
+function MapView({ loc }: { loc: LocationData }) {
+  const lat = loc.latitude;
+  const lon = loc.longitude;
+  const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.008}%2C${lat - 0.006}%2C${lon + 0.008}%2C${lat + 0.006}&layer=mapnik&marker=${lat}%2C${lon}`;
+
+  const openInMaps = () => {
+    const url = Platform.OS === "ios"
+      ? `maps://maps.apple.com/maps?q=${lat},${lon}`
+      : Platform.OS === "android"
+        ? `geo:${lat},${lon}?q=${lat},${lon}`
+        : `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`);
+    });
+  };
 
   return (
+    <View style={styles.mapContainer}>
+      {Platform.OS === "web" ? (
+        // Web: real embedded OpenStreetMap
+        <View style={styles.mapIframeWrap}>
+          {/* @ts-ignore */}
+          <iframe
+            src={mapSrc}
+            style={{ width: "100%", height: "100%", border: "none", borderRadius: 20 }}
+            title="부모님 위치"
+          />
+        </View>
+      ) : (
+        // Native: styled map visual
+        <View style={styles.mapNative}>
+          <View style={styles.mapGrid}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <View key={`h${i}`} style={[styles.mapGridLine, styles.mapGridLineH, { top: `${(i + 1) * 11}%` as any }]} />
+            ))}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={`v${i}`} style={[styles.mapGridLine, styles.mapGridLineV, { left: `${(i + 1) * 14}%` as any }]} />
+            ))}
+          </View>
+          <View style={styles.mapPin}>
+            <PulsingDot color="#ef4444" />
+          </View>
+        </View>
+      )}
+
+      {/* Open in maps button */}
+      <Pressable onPress={openInMaps} style={styles.openMapBtn}>
+        <Ionicons name="navigate" size={14} color={COLORS.white} />
+        <Text style={styles.openMapBtnText}>지도 앱에서 보기</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function LocationTab({ familyCode }: { familyCode: string | null }) {
+  const [locations, setLocations] = useState<LocationData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  const loadLocations = useCallback(async () => {
+    if (!familyCode) return;
+    try {
+      const locs = await api.getAllLocations(familyCode);
+      setLocations(locs);
+      setLastRefresh(new Date());
+    } catch {}
+  }, [familyCode]);
+
+  useEffect(() => {
+    if (!familyCode) return;
+    setLoading(true);
+    loadLocations().finally(() => setLoading(false));
+    const interval = setInterval(loadLocations, 30000);
+    return () => clearInterval(interval);
+  }, [familyCode, loadLocations]);
+
+  // Filter for parent locations that are sharing
+  const parentLocations = locations.filter(l => l.role === "parent" && l.isSharing);
+  const parentLoc = parentLocations[0] ?? null;
+
+  if (!familyCode) {
+    return (
+      <View style={styles.mapEmptyCenter}>
+        <View style={styles.mapEmptyIconWrap}>
+          <Ionicons name="link-outline" size={40} color={COLORS.child.textMuted} />
+        </View>
+        <Text style={styles.mapEmptyTitle}>가족을 먼저 연결해주세요</Text>
+        <Text style={styles.mapEmptyDesc}>가족 코드를 입력하면 부모님의 위치를 확인할 수 있어요</Text>
+        <Pressable style={styles.mapEmptyBtn} onPress={() => router.push("/setup")}>
+          <Ionicons name="link" size={16} color={COLORS.white} />
+          <Text style={styles.mapEmptyBtnText}>가족 연결하기</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.mapEmptyCenter}>
+        <ActivityIndicator size="large" color={COLORS.child.accent} />
+        <Text style={styles.mapEmptyDesc}>위치를 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  if (!parentLoc) {
+    return (
+      <View style={styles.mapEmptyCenter}>
+        <View style={styles.mapWaitingWrap}>
+          <Animated.View>
+            <Ionicons name="location-outline" size={48} color={COLORS.child.accent} />
+          </Animated.View>
+        </View>
+        <Text style={styles.mapEmptyTitle}>부모님 위치를 기다리는 중</Text>
+        <Text style={styles.mapEmptyDesc}>부모님이 앱을 실행하면 위치가 여기 표시됩니다</Text>
+        <Pressable onPress={loadLocations} style={styles.refreshBtn}>
+          <Ionicons name="refresh" size={16} color={COLORS.child.accent} />
+          <Text style={styles.refreshBtnText}>새로고침</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const minsAgo = Math.floor((Date.now() - new Date(parentLoc.updatedAt).getTime()) / 60000);
+  const isRecent = minsAgo < 5;
+
+  return (
+    <ScrollView style={styles.tabContent} contentContainerStyle={styles.mapScrollContent} showsVerticalScrollIndicator={false}>
+      {/* Map */}
+      <MapView loc={parentLoc} />
+
+      {/* Status banner */}
+      <View style={[styles.statusBanner, { backgroundColor: isRecent ? "rgba(74,222,128,0.1)" : "rgba(251,191,36,0.1)" }]}>
+        <View style={[styles.statusBannerDot, { backgroundColor: isRecent ? "#4ade80" : "#fbbf24" }]} />
+        <Text style={[styles.statusBannerText, { color: isRecent ? "#4ade80" : "#fbbf24" }]}>
+          {isRecent ? "실시간 위치 공유 중" : `${minsAgo}분 전 업데이트`}
+        </Text>
+        <Pressable onPress={loadLocations} style={styles.statusRefreshBtn}>
+          <Ionicons name="refresh" size={14} color={isRecent ? "#4ade80" : "#fbbf24"} />
+        </Pressable>
+      </View>
+
+      {/* Parent info card */}
+      <View style={styles.parentInfoCard}>
+        <View style={styles.parentAvatarRow}>
+          <View style={styles.parentAvatar}>
+            <Ionicons name="person" size={22} color={COLORS.white} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.parentName}>{parentLoc.memberName}</Text>
+            <Text style={styles.parentRole}>부모님</Text>
+          </View>
+          <View style={[styles.onlineBadge, { backgroundColor: isRecent ? "rgba(74,222,128,0.15)" : "rgba(251,191,36,0.15)" }]}>
+            <View style={[styles.onlineDot, { backgroundColor: isRecent ? "#4ade80" : "#fbbf24" }]} />
+            <Text style={[styles.onlineBadgeText, { color: isRecent ? "#4ade80" : "#fbbf24" }]}>
+              {isRecent ? "안전" : "확인 필요"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.infoRows}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoRowIcon}><Ionicons name="location" size={16} color={COLORS.child.accent} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoRowLabel}>현재 위치</Text>
+              <Text style={styles.infoRowValue}>
+                {parentLoc.address || `위도 ${parentLoc.latitude.toFixed(5)}, 경도 ${parentLoc.longitude.toFixed(5)}`}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoRowIcon}><Ionicons name="time" size={16} color={COLORS.child.accent} /></View>
+            <View>
+              <Text style={styles.infoRowLabel}>마지막 업데이트</Text>
+              <Text style={styles.infoRowValue}>{formatTime(parentLoc.updatedAt)}</Text>
+            </View>
+          </View>
+
+          {parentLoc.accuracy != null && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoRowIcon}><Ionicons name="radio" size={16} color={COLORS.child.accent} /></View>
+              <View>
+                <Text style={styles.infoRowLabel}>정확도</Text>
+                <Text style={styles.infoRowValue}>±{Math.round(parentLoc.accuracy)}m</Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Quick contact */}
+      <View style={styles.quickActions}>
+        <Pressable style={styles.quickActionBtn} onPress={() => Linking.openURL("tel:")}>
+          <View style={[styles.quickActionIcon, { backgroundColor: "rgba(74,222,128,0.12)" }]}>
+            <Ionicons name="call" size={22} color="#4ade80" />
+          </View>
+          <Text style={styles.quickActionLabel}>전화하기</Text>
+        </Pressable>
+        <Pressable style={styles.quickActionBtn} onPress={() => {}}>
+          <View style={[styles.quickActionIcon, { backgroundColor: "rgba(200,112,74,0.12)" }]}>
+            <Ionicons name="chatbubble" size={22} color={COLORS.child.accent} />
+          </View>
+          <Text style={styles.quickActionLabel}>문자 보내기</Text>
+        </Pressable>
+        <Pressable style={styles.quickActionBtn} onPress={loadLocations}>
+          <View style={[styles.quickActionIcon, { backgroundColor: "rgba(99,102,241,0.12)" }]}>
+            <Ionicons name="refresh" size={22} color="#818cf8" />
+          </View>
+          <Text style={styles.quickActionLabel}>새로고침</Text>
+        </Pressable>
+      </View>
+
+      {lastRefresh && (
+        <Text style={styles.lastRefreshText}>마지막 새로고침: {formatTime(lastRefresh.toISOString())}</Text>
+      )}
+    </ScrollView>
+  );
+}
+
+// ─── 사진 뷰어 ────────────────────────────────────────────────────────────────
+function PhotoViewer({ uri, visible, onClose, onDelete, canDelete }: {
+  uri: string; visible: boolean; onClose: () => void; onDelete?: () => void; canDelete?: boolean;
+}) {
+  if (!visible) return null;
+  return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Animated.View style={[styles.viewerOverlay, { opacity }]}>
+      <View style={styles.viewerOverlay}>
         <Pressable style={styles.viewerClose} onPress={onClose}>
           <Ionicons name="close-circle" size={36} color={COLORS.white} />
         </Pressable>
-        <View style={styles.viewerImgWrap}>
-          <Image source={{ uri }} style={styles.viewerImg} resizeMode="contain" />
-        </View>
+        <Image source={{ uri }} style={[styles.viewerImg, { height: height * 0.72 }]} resizeMode="contain" />
         {canDelete && onDelete && (
           <Pressable style={styles.viewerDeleteBtn} onPress={onDelete}>
             <Ionicons name="trash-outline" size={20} color={COLORS.white} />
             <Text style={styles.viewerDeleteText}>사진 삭제</Text>
           </Pressable>
         )}
-      </Animated.View>
+      </View>
     </Modal>
   );
 }
 
 // ─── 안부 탭 ──────────────────────────────────────────────────────────────────
-function AnbuTab({
-  familyCode,
-  myName,
-  myRole,
-  deviceId,
-}: {
-  familyCode: string | null;
-  myName: string | null;
-  myRole: string | null;
-  deviceId: string;
+function AnbuTab({ familyCode, myName, myRole, deviceId }: {
+  familyCode: string | null; myName: string | null; myRole: string | null; deviceId: string;
 }) {
   const [subView, setSubView] = useState<"messages" | "gallery">("messages");
   const [messageText, setMessageText] = useState("");
@@ -120,16 +333,12 @@ function AnbuTab({
   const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [viewerMsgId, setViewerMsgId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  const photoMessages = messages.filter((m) => !!m.photoData);
+  const photoMessages = messages.filter(m => !!m.photoData);
   const THUMB_SIZE = (width - 52) / 3;
 
   const loadMessages = useCallback(async () => {
     if (!familyCode) return;
-    try {
-      const msgs = await api.getMessages(familyCode);
-      setMessages(msgs);
-    } catch {}
+    try { setMessages(await api.getMessages(familyCode)); } catch {}
   }, [familyCode]);
 
   useEffect(() => {
@@ -141,66 +350,29 @@ function AnbuTab({
 
   const pickFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("권한 필요", "사진 라이브러리 접근 권한이 필요합니다.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.6,
-      base64: true,
-    });
+    if (status !== "granted") { Alert.alert("권한 필요", "사진 라이브러리 접근 권한이 필요합니다."); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.6, base64: true });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      if (asset.base64) {
-        setAttachedPhoto(`data:image/jpeg;base64,${asset.base64}`);
-      } else if (asset.uri) {
-        setAttachedPhoto(asset.uri);
-      }
+      setAttachedPhoto(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
     }
   };
 
   const pickFromCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("권한 필요", "카메라 접근 권한이 필요합니다.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.6,
-      base64: true,
-    });
+    if (status !== "granted") { Alert.alert("권한 필요", "카메라 접근 권한이 필요합니다."); return; }
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.6, base64: true });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      if (asset.base64) {
-        setAttachedPhoto(`data:image/jpeg;base64,${asset.base64}`);
-      } else if (asset.uri) {
-        setAttachedPhoto(asset.uri);
-      }
+      setAttachedPhoto(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
     }
   };
 
   const handlePickPhoto = () => {
     if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["취소", "카메라로 찍기", "앨범에서 선택"],
-          cancelButtonIndex: 0,
-        },
-        (index) => {
-          if (index === 1) pickFromCamera();
-          if (index === 2) pickFromLibrary();
-        }
-      );
+      ActionSheetIOS.showActionSheetWithOptions({ options: ["취소", "카메라로 찍기", "앨범에서 선택"], cancelButtonIndex: 0 }, i => { if (i === 1) pickFromCamera(); if (i === 2) pickFromLibrary(); });
     } else {
-      // Android / Web: show simple alert
-      Alert.alert("사진 첨부", "어디서 가져올까요?", [
-        { text: "취소", style: "cancel" },
-        { text: "카메라", onPress: pickFromCamera },
-        { text: "갤러리", onPress: pickFromLibrary },
-      ]);
+      Alert.alert("사진 첨부", "어디서 가져올까요?", [{ text: "취소", style: "cancel" }, { text: "카메라", onPress: pickFromCamera }, { text: "갤러리", onPress: pickFromLibrary }]);
     }
   };
 
@@ -208,260 +380,110 @@ function AnbuTab({
     if ((!messageText.trim() && !attachedPhoto) || !familyCode || !myName || !myRole) return;
     setSending(true);
     try {
-      const msg = await api.sendMessage(
-        familyCode,
-        deviceId,
-        myName,
-        myRole,
-        messageText.trim(),
-        attachedPhoto || null
-      );
-      setMessages((prev) => [msg, ...prev]);
+      const msg = await api.sendMessage(familyCode, deviceId, myName, myRole, messageText.trim(), attachedPhoto || null);
+      setMessages(prev => [msg, ...prev]);
       setMessageText("");
       setAttachedPhoto(null);
       setSent(true);
       setTimeout(() => setSent(false), 2000);
-    } catch (e) {
-      console.error("Send failed", e);
-    } finally {
-      setSending(false);
-    }
+    } catch {}
+    finally { setSending(false); }
   };
 
   const handleDeleteMessage = async (msgId: number) => {
     if (!familyCode) return;
-    Alert.alert(
-      "메시지 삭제",
-      "이 메시지를 삭제할까요?",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "삭제",
-          style: "destructive",
-          onPress: async () => {
-            setDeletingId(msgId);
-            try {
-              await api.deleteMessage(familyCode, msgId, deviceId);
-              setMessages((prev) => prev.filter((m) => m.id !== msgId));
-              if (viewerMsgId === msgId) {
-                setViewerUri(null);
-                setViewerMsgId(null);
-              }
-            } catch {
-              Alert.alert("오류", "삭제에 실패했습니다.");
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const openPhotoViewer = (uri: string, msgId: number) => {
-    setViewerUri(uri);
-    setViewerMsgId(msgId);
+    Alert.alert("메시지 삭제", "이 메시지를 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      { text: "삭제", style: "destructive", onPress: async () => {
+        setDeletingId(msgId);
+        try {
+          await api.deleteMessage(familyCode, msgId, deviceId);
+          setMessages(prev => prev.filter(m => m.id !== msgId));
+          if (viewerMsgId === msgId) { setViewerUri(null); setViewerMsgId(null); }
+        } catch { Alert.alert("오류", "삭제에 실패했습니다."); }
+        finally { setDeletingId(null); }
+      }},
+    ]);
   };
 
   const canDeleteMsg = (msg: FamilyMessage) => msg.deviceId === deviceId;
 
   return (
     <>
-      {/* Photo viewer */}
       {viewerUri && (
-        <PhotoViewer
-          uri={viewerUri}
-          visible={!!viewerUri}
-          onClose={() => { setViewerUri(null); setViewerMsgId(null); }}
+        <PhotoViewer uri={viewerUri} visible={!!viewerUri} onClose={() => { setViewerUri(null); setViewerMsgId(null); }}
           canDelete={viewerMsgId !== null && messages.find(m => m.id === viewerMsgId)?.deviceId === deviceId}
-          onDelete={() => { if (viewerMsgId) handleDeleteMessage(viewerMsgId); setViewerUri(null); setViewerMsgId(null); }}
-        />
+          onDelete={() => { if (viewerMsgId) handleDeleteMessage(viewerMsgId); setViewerUri(null); setViewerMsgId(null); }} />
       )}
-
-      <ScrollView
-        style={styles.tabContent}
-        contentContainerStyle={styles.tabContentPad}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Family connect prompt */}
+      <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentPad} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {!familyCode && (
           <View style={styles.connectPrompt}>
             <Ionicons name="link-outline" size={32} color={COLORS.child.textMuted} />
             <Text style={styles.connectPromptText}>가족을 연결하면 안부를 주고받을 수 있어요</Text>
-            <Pressable style={styles.connectBtn} onPress={() => router.push("/setup")}>
-              <Text style={styles.connectBtnText}>가족 연결하기</Text>
-            </Pressable>
+            <Pressable style={styles.connectBtn} onPress={() => router.push("/setup")}><Text style={styles.connectBtnText}>가족 연결하기</Text></Pressable>
           </View>
         )}
-
-        {/* Sub-view toggle: 메시지 / 갤러리 */}
+        {/* Sub-view toggle */}
         <View style={styles.subViewToggle}>
-          <Pressable
-            onPress={() => setSubView("messages")}
-            style={[styles.subViewBtn, subView === "messages" && styles.subViewBtnActive]}
-          >
-            <Ionicons
-              name="chatbubble-ellipses"
-              size={15}
-              color={subView === "messages" ? COLORS.child.accent : COLORS.child.tabInactive}
-            />
-            <Text style={[styles.subViewBtnText, subView === "messages" && styles.subViewBtnTextActive]}>
-              메시지
-            </Text>
+          <Pressable onPress={() => setSubView("messages")} style={[styles.subViewBtn, subView === "messages" && styles.subViewBtnActive]}>
+            <Ionicons name="chatbubble-ellipses" size={15} color={subView === "messages" ? COLORS.child.accent : COLORS.child.tabInactive} />
+            <Text style={[styles.subViewBtnText, subView === "messages" && styles.subViewBtnTextActive]}>메시지</Text>
           </Pressable>
-          <Pressable
-            onPress={() => setSubView("gallery")}
-            style={[styles.subViewBtn, subView === "gallery" && styles.subViewBtnActive]}
-          >
-            <Ionicons
-              name="images"
-              size={15}
-              color={subView === "gallery" ? COLORS.child.accent : COLORS.child.tabInactive}
-            />
-            <Text style={[styles.subViewBtnText, subView === "gallery" && styles.subViewBtnTextActive]}>
-              갤러리 {photoMessages.length > 0 ? `(${photoMessages.length})` : ""}
-            </Text>
+          <Pressable onPress={() => setSubView("gallery")} style={[styles.subViewBtn, subView === "gallery" && styles.subViewBtnActive]}>
+            <Ionicons name="images" size={15} color={subView === "gallery" ? COLORS.child.accent : COLORS.child.tabInactive} />
+            <Text style={[styles.subViewBtnText, subView === "gallery" && styles.subViewBtnTextActive]}>갤러리 {photoMessages.length > 0 ? `(${photoMessages.length})` : ""}</Text>
           </Pressable>
         </View>
 
-        {/* ── 메시지 뷰 ── */}
         {subView === "messages" && (
           <>
-            {sent && (
-              <View style={styles.sentToast}>
-                <Ionicons name="checkmark-circle" size={16} color="#4ade80" />
-                <Text style={styles.sentToastText}>부모님께 전송되었어요</Text>
-              </View>
-            )}
-
-            {/* Compose card */}
+            {sent && (<View style={styles.sentToast}><Ionicons name="checkmark-circle" size={16} color="#4ade80" /><Text style={styles.sentToastText}>부모님께 전송되었어요</Text></View>)}
             <View style={styles.composeCard}>
               <View style={styles.composeHeader}>
-                <View style={styles.composeAvatar}>
-                  <Ionicons name="heart" size={18} color={COLORS.white} />
-                </View>
-                <View>
-                  <Text style={styles.composeTitle}>안부 보내기</Text>
-                  <Text style={styles.composeSub}>글과 사진으로 부모님께 전해요</Text>
-                </View>
+                <View style={styles.composeAvatar}><Ionicons name="heart" size={18} color={COLORS.white} /></View>
+                <View><Text style={styles.composeTitle}>안부 보내기</Text><Text style={styles.composeSub}>글과 사진으로 부모님께 전해요</Text></View>
               </View>
-
-              {/* Attached photo preview */}
               {attachedPhoto && (
                 <View style={styles.attachPreviewWrap}>
                   <Image source={{ uri: attachedPhoto }} style={styles.attachPreview} resizeMode="cover" />
-                  <Pressable style={styles.attachRemoveBtn} onPress={() => setAttachedPhoto(null)}>
-                    <Ionicons name="close-circle" size={24} color={COLORS.white} />
-                  </Pressable>
-                  <View style={styles.attachLabel}>
-                    <Ionicons name="image" size={12} color={COLORS.white} />
-                    <Text style={styles.attachLabelText}>사진 첨부됨</Text>
-                  </View>
+                  <Pressable style={styles.attachRemoveBtn} onPress={() => setAttachedPhoto(null)}><Ionicons name="close-circle" size={24} color={COLORS.white} /></Pressable>
+                  <View style={styles.attachLabel}><Ionicons name="image" size={12} color={COLORS.white} /><Text style={styles.attachLabelText}>사진 첨부됨</Text></View>
                 </View>
               )}
-
-              <TextInput
-                style={styles.composeInput}
-                value={messageText}
-                onChangeText={setMessageText}
-                placeholder="안부 메시지를 입력하세요..."
-                placeholderTextColor={COLORS.child.textMuted}
-                multiline
-                maxLength={200}
-              />
+              <TextInput style={styles.composeInput} value={messageText} onChangeText={setMessageText} placeholder="안부 메시지를 입력하세요..." placeholderTextColor={COLORS.child.textMuted} multiline maxLength={200} />
               <View style={styles.composeFooter}>
                 <View style={styles.composeFooterLeft}>
-                  {/* Camera button */}
-                  <Pressable
-                    onPress={pickFromCamera}
-                    style={({ pressed }) => [styles.attachIconBtn, { opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <Ionicons name="camera" size={22} color={COLORS.child.accent} />
-                  </Pressable>
-                  {/* Gallery button */}
-                  <Pressable
-                    onPress={pickFromLibrary}
-                    style={({ pressed }) => [styles.attachIconBtn, { opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <Ionicons name="images" size={22} color={COLORS.child.accent} />
-                  </Pressable>
+                  <Pressable onPress={pickFromCamera} style={({ pressed }) => [styles.attachIconBtn, { opacity: pressed ? 0.7 : 1 }]}><Ionicons name="camera" size={22} color={COLORS.child.accent} /></Pressable>
+                  <Pressable onPress={pickFromLibrary} style={({ pressed }) => [styles.attachIconBtn, { opacity: pressed ? 0.7 : 1 }]}><Ionicons name="images" size={22} color={COLORS.child.accent} /></Pressable>
                   <Text style={styles.charCount}>{messageText.length}/200</Text>
                 </View>
-                <Pressable
-                  onPress={handleSend}
-                  style={[
-                    styles.sendBtn,
-                    ((!messageText.trim() && !attachedPhoto) || sending || !familyCode) && styles.sendBtnDisabled,
-                  ]}
-                  disabled={(!messageText.trim() && !attachedPhoto) || sending || !familyCode}
-                >
-                  {sending ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : (
-                    <>
-                      <Ionicons name="send" size={16} color={COLORS.white} />
-                      <Text style={styles.sendBtnText}>전송</Text>
-                    </>
-                  )}
+                <Pressable onPress={handleSend} style={[styles.sendBtn, ((!messageText.trim() && !attachedPhoto) || sending || !familyCode) && styles.sendBtnDisabled]} disabled={(!messageText.trim() && !attachedPhoto) || sending || !familyCode}>
+                  {sending ? <ActivityIndicator size="small" color={COLORS.white} /> : <><Ionicons name="send" size={16} color={COLORS.white} /><Text style={styles.sendBtnText}>전송</Text></>}
                 </Pressable>
               </View>
             </View>
-
             <Text style={styles.subSectionLabel}>보낸 메시지</Text>
-
             {loading && <ActivityIndicator color={COLORS.child.accent} style={{ marginVertical: 16 }} />}
-
-            {!loading && messages.length === 0 && familyCode && (
-              <View style={styles.emptyState}>
-                <Ionicons name="mail-outline" size={28} color={COLORS.child.textMuted} />
-                <Text style={styles.emptyStateText}>아직 보낸 메시지가 없어요</Text>
-              </View>
-            )}
-
-            {messages.map((msg) => (
+            {!loading && messages.length === 0 && familyCode && (<View style={styles.emptyState}><Ionicons name="mail-outline" size={28} color={COLORS.child.textMuted} /><Text style={styles.emptyStateText}>아직 보낸 메시지가 없어요</Text></View>)}
+            {messages.map(msg => (
               <View key={msg.id} style={styles.msgItem}>
-                <View style={styles.msgItemAvatarWrap}>
-                  <Ionicons name="person" size={13} color={COLORS.white} />
-                </View>
+                <View style={styles.msgItemAvatarWrap}><Ionicons name="person" size={13} color={COLORS.white} /></View>
                 <View style={styles.msgItemBody}>
-                  {!!msg.text && (
-                    <Text style={styles.msgItemText}>{msg.text}</Text>
-                  )}
+                  {!!msg.text && <Text style={styles.msgItemText}>{msg.text}</Text>}
                   {msg.photoData && (
-                    <Pressable onPress={() => openPhotoViewer(msg.photoData!, msg.id)}>
-                      <Image
-                        source={{ uri: msg.photoData }}
-                        style={styles.msgPhoto}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.msgPhotoHint}>
-                        <Ionicons name="expand" size={12} color={COLORS.white} />
-                        <Text style={styles.msgPhotoHintText}>탭하면 크게 볼 수 있어요</Text>
-                      </View>
+                    <Pressable onPress={() => { setViewerUri(msg.photoData!); setViewerMsgId(msg.id); }}>
+                      <Image source={{ uri: msg.photoData }} style={styles.msgPhoto} resizeMode="cover" />
+                      <View style={styles.msgPhotoHint}><Ionicons name="expand" size={12} color={COLORS.child.textMuted} /><Text style={styles.msgPhotoHintText}>탭하면 크게 볼 수 있어요</Text></View>
                     </Pressable>
                   )}
                   <View style={styles.msgItemMeta}>
                     <Text style={styles.msgItemTime}>{formatTime(msg.createdAt)}</Text>
-                    {msg.hearts > 0 && (
-                      <View style={styles.likedChip}>
-                        <Ionicons name="heart" size={10} color={COLORS.coral} />
-                        <Text style={styles.likedChipText}>부모님이 {msg.hearts}번 좋아했어요</Text>
-                      </View>
-                    )}
+                    {msg.hearts > 0 && (<View style={styles.likedChip}><Ionicons name="heart" size={10} color={COLORS.coral} /><Text style={styles.likedChipText}>부모님이 {msg.hearts}번 좋아했어요</Text></View>)}
                   </View>
                 </View>
                 {canDeleteMsg(msg) && (
-                  <Pressable
-                    onPress={() => handleDeleteMessage(msg.id)}
-                    style={styles.msgDeleteBtn}
-                    disabled={deletingId === msg.id}
-                  >
-                    {deletingId === msg.id ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : (
-                      <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                    )}
+                  <Pressable onPress={() => handleDeleteMessage(msg.id)} style={styles.msgDeleteBtn} disabled={deletingId === msg.id}>
+                    {deletingId === msg.id ? <ActivityIndicator size="small" color="#ef4444" /> : <Ionicons name="trash-outline" size={18} color="#ef4444" />}
                   </Pressable>
                 )}
               </View>
@@ -469,71 +491,32 @@ function AnbuTab({
           </>
         )}
 
-        {/* ── 갤러리 뷰 ── */}
         {subView === "gallery" && (
           <>
-            <View style={styles.galleryHeader}>
-              <Text style={styles.galleryTitle}>내가 보낸 사진</Text>
-              <Text style={styles.galleryCount}>총 {photoMessages.length}장</Text>
-            </View>
-
+            <View style={styles.galleryHeader}><Text style={styles.galleryTitle}>내가 보낸 사진</Text><Text style={styles.galleryCount}>총 {photoMessages.length}장</Text></View>
             {loading && <ActivityIndicator color={COLORS.child.accent} style={{ marginVertical: 24 }} />}
-
             {!loading && photoMessages.length === 0 && (
               <View style={styles.galleryEmpty}>
-                <View style={styles.galleryEmptyIcon}>
-                  <Ionicons name="images-outline" size={40} color={COLORS.child.textMuted} />
-                </View>
+                <View style={styles.galleryEmptyIcon}><Ionicons name="images-outline" size={40} color={COLORS.child.textMuted} /></View>
                 <Text style={styles.galleryEmptyTitle}>아직 사진이 없어요</Text>
                 <Text style={styles.galleryEmptyDesc}>메시지 탭에서 사진을 첨부해서 보내보세요</Text>
-                <Pressable style={styles.galleryGoMsgBtn} onPress={() => setSubView("messages")}>
-                  <Ionicons name="camera" size={16} color={COLORS.white} />
-                  <Text style={styles.galleryGoMsgBtnText}>사진 보내기</Text>
-                </Pressable>
+                <Pressable style={styles.galleryGoMsgBtn} onPress={() => setSubView("messages")}><Ionicons name="camera" size={16} color={COLORS.white} /><Text style={styles.galleryGoMsgBtnText}>사진 보내기</Text></Pressable>
               </View>
             )}
-
             {photoMessages.length > 0 && (
               <>
-                <Text style={styles.galleryManageHint}>
-                  <Ionicons name="information-circle-outline" size={13} color={COLORS.child.textMuted} /> 사진을 탭하면 크게 볼 수 있어요. 삭제 버튼으로 관리하세요.
-                </Text>
+                <Text style={styles.galleryManageHint}>탭하면 크게 볼 수 있어요. 빨간 버튼으로 삭제합니다.</Text>
                 <View style={styles.galleryGrid}>
-                  {photoMessages.map((msg) => (
+                  {photoMessages.map(msg => (
                     <View key={msg.id} style={[styles.galleryThumbWrap, { width: THUMB_SIZE, height: THUMB_SIZE }]}>
-                      <Pressable
-                        onPress={() => openPhotoViewer(msg.photoData!, msg.id)}
-                        style={({ pressed }) => [styles.galleryThumb, { opacity: pressed ? 0.85 : 1 }]}
-                      >
-                        <Image
-                          source={{ uri: msg.photoData! }}
-                          style={{ width: "100%", height: "100%", borderRadius: 12 }}
-                          resizeMode="cover"
-                        />
-                        {/* Time overlay */}
-                        <View style={styles.thumbTimeOverlay}>
-                          <Text style={styles.thumbTimeText}>{formatTime(msg.createdAt)}</Text>
-                        </View>
-                        {/* Hearts overlay */}
-                        {msg.hearts > 0 && (
-                          <View style={styles.thumbHeartChip}>
-                            <Ionicons name="heart" size={9} color={COLORS.coral} />
-                            <Text style={styles.thumbHeartText}>{msg.hearts}</Text>
-                          </View>
-                        )}
+                      <Pressable onPress={() => { setViewerUri(msg.photoData!); setViewerMsgId(msg.id); }} style={({ pressed }) => [styles.galleryThumb, { opacity: pressed ? 0.85 : 1 }]}>
+                        <Image source={{ uri: msg.photoData! }} style={{ width: "100%", height: "100%", borderRadius: 12 }} resizeMode="cover" />
+                        <View style={styles.thumbTimeOverlay}><Text style={styles.thumbTimeText}>{formatTime(msg.createdAt)}</Text></View>
+                        {msg.hearts > 0 && (<View style={styles.thumbHeartChip}><Ionicons name="heart" size={9} color={COLORS.coral} /><Text style={styles.thumbHeartText}>{msg.hearts}</Text></View>)}
                       </Pressable>
-                      {/* Delete button */}
                       {canDeleteMsg(msg) && (
-                        <Pressable
-                          style={styles.thumbDeleteBtn}
-                          onPress={() => handleDeleteMessage(msg.id)}
-                          disabled={deletingId === msg.id}
-                        >
-                          {deletingId === msg.id ? (
-                            <ActivityIndicator size="small" color={COLORS.white} />
-                          ) : (
-                            <Ionicons name="trash" size={13} color={COLORS.white} />
-                          )}
+                        <Pressable style={styles.thumbDeleteBtn} onPress={() => handleDeleteMessage(msg.id)} disabled={deletingId === msg.id}>
+                          {deletingId === msg.id ? <ActivityIndicator size="small" color={COLORS.white} /> : <Ionicons name="trash" size={13} color={COLORS.white} />}
                         </Pressable>
                       )}
                     </View>
@@ -548,219 +531,30 @@ function AnbuTab({
   );
 }
 
-// ─── 위치 탭 ──────────────────────────────────────────────────────────────────
-function LocationTab({ familyCode, myName, deviceId }: { familyCode: string | null; myName: string | null; deviceId: string }) {
-  const [permission, requestPermission] = Location.useForegroundPermissions();
-  const [isSharing, setIsSharing] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
-  const [address, setAddress] = useState<string>("");
-  const [uploading, setUploading] = useState(false);
-  const [lastSynced, setLastSynced] = useState<Date | null>(null);
-  const watchRef = useRef<Location.LocationSubscription | null>(null);
-
-  const uploadLocation = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
-    if (!familyCode || !myName) return;
-    setUploading(true);
-    try {
-      let addr = "";
-      try {
-        const geocoded = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        if (geocoded.length > 0) {
-          const g = geocoded[0];
-          addr = [g.city || g.district, g.street].filter(Boolean).join(" ") || "";
-        }
-      } catch {}
-      setAddress(addr);
-      await api.updateLocation(familyCode, {
-        deviceId, memberName: myName, latitude: loc.coords.latitude, longitude: loc.coords.longitude,
-        address: addr, accuracy: loc.coords.accuracy ?? undefined, isSharing: sharing,
-      });
-      setLastSynced(new Date());
-    } catch {}
-    finally { setUploading(false); }
-  }, [familyCode, myName, deviceId]);
-
-  const startWatching = useCallback(async () => {
-    if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; }
-    try {
-      const sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 50 },
-        (loc) => { setCurrentLocation(loc); uploadLocation(loc, isSharing); }
-      );
-      watchRef.current = sub;
-    } catch {}
-  }, [isSharing, uploadLocation]);
-
-  useEffect(() => {
-    if (permission?.granted && isSharing) {
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
-        .then((loc) => { setCurrentLocation(loc); uploadLocation(loc, true); }).catch(() => {});
-      startWatching();
-    } else if (!isSharing && watchRef.current) { watchRef.current.remove(); watchRef.current = null; }
-    return () => { if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; } };
-  }, [permission?.granted, isSharing]);
-
-  const toggleSharing = async () => {
-    const next = !isSharing;
-    setIsSharing(next);
-    if (currentLocation) await uploadLocation(currentLocation, next);
-  };
-
-  if (!permission) return <View style={styles.permissionCenter}><ActivityIndicator color={COLORS.child.accent} /></View>;
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.permissionCenter}>
-        <View style={styles.permissionCard}>
-          <View style={styles.permissionIcon}><Ionicons name="location" size={36} color={COLORS.child.accent} /></View>
-          <Text style={styles.permissionTitle}>위치 권한이 필요해요</Text>
-          <Text style={styles.permissionDesc}>부모님께 내 위치를 안전하게 공유하려면 위치 접근 권한을 허용해주세요</Text>
-          {!permission.canAskAgain && Platform.OS !== "web" ? (
-            <Pressable style={styles.permissionBtn} onPress={() => { try { Linking.openSettings(); } catch {} }}>
-              <Text style={styles.permissionBtnText}>설정에서 허용하기</Text>
-            </Pressable>
-          ) : (
-            <Pressable style={styles.permissionBtn} onPress={requestPermission}>
-              <Ionicons name="location" size={18} color={COLORS.white} />
-              <Text style={styles.permissionBtnText}>위치 권한 허용</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentPad} showsVerticalScrollIndicator={false}>
-      {!familyCode && (
-        <View style={styles.connectPrompt}>
-          <Ionicons name="link-outline" size={32} color={COLORS.child.textMuted} />
-          <Text style={styles.connectPromptText}>가족을 연결하면 위치를 공유할 수 있어요</Text>
-          <Pressable style={styles.connectBtn} onPress={() => router.push("/setup")}>
-            <Text style={styles.connectBtnText}>가족 연결하기</Text>
-          </Pressable>
-        </View>
-      )}
-      <View style={styles.locationMainCard}>
-        <View style={styles.locationMapVisual}>
-          <View style={styles.locationMapBg} />
-          <View style={styles.locationPinWrap}>
-            <View style={[styles.locationPinDot, { backgroundColor: isSharing ? COLORS.child.accent : "#9ca3af" }]}>
-              <Ionicons name="location" size={20} color={COLORS.white} />
-            </View>
-            <View style={[styles.locationPinRing, { borderColor: isSharing ? "rgba(200,112,74,0.3)" : "rgba(156,163,175,0.3)" }]} />
-          </View>
-          <View style={styles.locationStatusOverlay}>
-            <View style={[styles.statusPill, { backgroundColor: isSharing ? "rgba(74,222,128,0.15)" : "rgba(156,163,175,0.15)" }]}>
-              <View style={[styles.statusDot, { backgroundColor: isSharing ? "#4ade80" : "#9ca3af" }]} />
-              <Text style={[styles.statusPillText, { color: isSharing ? "#4ade80" : "#9ca3af" }]}>
-                {isSharing ? "공유 중" : "공유 중지"}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.locationDetails}>
-          {currentLocation ? (
-            <>
-              <View style={styles.locationRow}>
-                <View style={styles.locationRowIcon}><Ionicons name="location" size={14} color={COLORS.child.accent} /></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.locationRowLabel}>현재 위치</Text>
-                  <Text style={styles.locationRowValue} numberOfLines={2}>
-                    {address || `위도 ${currentLocation.coords.latitude.toFixed(5)}\n경도 ${currentLocation.coords.longitude.toFixed(5)}`}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.locationRow}>
-                <View style={styles.locationRowIcon}><Ionicons name="radio" size={14} color={COLORS.child.accent} /></View>
-                <View>
-                  <Text style={styles.locationRowLabel}>정확도</Text>
-                  <Text style={styles.locationRowValue}>{currentLocation.coords.accuracy ? `±${Math.round(currentLocation.coords.accuracy)}m` : "측정 중"}</Text>
-                </View>
-              </View>
-              {lastSynced && (
-                <View style={styles.locationRow}>
-                  <View style={styles.locationRowIcon}><Ionicons name="sync" size={14} color={COLORS.child.accent} /></View>
-                  <View>
-                    <Text style={styles.locationRowLabel}>마지막 동기화</Text>
-                    <Text style={styles.locationRowValue}>{formatTime(lastSynced.toISOString())}</Text>
-                  </View>
-                </View>
-              )}
-            </>
-          ) : (
-            <View style={styles.locatingRow}>
-              <ActivityIndicator size="small" color={COLORS.child.accent} />
-              <Text style={styles.locatingText}>위치를 확인하는 중...</Text>
-            </View>
-          )}
-        </View>
-      </View>
-      <View style={styles.sharingCard}>
-        <View style={styles.sharingRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.sharingTitle}>위치 공유</Text>
-            <Text style={styles.sharingSub}>{isSharing ? "부모님이 내 위치를 볼 수 있어요" : "현재 위치 공유가 중지됐어요"}</Text>
-          </View>
-          {uploading && <ActivityIndicator size="small" color={COLORS.child.accent} style={{ marginRight: 12 }} />}
-          <Pressable onPress={toggleSharing} style={[styles.toggleBtn, { backgroundColor: isSharing ? COLORS.child.accent : "#d1d1d1" }]}>
-            <Animated.View style={[styles.toggleKnob, { transform: [{ translateX: isSharing ? 22 : 2 }] }]} />
-          </Pressable>
-        </View>
-      </View>
-      <Text style={styles.subSectionLabel}>안전 구역</Text>
-      {["자택", "직장", "병원"].map((zone, i) => (
-        <View key={i} style={styles.safeZoneItem}>
-          <View style={styles.safeZoneIcon}>
-            <Ionicons name={i === 0 ? "home" : i === 1 ? "business" : "medical"} size={16} color={COLORS.child.accent} />
-          </View>
-          <Text style={styles.safeZoneName}>{zone}</Text>
-          <Ionicons name="checkmark-circle" size={18} color="#4ade80" />
-        </View>
-      ))}
-    </ScrollView>
-  );
-}
-
 // ─── 선물샵 탭 ────────────────────────────────────────────────────────────────
 function GiftTab() {
   const [selected, setSelected] = useState<typeof GIFTS[0] | null>(null);
   const [purchased, setPurchased] = useState<typeof GIFTS[0] | null>(null);
   const [filter, setFilter] = useState("전체");
   const categories = ["전체", "식품", "건강", "꽃"];
-  const filtered = filter === "전체" ? GIFTS : GIFTS.filter((g) => g.category === filter);
-
-  const handlePurchase = () => {
-    if (!selected) return;
-    setPurchased(selected);
-    setSelected(null);
-  };
-
+  const filtered = filter === "전체" ? GIFTS : GIFTS.filter(g => g.category === filter);
   return (
     <>
       <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentPad} showsVerticalScrollIndicator={false}>
         <View style={styles.giftBanner}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.giftBannerTitle}>부모님께 선물 보내기</Text>
-            <Text style={styles.giftBannerSub}>마음을 담은 특별한 선물</Text>
-          </View>
+          <View style={{ flex: 1 }}><Text style={styles.giftBannerTitle}>부모님께 선물 보내기</Text><Text style={styles.giftBannerSub}>마음을 담은 특별한 선물</Text></View>
           <View style={styles.giftBannerIcon}><Ionicons name="gift" size={36} color="rgba(255,255,255,0.8)" /></View>
         </View>
-        {purchased && (
-          <View style={styles.purchaseSuccess}>
-            <Ionicons name="checkmark-circle" size={20} color="#4ade80" />
-            <Text style={styles.purchaseSuccessText}>{purchased.name} 주문 완료!</Text>
-          </View>
-        )}
+        {purchased && (<View style={styles.purchaseSuccess}><Ionicons name="checkmark-circle" size={20} color="#4ade80" /><Text style={styles.purchaseSuccessText}>{purchased.name} 주문 완료!</Text></View>)}
         <View style={styles.filterRow}>
-          {categories.map((cat) => (
+          {categories.map(cat => (
             <Pressable key={cat} onPress={() => setFilter(cat)} style={[styles.filterChip, filter === cat && styles.filterChipActive]}>
               <Text style={[styles.filterChipText, filter === cat && styles.filterChipTextActive]}>{cat}</Text>
             </Pressable>
           ))}
         </View>
         <View style={styles.giftGrid}>
-          {filtered.map((gift) => (
+          {filtered.map(gift => (
             <Pressable key={gift.id} style={({ pressed }) => [styles.giftCard, { opacity: pressed ? 0.9 : 1 }]} onPress={() => setSelected(gift)}>
               {gift.popular && (<View style={styles.popularBadge}><Text style={styles.popularBadgeText}>인기</Text></View>)}
               <View style={styles.giftIconBg}><Ionicons name={gift.icon} size={28} color={COLORS.child.accent} /></View>
@@ -779,17 +573,11 @@ function GiftTab() {
             <Text style={styles.modalTitle}>{selected?.name}</Text>
             <Text style={styles.modalPrice}>{selected?.price}</Text>
             <Text style={styles.modalDesc}>부모님께 따뜻한 마음을 전해보세요. 당일 배송 가능합니다.</Text>
-            <View style={styles.modalRecipient}>
-              <Ionicons name="heart" size={14} color={COLORS.child.accent} />
-              <Text style={styles.modalRecipientText}>받는 분: 어머니, 아버지</Text>
-            </View>
-            <Pressable style={({ pressed }) => [styles.purchaseBtn, { opacity: pressed ? 0.9 : 1 }]} onPress={handlePurchase}>
-              <Ionicons name="gift" size={18} color={COLORS.white} />
-              <Text style={styles.purchaseBtnText}>{selected?.price} · 선물하기</Text>
+            <View style={styles.modalRecipient}><Ionicons name="heart" size={14} color={COLORS.child.accent} /><Text style={styles.modalRecipientText}>받는 분: 어머니, 아버지</Text></View>
+            <Pressable style={({ pressed }) => [styles.purchaseBtn, { opacity: pressed ? 0.9 : 1 }]} onPress={() => { setPurchased(selected); setSelected(null); }}>
+              <Ionicons name="gift" size={18} color={COLORS.white} /><Text style={styles.purchaseBtnText}>{selected?.price} · 선물하기</Text>
             </Pressable>
-            <Pressable onPress={() => setSelected(null)} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>취소</Text>
-            </Pressable>
+            <Pressable onPress={() => setSelected(null)} style={styles.cancelBtn}><Text style={styles.cancelBtnText}>취소</Text></Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -801,7 +589,7 @@ function GiftTab() {
 export default function ChildScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, myName, myRole, deviceId, isConnected } = useFamilyContext();
-  const [activeTab, setActiveTab] = useState<Tab>("안부");
+  const [activeTab, setActiveTab] = useState<Tab>("지도");
   const tabUnderline = useRef(new Animated.Value(0)).current;
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -813,8 +601,8 @@ export default function ChildScreen() {
   };
 
   const TAB_ICONS: Record<Tab, keyof typeof Ionicons.glyphMap> = {
+    "지도": "map",
     "안부": "chatbubble-ellipses",
-    "위치": "location",
     "선물샵": "gift",
   };
 
@@ -823,7 +611,7 @@ export default function ChildScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>마음잇기</Text>
-          <Text style={styles.headerGreeting}>{myName ? `${myName}님, 안녕하세요` : "오늘도 안부를 전해보세요"}</Text>
+          <Text style={styles.headerGreeting}>{myName ? `${myName}님, 안녕하세요` : "부모님의 위치를 확인하세요"}</Text>
         </View>
         <View style={styles.headerRight}>
           {isConnected && familyCode && (
@@ -849,12 +637,8 @@ export default function ChildScreen() {
         <Animated.View style={[styles.tabUnderline, { width: width / TABS.length, transform: [{ translateX: tabUnderline }] }]} />
       </View>
 
-      {activeTab === "안부" && (
-        <AnbuTab familyCode={familyCode} myName={myName} myRole={myRole} deviceId={deviceId} />
-      )}
-      {activeTab === "위치" && (
-        <LocationTab familyCode={familyCode} myName={myName} deviceId={deviceId} />
-      )}
+      {activeTab === "지도" && <LocationTab familyCode={familyCode} />}
+      {activeTab === "안부" && <AnbuTab familyCode={familyCode} myName={myName} myRole={myRole} deviceId={deviceId} />}
       {activeTab === "선물샵" && <GiftTab />}
     </View>
   );
@@ -863,29 +647,16 @@ export default function ChildScreen() {
 // ─── 스타일 ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.child.bg },
-  header: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end",
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12,
-  },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 24, color: COLORS.child.text, letterSpacing: 2, marginBottom: 2 },
   headerGreeting: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub },
   headerRight: { flexDirection: "column", alignItems: "flex-end", gap: 6 },
-  connectedChip: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(74,222,128,0.1)", paddingHorizontal: 9, paddingVertical: 4,
-    borderRadius: 8, borderWidth: 1, borderColor: "rgba(74,222,128,0.2)",
-  },
+  connectedChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(74,222,128,0.1)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(74,222,128,0.2)" },
   connectedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#4ade80" },
   connectedText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#4ade80", letterSpacing: 1 },
-  backBtn: {
-    flexDirection: "row", alignItems: "center", gap: 2,
-    backgroundColor: "rgba(61,43,31,0.08)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-  },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: "rgba(61,43,31,0.08)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   backBtnText: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub },
-  tabBar: {
-    flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(61,43,31,0.08)",
-    position: "relative", backgroundColor: COLORS.child.bg,
-  },
+  tabBar: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(61,43,31,0.08)", position: "relative", backgroundColor: COLORS.child.bg },
   tabItem: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 12, gap: 6 },
   tabLabel: { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.child.tabInactive },
   tabLabelActive: { fontFamily: "Inter_600SemiBold", color: COLORS.child.tabActive },
@@ -893,93 +664,88 @@ const styles = StyleSheet.create({
   tabContent: { flex: 1 },
   tabContentPad: { padding: 16, paddingBottom: 32 },
 
+  // Map tab
+  mapScrollContent: { padding: 16, paddingBottom: 32 },
+  mapContainer: { marginBottom: 12, borderRadius: 20, overflow: "hidden" },
+  mapIframeWrap: { width: "100%", height: 300, borderRadius: 20, overflow: "hidden" },
+  mapNative: { width: "100%", height: 260, backgroundColor: "#d4e8c2", borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center", position: "relative" },
+  mapGrid: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  mapGridLine: { position: "absolute", backgroundColor: "rgba(100,140,70,0.25)" },
+  mapGridLineH: { left: 0, right: 0, height: 1 },
+  mapGridLineV: { top: 0, bottom: 0, width: 1 },
+  mapPin: { zIndex: 2 },
+  openMapBtn: { position: "absolute", bottom: 12, right: 12, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  openMapBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.white },
+  statusBanner: { flexDirection: "row", alignItems: "center", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12, gap: 8 },
+  statusBannerDot: { width: 8, height: 8, borderRadius: 4 },
+  statusBannerText: { fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 },
+  statusRefreshBtn: { padding: 4 },
+  parentInfoCard: { backgroundColor: COLORS.child.bgCard, borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
+  parentAvatarRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  parentAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.child.accent, alignItems: "center", justifyContent: "center" },
+  parentName: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.child.text, marginBottom: 2 },
+  parentRole: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textSub },
+  onlineBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  onlineDot: { width: 7, height: 7, borderRadius: 4 },
+  onlineBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  infoRows: { gap: 12 },
+  infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  infoRowIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center" },
+  infoRowLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.child.textSub, marginBottom: 2 },
+  infoRowValue: { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.child.text },
+  quickActions: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  quickActionBtn: { flex: 1, alignItems: "center", gap: 8 },
+  quickActionIcon: { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  quickActionLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.child.textSub },
+  lastRefreshText: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.child.textMuted, textAlign: "center", marginTop: 4 },
+  mapEmptyCenter: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
+  mapEmptyIconWrap: { width: 88, height: 88, borderRadius: 24, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  mapWaitingWrap: { width: 88, height: 88, borderRadius: 24, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  mapEmptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.child.text, textAlign: "center" },
+  mapEmptyDesc: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, textAlign: "center", lineHeight: 20 },
+  mapEmptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.child.accent, paddingHorizontal: 22, paddingVertical: 13, borderRadius: 16, marginTop: 4 },
+  mapEmptyBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.white },
+  refreshBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.child.accentSoft, marginTop: 4 },
+  refreshBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.child.accent },
+
   // Connect prompt
-  connectPrompt: {
-    alignItems: "center", backgroundColor: "rgba(200,112,74,0.06)", borderRadius: 16,
-    padding: 20, marginBottom: 16, borderWidth: 1, borderColor: "rgba(200,112,74,0.12)", gap: 8,
-  },
+  connectPrompt: { alignItems: "center", backgroundColor: "rgba(200,112,74,0.06)", borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: "rgba(200,112,74,0.12)", gap: 8 },
   connectPromptText: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub, textAlign: "center" },
   connectBtn: { backgroundColor: COLORS.child.accent, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 12, marginTop: 4 },
   connectBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.white },
 
   // Sub-view toggle
-  subViewToggle: {
-    flexDirection: "row", backgroundColor: "rgba(61,43,31,0.06)",
-    borderRadius: 14, padding: 4, marginBottom: 16,
-  },
-  subViewBtn: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 9, borderRadius: 11,
-  },
+  subViewToggle: { flexDirection: "row", backgroundColor: "rgba(61,43,31,0.06)", borderRadius: 14, padding: 4, marginBottom: 16 },
+  subViewBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 9, borderRadius: 11 },
   subViewBtnActive: { backgroundColor: COLORS.white, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   subViewBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.child.tabInactive },
   subViewBtnTextActive: { color: COLORS.child.accent, fontFamily: "Inter_600SemiBold" },
 
-  // Toast
-  sentToast: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(74,222,128,0.1)", borderWidth: 1, borderColor: "rgba(74,222,128,0.2)",
-    borderRadius: 12, padding: 12, marginBottom: 14,
-  },
+  // Toast / compose
+  sentToast: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(74,222,128,0.1)", borderWidth: 1, borderColor: "rgba(74,222,128,0.2)", borderRadius: 12, padding: 12, marginBottom: 14 },
   sentToastText: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#4ade80" },
-
-  // Compose
-  composeCard: {
-    backgroundColor: COLORS.child.bgCard, borderRadius: 20, padding: 18, marginBottom: 22,
-    borderWidth: 1, borderColor: COLORS.child.bgCardBorder,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
+  composeCard: { backgroundColor: COLORS.child.bgCard, borderRadius: 20, padding: 18, marginBottom: 22, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
   composeHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
   composeAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.child.accent, alignItems: "center", justifyContent: "center" },
   composeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.child.text, marginBottom: 2 },
   composeSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textSub },
-  attachPreviewWrap: {
-    borderRadius: 14, overflow: "hidden", marginBottom: 12,
-    position: "relative", height: 160,
-  },
+  attachPreviewWrap: { borderRadius: 14, overflow: "hidden", marginBottom: 12, position: "relative", height: 160 },
   attachPreview: { width: "100%", height: "100%", borderRadius: 14 },
-  attachRemoveBtn: {
-    position: "absolute", top: 8, right: 8,
-    backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16,
-  },
-  attachLabel: {
-    position: "absolute", bottom: 8, left: 8,
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-  },
+  attachRemoveBtn: { position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 },
+  attachLabel: { position: "absolute", bottom: 8, left: 8, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   attachLabelText: { fontFamily: "Inter_500Medium", fontSize: 11, color: COLORS.white },
-  composeInput: {
-    backgroundColor: "rgba(61,43,31,0.04)", borderRadius: 14, padding: 14,
-    fontSize: 15, fontFamily: "Inter_400Regular", color: COLORS.child.text,
-    minHeight: 72, textAlignVertical: "top", marginBottom: 12,
-    borderWidth: 1, borderColor: "rgba(61,43,31,0.06)",
-  },
+  composeInput: { backgroundColor: "rgba(61,43,31,0.04)", borderRadius: 14, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: COLORS.child.text, minHeight: 72, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: "rgba(61,43,31,0.06)" },
   composeFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   composeFooterLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  attachIconBtn: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: COLORS.child.accentSoft,
-    alignItems: "center", justifyContent: "center",
-  },
+  attachIconBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center" },
   charCount: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textMuted },
-  sendBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: COLORS.child.accent, paddingHorizontal: 18, paddingVertical: 10,
-    borderRadius: 14, minWidth: 72, justifyContent: "center",
-  },
+  sendBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.child.accent, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 14, minWidth: 72, justifyContent: "center" },
   sendBtnDisabled: { opacity: 0.4 },
   sendBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.white },
-  subSectionLabel: {
-    fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.child.textSub,
-    letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12,
-  },
+  subSectionLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.child.textSub, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 },
   emptyState: { alignItems: "center", padding: 24, gap: 8 },
   emptyStateText: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textMuted, textAlign: "center" },
-  msgItem: {
-    flexDirection: "row", gap: 12, backgroundColor: COLORS.child.bgCard,
-    borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: COLORS.child.bgCardBorder,
-  },
+  msgItem: { flexDirection: "row", gap: 12, backgroundColor: COLORS.child.bgCard, borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
   msgItemAvatarWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.child.accent, alignItems: "center", justifyContent: "center" },
   msgItemBody: { flex: 1 },
   msgItemText: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.text, lineHeight: 20, marginBottom: 6 },
@@ -988,10 +754,7 @@ const styles = StyleSheet.create({
   msgPhotoHintText: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.child.textMuted },
   msgItemMeta: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   msgItemTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.child.textMuted },
-  likedChip: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: COLORS.child.accentSoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-  },
+  likedChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.child.accentSoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   likedChipText: { fontFamily: "Inter_500Medium", fontSize: 11, color: COLORS.child.accent },
   msgDeleteBtn: { paddingLeft: 4, paddingTop: 2, alignItems: "center", justifyContent: "flex-start" },
 
@@ -1003,92 +766,26 @@ const styles = StyleSheet.create({
   galleryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   galleryThumbWrap: { position: "relative", borderRadius: 12, overflow: "visible" },
   galleryThumb: { width: "100%", height: "100%", borderRadius: 12, overflow: "hidden", backgroundColor: "rgba(61,43,31,0.06)" },
-  thumbTimeOverlay: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    backgroundColor: "rgba(0,0,0,0.45)", padding: 4, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
-  },
+  thumbTimeOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", padding: 4, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
   thumbTimeText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.85)", textAlign: "center" },
-  thumbHeartChip: {
-    position: "absolute", top: 5, left: 5,
-    flexDirection: "row", alignItems: "center", gap: 2,
-    backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6,
-  },
+  thumbHeartChip: { position: "absolute", top: 5, left: 5, flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6 },
   thumbHeartText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.white },
-  thumbDeleteBtn: {
-    position: "absolute", top: -7, right: -7,
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: "#ef4444",
-    alignItems: "center", justifyContent: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 4,
-    zIndex: 10,
-  },
-  galleryEmpty: {
-    alignItems: "center", paddingVertical: 48, gap: 10,
-  },
-  galleryEmptyIcon: {
-    width: 80, height: 80, borderRadius: 24,
-    backgroundColor: "rgba(61,43,31,0.06)",
-    alignItems: "center", justifyContent: "center", marginBottom: 4,
-  },
+  thumbDeleteBtn: { position: "absolute", top: -7, right: -7, width: 26, height: 26, borderRadius: 13, backgroundColor: "#ef4444", alignItems: "center", justifyContent: "center", zIndex: 10 },
+  galleryEmpty: { alignItems: "center", paddingVertical: 48, gap: 10 },
+  galleryEmptyIcon: { width: 80, height: 80, borderRadius: 24, backgroundColor: "rgba(61,43,31,0.06)", alignItems: "center", justifyContent: "center", marginBottom: 4 },
   galleryEmptyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 17, color: COLORS.child.text },
   galleryEmptyDesc: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, textAlign: "center", lineHeight: 20 },
-  galleryGoMsgBtn: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: COLORS.child.accent, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, marginTop: 8,
-  },
+  galleryGoMsgBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.child.accent, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, marginTop: 8 },
   galleryGoMsgBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.white },
 
   // Photo viewer
   viewerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   viewerClose: { position: "absolute", top: 54, right: 20, zIndex: 10 },
-  viewerImgWrap: { width: "100%", height: height * 0.72, justifyContent: "center", alignItems: "center", paddingHorizontal: 16 },
-  viewerImg: { width: "100%", height: "100%", borderRadius: 16 },
-  viewerDeleteBtn: {
-    position: "absolute", bottom: 60,
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(239,68,68,0.85)", paddingHorizontal: 22, paddingVertical: 13, borderRadius: 20,
-  },
+  viewerImg: { width: "100%", borderRadius: 16 },
+  viewerDeleteBtn: { position: "absolute", bottom: 60, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(239,68,68,0.85)", paddingHorizontal: 22, paddingVertical: 13, borderRadius: 20 },
   viewerDeleteText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.white },
 
-  // Location
-  permissionCenter: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  permissionCard: {
-    backgroundColor: COLORS.child.bgCard, borderRadius: 24, padding: 28,
-    alignItems: "center", borderWidth: 1, borderColor: COLORS.child.bgCardBorder, gap: 12, width: "100%", maxWidth: 340,
-  },
-  permissionIcon: { width: 72, height: 72, borderRadius: 20, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center", marginBottom: 8 },
-  permissionTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.child.text, textAlign: "center" },
-  permissionDesc: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, textAlign: "center", lineHeight: 20 },
-  permissionBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.child.accent, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, marginTop: 8 },
-  permissionBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.white },
-  locationMainCard: { backgroundColor: COLORS.child.bgCard, borderRadius: 20, overflow: "hidden", marginBottom: 14, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
-  locationMapVisual: { height: 160, backgroundColor: "#c8d8b0", alignItems: "center", justifyContent: "center", position: "relative" },
-  locationMapBg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(100,140,70,0.2)" },
-  locationPinWrap: { alignItems: "center", justifyContent: "center" },
-  locationPinDot: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", zIndex: 2 },
-  locationPinRing: { position: "absolute", width: 64, height: 64, borderRadius: 32, borderWidth: 2 },
-  locationStatusOverlay: { position: "absolute", top: 12, right: 12 },
-  statusPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusPillText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
-  locationDetails: { padding: 16, gap: 12 },
-  locationRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  locationRowIcon: { width: 30, height: 30, borderRadius: 8, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center", marginTop: 1 },
-  locationRowLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.child.textSub, marginBottom: 2 },
-  locationRowValue: { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.child.text },
-  locatingRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 8 },
-  locatingText: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub },
-  sharingCard: { backgroundColor: COLORS.child.bgCard, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
-  sharingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sharingTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.child.text, marginBottom: 3 },
-  sharingSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textSub },
-  toggleBtn: { width: 50, height: 28, borderRadius: 14, justifyContent: "center", paddingHorizontal: 2 },
-  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.white },
-  safeZoneItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: COLORS.child.bgCard, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
-  safeZoneIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center" },
-  safeZoneName: { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.child.text, flex: 1 },
-
-  // Gifts
+  // Gift shop
   giftBanner: { backgroundColor: COLORS.child.accent, borderRadius: 20, padding: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
   giftBannerTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.white, marginBottom: 4 },
   giftBannerSub: { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.8)" },
