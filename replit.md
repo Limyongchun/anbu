@@ -91,6 +91,21 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `artifacts/mobile` (`@workspace/mobile`)
+
+Expo React Native app called 마음잇기 (Heart Connection). Korean family connection app.
+
+- **Two modes**: Parent (dark navy, coral accent) and Child (warm off-white, terracotta accent)
+- **Screens**:
+  - `app/index.tsx` — Splash with floating orbs + pulsing hearts; auto-redirects to parent/child if already connected
+  - `app/setup.tsx` — Step-by-step family connection wizard: role → name → create code / enter code
+  - `app/parent.tsx` — Photo slideshow, real-time messages from DB, child GPS location display, floating hearts
+  - `app/child.tsx` — 3 tabs: 안부 (message sending), 위치 (real GPS with expo-location), 선물샵 (gift shop)
+- **Context**: `context/FamilyContext.tsx` — AsyncStorage-backed family state (code, deviceId, name, role)
+- **API client**: `lib/api.ts` — typed fetch client using `EXPO_PUBLIC_DOMAIN` env var
+- **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
+- **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

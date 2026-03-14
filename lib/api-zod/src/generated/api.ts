@@ -8,9 +8,213 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
+});
+
+/**
+ * @summary Create a new family group
+ */
+export const CreateFamilyBody = zod.object({
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  role: zod.enum(["parent", "child"]),
+});
+
+export const CreateFamilyResponse = zod.object({
+  code: zod.string(),
+  members: zod.array(
+    zod.object({
+      id: zod.number(),
+      familyCode: zod.string(),
+      deviceId: zod.string(),
+      memberName: zod.string(),
+      role: zod.enum(["parent", "child"]),
+      joinedAt: zod.string(),
+    }),
+  ),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Join an existing family group
+ */
+export const JoinFamilyBody = zod.object({
+  code: zod.string(),
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  role: zod.enum(["parent", "child"]),
+});
+
+export const JoinFamilyResponse = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  role: zod.enum(["parent", "child"]),
+  joinedAt: zod.string(),
+});
+
+/**
+ * @summary Get family group info
+ */
+export const GetFamilyParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const GetFamilyResponse = zod.object({
+  code: zod.string(),
+  members: zod.array(
+    zod.object({
+      id: zod.number(),
+      familyCode: zod.string(),
+      deviceId: zod.string(),
+      memberName: zod.string(),
+      role: zod.enum(["parent", "child"]),
+      joinedAt: zod.string(),
+    }),
+  ),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Get latest location for a family member
+ */
+export const GetFamilyLocationParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const GetFamilyLocationQueryParams = zod.object({
+  deviceId: zod.coerce.string(),
+});
+
+export const GetFamilyLocationResponse = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string().optional(),
+  accuracy: zod.number().optional(),
+  battery: zod.number().optional(),
+  isSharing: zod.boolean(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update device location
+ */
+export const UpdateLocationParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const UpdateLocationBody = zod.object({
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string().optional(),
+  accuracy: zod.number().optional(),
+  battery: zod.number().optional(),
+  isSharing: zod.boolean(),
+});
+
+export const UpdateLocationResponse = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string().optional(),
+  accuracy: zod.number().optional(),
+  battery: zod.number().optional(),
+  isSharing: zod.boolean(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Get all member locations in the family
+ */
+export const GetAllLocationsParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const GetAllLocationsResponseItem = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  deviceId: zod.string(),
+  memberName: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string().optional(),
+  accuracy: zod.number().optional(),
+  battery: zod.number().optional(),
+  isSharing: zod.boolean(),
+  updatedAt: zod.string(),
+});
+export const GetAllLocationsResponse = zod.array(GetAllLocationsResponseItem);
+
+/**
+ * @summary Get messages for the family
+ */
+export const GetFamilyMessagesParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const GetFamilyMessagesResponseItem = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  fromName: zod.string(),
+  fromRole: zod.string(),
+  text: zod.string(),
+  hearts: zod.number(),
+  createdAt: zod.string(),
+});
+export const GetFamilyMessagesResponse = zod.array(
+  GetFamilyMessagesResponseItem,
+);
+
+/**
+ * @summary Send a message to the family
+ */
+export const SendMessageParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const SendMessageBody = zod.object({
+  fromName: zod.string(),
+  fromRole: zod.string(),
+  text: zod.string(),
+});
+
+export const SendMessageResponse = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  fromName: zod.string(),
+  fromRole: zod.string(),
+  text: zod.string(),
+  hearts: zod.number(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Heart a message
+ */
+export const HeartMessageParams = zod.object({
+  code: zod.coerce.string(),
+  messageId: zod.coerce.number(),
+});
+
+export const HeartMessageResponse = zod.object({
+  id: zod.number(),
+  familyCode: zod.string(),
+  fromName: zod.string(),
+  fromRole: zod.string(),
+  text: zod.string(),
+  hearts: zod.number(),
+  createdAt: zod.string(),
 });

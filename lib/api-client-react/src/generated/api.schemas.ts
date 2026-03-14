@@ -8,3 +8,104 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export type CreateFamilyRequestRole =
+  (typeof CreateFamilyRequestRole)[keyof typeof CreateFamilyRequestRole];
+
+export const CreateFamilyRequestRole = {
+  parent: "parent",
+  child: "child",
+} as const;
+
+export interface CreateFamilyRequest {
+  deviceId: string;
+  memberName: string;
+  role: CreateFamilyRequestRole;
+}
+
+export type JoinFamilyRequestRole =
+  (typeof JoinFamilyRequestRole)[keyof typeof JoinFamilyRequestRole];
+
+export const JoinFamilyRequestRole = {
+  parent: "parent",
+  child: "child",
+} as const;
+
+export interface JoinFamilyRequest {
+  code: string;
+  deviceId: string;
+  memberName: string;
+  role: JoinFamilyRequestRole;
+}
+
+export type FamilyMemberRole =
+  (typeof FamilyMemberRole)[keyof typeof FamilyMemberRole];
+
+export const FamilyMemberRole = {
+  parent: "parent",
+  child: "child",
+} as const;
+
+export interface FamilyMember {
+  id: number;
+  familyCode: string;
+  deviceId: string;
+  memberName: string;
+  role: FamilyMemberRole;
+  joinedAt: string;
+}
+
+export interface FamilyGroup {
+  code: string;
+  members: FamilyMember[];
+  createdAt: string;
+}
+
+export interface LocationData {
+  id: number;
+  familyCode: string;
+  deviceId: string;
+  memberName: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  accuracy?: number;
+  battery?: number;
+  isSharing: boolean;
+  updatedAt: string;
+}
+
+export interface UpdateLocationRequest {
+  deviceId: string;
+  memberName: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  accuracy?: number;
+  battery?: number;
+  isSharing: boolean;
+}
+
+export interface FamilyMessage {
+  id: number;
+  familyCode: string;
+  fromName: string;
+  fromRole: string;
+  text: string;
+  hearts: number;
+  createdAt: string;
+}
+
+export interface SendMessageRequest {
+  fromName: string;
+  fromRole: string;
+  text: string;
+}
+
+export type GetFamilyLocationParams = {
+  deviceId: string;
+};

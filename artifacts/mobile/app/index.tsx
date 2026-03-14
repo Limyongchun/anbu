@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
+import { useFamilyContext } from "@/context/FamilyContext";
 
 const { width } = Dimensions.get("window");
 
@@ -84,6 +85,7 @@ function FloatingOrb({ x, y, size, color, delay }: { x: number; y: number; size:
 
 export default function SplashScreen() {
   const insets = useSafeAreaInsets();
+  const { isConnected, myRole, loading } = useFamilyContext();
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(30)).current;
 
@@ -93,6 +95,13 @@ export default function SplashScreen() {
       Animated.timing(slideUp, { toValue: 0, duration: 800, useNativeDriver: false }),
     ]).start();
   }, []);
+
+  // Auto-redirect if already connected
+  useEffect(() => {
+    if (!loading && isConnected && myRole) {
+      router.replace(myRole === "parent" ? "/parent" : "/child");
+    }
+  }, [loading, isConnected, myRole]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -125,37 +134,44 @@ export default function SplashScreen() {
         <View style={styles.divider} />
 
         <View style={styles.buttons}>
+          {/* Primary: Set up family connection */}
           <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnChild, { opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
-            onPress={() => router.push("/child")}
+            style={({ pressed }) => [styles.btn, styles.btnPrimary, { opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
+            onPress={() => router.push("/setup")}
           >
             <View style={styles.btnContent}>
               <View style={styles.btnIconWrap}>
-                <Ionicons name="people" size={22} color={COLORS.white} />
+                <Ionicons name="link" size={22} color={COLORS.white} />
               </View>
               <View style={styles.btnTextWrap}>
-                <Text style={styles.btnLabel}>자녀 화면으로</Text>
-                <Text style={styles.btnDesc}>안부 · 위치 · 선물 보내기</Text>
+                <Text style={styles.btnLabel}>가족 연결하기</Text>
+                <Text style={styles.btnDesc}>가족방 만들기 또는 코드로 참가</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
             </View>
           </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [styles.btn, styles.btnParent, { opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
-            onPress={() => router.push("/parent")}
-          >
-            <View style={styles.btnContent}>
-              <View style={[styles.btnIconWrap, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
-                <Ionicons name="home" size={22} color={COLORS.white} />
-              </View>
-              <View style={styles.btnTextWrap}>
-                <Text style={styles.btnLabel}>부모님 화면으로</Text>
-                <Text style={styles.btnDesc}>사진 · 안부 · 하트 반응하기</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+          {/* Secondary options */}
+          <View style={styles.demoRow}>
+            <Text style={styles.demoLabel}>미리보기</Text>
+            <View style={styles.demoBtns}>
+              <Pressable
+                style={({ pressed }) => [styles.demoBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => router.push("/child")}
+              >
+                <Ionicons name="people" size={16} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.demoBtnText}>자녀 화면</Text>
+              </Pressable>
+              <View style={styles.demoDivider} />
+              <Pressable
+                style={({ pressed }) => [styles.demoBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => router.push("/parent")}
+              >
+                <Ionicons name="home" size={16} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.demoBtnText}>부모님 화면</Text>
+              </Pressable>
             </View>
-          </Pressable>
+          </View>
         </View>
 
         <Text style={styles.footer}>가족과의 소중한 순간을 연결합니다</Text>
@@ -226,11 +242,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
   },
-  btnChild: {
+  btnPrimary: {
     backgroundColor: COLORS.coral,
-  },
-  btnParent: {
-    backgroundColor: "#3a5a8a",
   },
   btnContent: {
     flexDirection: "row",
@@ -260,6 +273,43 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.7)",
+  },
+  demoRow: {
+    width: "100%",
+    alignItems: "center",
+    gap: 10,
+  },
+  demoLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.35)",
+    letterSpacing: 1,
+  },
+  demoBtns: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    width: "100%",
+  },
+  demoBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+  },
+  demoBtnText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
+  },
+  demoDivider: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
   footer: {
     fontFamily: "Inter_400Regular",

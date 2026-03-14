@@ -1,0 +1,109 @@
+const BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface FamilyMember {
+  id: number;
+  familyCode: string;
+  deviceId: string;
+  memberName: string;
+  role: string;
+  joinedAt: string;
+}
+
+export interface FamilyGroup {
+  code: string;
+  members: FamilyMember[];
+  createdAt: string;
+}
+
+export interface LocationData {
+  id: number;
+  familyCode: string;
+  deviceId: string;
+  memberName: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  accuracy?: number;
+  battery?: number;
+  isSharing: boolean;
+  updatedAt: string;
+}
+
+export interface FamilyMessage {
+  id: number;
+  familyCode: string;
+  fromName: string;
+  fromRole: string;
+  text: string;
+  hearts: number;
+  createdAt: string;
+}
+
+export const api = {
+  createFamily: (deviceId: string, memberName: string, role: string): Promise<FamilyGroup> =>
+    request("/family/create", {
+      method: "POST",
+      body: JSON.stringify({ deviceId, memberName, role }),
+    }),
+
+  joinFamily: (code: string, deviceId: string, memberName: string, role: string): Promise<FamilyMember> =>
+    request("/family/join", {
+      method: "POST",
+      body: JSON.stringify({ code, deviceId, memberName, role }),
+    }),
+
+  getFamily: (code: string): Promise<FamilyGroup> =>
+    request(`/family/${code}`),
+
+  updateLocation: (
+    code: string,
+    data: {
+      deviceId: string;
+      memberName: string;
+      latitude: number;
+      longitude: number;
+      address?: string;
+      accuracy?: number;
+      battery?: number;
+      isSharing: boolean;
+    }
+  ): Promise<LocationData> =>
+    request(`/family/${code}/location`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  getAllLocations: (code: string): Promise<LocationData[]> =>
+    request(`/family/${code}/locations`),
+
+  getMessages: (code: string): Promise<FamilyMessage[]> =>
+    request(`/family/${code}/messages`),
+
+  sendMessage: (
+    code: string,
+    fromName: string,
+    fromRole: string,
+    text: string
+  ): Promise<FamilyMessage> =>
+    request(`/family/${code}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ fromName, fromRole, text }),
+    }),
+
+  heartMessage: (code: string, messageId: number): Promise<FamilyMessage> =>
+    request(`/family/${code}/messages/${messageId}/heart`, { method: "POST" }),
+};

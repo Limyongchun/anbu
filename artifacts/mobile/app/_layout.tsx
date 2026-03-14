@@ -13,17 +13,23 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { FamilyProvider } from "@/context/FamilyContext";
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 5000 },
+  },
+});
 
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="parent" options={{ headerShown: false, animation: "fade" }} />
-      <Stack.Screen name="child" options={{ headerShown: false, animation: "slide_from_right" }} />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="setup" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="parent" options={{ animation: "fade" }} />
+      <Stack.Screen name="child" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
@@ -48,9 +54,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
+          <FamilyProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </FamilyProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
