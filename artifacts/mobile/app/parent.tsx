@@ -30,49 +30,39 @@ const DEMO_PHOTOS = [
   { id: 3, url: "https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=600&q=80" },
 ];
 
-interface FloatingHeart {
-  id: number; x: number; delay: number; anim: Animated.Value;
-}
+interface FloatHeart { id: number; x: number; delay: number; anim: Animated.Value; }
 
-function HeartParticle({ heart }: { heart: FloatingHeart }) {
+function HeartParticle({ h }: { h: FloatHeart }) {
   useEffect(() => {
-    Animated.timing(heart.anim, { toValue: 1, duration: 1400, delay: heart.delay, useNativeDriver: false }).start();
+    Animated.timing(h.anim, { toValue: 1, duration: 1400, delay: h.delay, useNativeDriver: false }).start();
   }, []);
-  const translateY = heart.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -160] });
-  const opacity = heart.anim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.8, 0] });
-  const scale = heart.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.5, 1.3, 1.1] });
+  const ty = h.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -150] });
+  const op = h.anim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.8, 0] });
+  const sc = h.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.4, 1.3, 1.1] });
   return (
-    <Animated.View style={{ position: "absolute", left: `${heart.x}%` as any, bottom: "30%", transform: [{ translateY }, { scale }], opacity, zIndex: 9999 }}>
-      <Ionicons name="heart" size={28} color={COLORS.coral} />
+    <Animated.View style={{ position: "absolute", left: `${h.x}%` as any, bottom: "35%", transform: [{ translateY: ty }, { scale: sc }], opacity: op, zIndex: 9999 }}>
+      <Ionicons name="heart" size={26} color={COLORS.coral} />
     </Animated.View>
   );
 }
 
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "방금 전";
-  if (diffMin < 60) return `${diffMin}분 전`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}시간 전`;
-  return `${Math.floor(diffHr / 24)}일 전`;
+function formatTime(s: string): string {
+  const d = new Date(s), now = new Date();
+  const m = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (m < 1) return "방금 전";
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
 }
 
-function DevSwitcher() {
+function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
+  icon: keyof typeof Ionicons.glyphMap; size?: number; bg?: string; color?: string; onPress?: () => void; style?: object;
+}) {
   return (
-    <View style={devStyles.bar}>
-      <View style={devStyles.label}><Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.4)" /><Text style={devStyles.labelText}>개발 모드</Text></View>
-      <Pressable onPress={() => router.replace("/child")} style={({ pressed }) => [devStyles.btn, { opacity: pressed ? 0.7 : 1 }]}>
-        <Ionicons name="people" size={13} color="rgba(255,255,255,0.8)" />
-        <Text style={devStyles.btnText}>자녀 화면</Text>
-      </Pressable>
-      <Pressable onPress={() => router.replace("/")} style={({ pressed }) => [devStyles.btn, devStyles.btnHome, { opacity: pressed ? 0.7 : 1 }]}>
-        <Ionicons name="apps" size={13} color="rgba(255,255,255,0.8)" />
-        <Text style={devStyles.btnText}>홈</Text>
-      </Pressable>
-    </View>
+    <Pressable onPress={onPress} style={({ pressed }) => [{ width: 42, height: 42, borderRadius: 21, backgroundColor: bg ?? "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center", opacity: pressed ? 0.7 : 1 }, style]}>
+      <Ionicons name={icon} size={size} color={color ?? COLORS.white} />
+    </Pressable>
   );
 }
 
@@ -80,380 +70,342 @@ export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, myName, deviceId, isConnected } = useFamilyContext();
 
-  // UI state
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [heartedPhotos, setHeartedPhotos] = useState<Record<number, number>>({});
-  const [floatingHearts, setFloatingHearts] = useState<FloatingHeart[]>([]);
-  const [messages, setMessages] = useState<FamilyMessage[]>([]);
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const [hearts, setHearts] = useState<Record<number, number>>({});
+  const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
+  const [msgs, setMsgs] = useState<FamilyMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
 
-  // GPS sharing state
   const [permission, requestPermission] = Location.useForegroundPermissions();
   const [isSharing, setIsSharing] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
-  const [address, setAddress] = useState<string>("");
-  const [locationUploading, setLocationUploading] = useState(false);
+  const [currentLoc, setCurrentLoc] = useState<Location.LocationObject | null>(null);
+  const [address, setAddress] = useState("");
+  const [locUploading, setLocUploading] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
-  const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  // ── Photo slideshow ──
   useEffect(() => {
-    const iv = setInterval(() => setPhotoIndex(i => (i + 1) % DEMO_PHOTOS.length), 3500);
+    const iv = setInterval(() => setPhotoIdx(i => (i + 1) % DEMO_PHOTOS.length), 4000);
     return () => clearInterval(iv);
   }, []);
 
-  // ── Messages polling ──
-  const loadData = useCallback(async () => {
+  const loadMsgs = useCallback(async () => {
     if (!familyCode) return;
-    try { setMessages(await api.getMessages(familyCode)); } catch {}
+    try { setMsgs(await api.getMessages(familyCode)); } catch {}
   }, [familyCode]);
 
   useEffect(() => {
     if (!familyCode) return;
     setLoadingMsgs(true);
-    loadData().finally(() => setLoadingMsgs(false));
-    const iv = setInterval(loadData, 10000);
+    loadMsgs().finally(() => setLoadingMsgs(false));
+    const iv = setInterval(loadMsgs, 10000);
     return () => clearInterval(iv);
-  }, [familyCode, loadData]);
+  }, [familyCode, loadMsgs]);
 
-  // ── GPS location sharing ──
-  const uploadLocation = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
+  const uploadLoc = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
     if (!familyCode || !myName || !deviceId) return;
-    setLocationUploading(true);
+    setLocUploading(true);
     try {
       let addr = "";
       try {
         const geo = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        if (geo.length > 0) {
-          const g = geo[0];
-          addr = [g.city || g.district, g.street].filter(Boolean).join(" ");
-        }
+        if (geo.length > 0) { const g = geo[0]; addr = [g.city || g.district, g.street].filter(Boolean).join(" "); }
       } catch {}
       setAddress(addr);
-      await api.updateLocation(familyCode, {
-        deviceId, memberName: myName,
-        latitude: loc.coords.latitude, longitude: loc.coords.longitude,
-        address: addr, accuracy: loc.coords.accuracy ?? undefined, isSharing: sharing,
-      });
+      await api.updateLocation(familyCode, { deviceId, memberName: myName, latitude: loc.coords.latitude, longitude: loc.coords.longitude, address: addr, accuracy: loc.coords.accuracy ?? undefined, isSharing: sharing });
       setLastSynced(new Date());
     } catch {}
-    finally { setLocationUploading(false); }
+    finally { setLocUploading(false); }
   }, [familyCode, myName, deviceId]);
 
-  const startWatching = useCallback(async () => {
+  const startWatch = useCallback(async () => {
     if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; }
     try {
-      const sub = await Location.watchPositionAsync(
+      watchRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.Balanced, timeInterval: 20000, distanceInterval: 30 },
-        loc => { setCurrentLocation(loc); uploadLocation(loc, true); }
+        loc => { setCurrentLoc(loc); uploadLoc(loc, true); }
       );
-      watchRef.current = sub;
     } catch {}
-  }, [uploadLocation]);
+  }, [uploadLoc]);
 
   useEffect(() => {
     if (!permission) return;
-    if (!permission.granted) {
-      requestPermission();
-      return;
-    }
+    if (!permission.granted) { requestPermission(); return; }
     if (isSharing) {
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
-        .then(loc => { setCurrentLocation(loc); uploadLocation(loc, true); })
-        .catch(() => {});
-      startWatching();
-    } else if (watchRef.current) {
-      watchRef.current.remove();
-      watchRef.current = null;
-    }
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).then(l => { setCurrentLoc(l); uploadLoc(l, true); }).catch(() => {});
+      startWatch();
+    } else if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; }
     return () => { if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; } };
   }, [permission?.granted, isSharing]);
 
-  const toggleSharing = async () => {
-    const next = !isSharing;
-    setIsSharing(next);
-    if (currentLocation) await uploadLocation(currentLocation, next);
+  const toggleShare = async () => {
+    const next = !isSharing; setIsSharing(next);
+    if (currentLoc) await uploadLoc(currentLoc, next);
   };
 
-  // ── Heart animations ──
   const spawnHearts = useCallback(() => {
-    const hearts: FloatingHeart[] = Array.from({ length: 6 }, (_, i) => ({
-      id: Date.now() + i, x: Math.random() * 70 + 10, delay: i * 80, anim: new Animated.Value(0),
-    }));
-    setFloatingHearts(p => [...p, ...hearts]);
-    setTimeout(() => setFloatingHearts(p => p.filter(h => !hearts.some(n => n.id === h.id))), 1600);
+    const hs: FloatHeart[] = Array.from({ length: 6 }, (_, i) => ({ id: Date.now() + i, x: Math.random() * 70 + 10, delay: i * 80, anim: new Animated.Value(0) }));
+    setFloatHearts(p => [...p, ...hs]);
+    setTimeout(() => setFloatHearts(p => p.filter(h => !hs.some(n => n.id === h.id))), 1600);
   }, []);
 
-  const heartMessage = async (msg: FamilyMessage) => {
+  const heartMsg = async (msg: FamilyMessage) => {
     spawnHearts();
     if (!familyCode) return;
     try {
-      const updated = await api.heartMessage(familyCode, msg.id);
-      setMessages(p => p.map(m => m.id === updated.id ? updated : m));
+      const u = await api.heartMessage(familyCode, msg.id);
+      setMsgs(p => p.map(m => m.id === u.id ? u : m));
     } catch {
-      setMessages(p => p.map(m => m.id === msg.id ? { ...m, hearts: m.hearts + 1 } : m));
+      setMsgs(p => p.map(m => m.id === msg.id ? { ...m, hearts: m.hearts + 1 } : m));
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
-      {/* Floating hearts overlay */}
-      {floatingHearts.map(h => <HeartParticle key={h.id} heart={h} />)}
+    <View style={{ flex: 1, backgroundColor: COLORS.mapBg }}>
+      {floatHearts.map(h => <HeartParticle key={h.id} h={h} />)}
 
-      {/* Photo viewer modal */}
+      {/* Photo viewer */}
       <Modal visible={!!viewerUri} transparent animationType="fade" onRequestClose={() => setViewerUri(null)}>
-        <View style={styles.viewerOverlay}>
-          <Pressable style={styles.viewerClose} onPress={() => setViewerUri(null)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.96)", alignItems: "center", justifyContent: "center" }}>
+          <Pressable style={{ position: "absolute", top: 54, right: 20, zIndex: 10 }} onPress={() => setViewerUri(null)}>
             <Ionicons name="close-circle" size={36} color={COLORS.white} />
           </Pressable>
-          {viewerUri && <Image source={{ uri: viewerUri }} style={[styles.viewerImg, { height: height * 0.72 }]} resizeMode="contain" />}
+          {viewerUri && <Image source={{ uri: viewerUri }} style={{ width: "100%", height: height * 0.72, borderRadius: 16 }} resizeMode="contain" />}
         </View>
       </Modal>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>DUGO</Text>
-          {myName && <Text style={styles.headerSub}>{myName} · 부모님 화면</Text>}
+      {/* ── 상단 헤더 ── */}
+      <View style={[s.header, { paddingTop: topInset + 14 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.logo}>DUGO</Text>
+          {myName && <Text style={s.logoSub}>{myName} · 부모님</Text>}
         </View>
-        <View style={styles.headerRight}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {isConnected && familyCode && (
-            <View style={styles.codeChip}>
-              <Ionicons name="link" size={11} color={COLORS.coral} />
-              <Text style={styles.codeChipText}>{familyCode}</Text>
+            <View style={s.codeChip}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.neon }} />
+              <Text style={s.codeText}>{familyCode}</Text>
             </View>
           )}
-          <Pressable onPress={() => router.replace("/")} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={18} color={COLORS.parent.textSub} />
-            <Text style={styles.backBtnText}>나가기</Text>
-          </Pressable>
+          <CircleBtn icon="chevron-back" bg="rgba(255,255,255,0.08)" onPress={() => router.replace("/")} />
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 24 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomInset + 32 }}>
 
         {/* ── GPS 공유 카드 ── */}
-        <View style={styles.gpsCard}>
-          <View style={styles.gpsCardHeader}>
-            <View style={styles.gpsIconWrap}>
-              <Ionicons name="location" size={22} color={isSharing ? "#4ade80" : COLORS.parent.textMuted} />
+        <View style={s.gpsCard}>
+          <View style={s.gpsCardLeft}>
+            <View style={[s.gpsIcon, { backgroundColor: isSharing ? "rgba(212,242,0,0.15)" : "rgba(255,255,255,0.07)" }]}>
+              <Ionicons name="location" size={20} color={isSharing ? COLORS.neon : "rgba(255,255,255,0.4)"} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.gpsCardTitle}>내 위치 공유</Text>
-              <Text style={styles.gpsCardSub}>
+              <Text style={s.gpsTitle}>내 위치 공유</Text>
+              <Text style={s.gpsSub} numberOfLines={1}>
                 {permission?.granted
                   ? isSharing
-                    ? (currentLocation ? (address || `위도 ${currentLocation.coords.latitude.toFixed(4)}`) : "위치 확인 중...")
-                    : "위치 공유가 중지되었습니다"
+                    ? (address || (currentLoc ? `${currentLoc.coords.latitude.toFixed(4)}, ${currentLoc.coords.longitude.toFixed(4)}` : "위치 확인 중..."))
+                    : "공유 중지됨"
                   : "위치 권한이 필요합니다"}
               </Text>
             </View>
-            {locationUploading && <ActivityIndicator size="small" color="#4ade80" style={{ marginRight: 8 }} />}
-            {lastSynced && isSharing && (
-              <Text style={styles.syncTime}>{formatTime(lastSynced.toISOString())}</Text>
-            )}
-            {/* Toggle */}
-            {permission?.granted ? (
-              <Pressable onPress={toggleSharing} style={[styles.toggleBtn, { backgroundColor: isSharing ? "#4ade80" : "#555" }]}>
-                <View style={[styles.toggleKnob, { transform: [{ translateX: isSharing ? 22 : 2 }] }]} />
-              </Pressable>
-            ) : (
-              <Pressable onPress={requestPermission} style={styles.permBtn}>
-                <Text style={styles.permBtnText}>허용</Text>
-              </Pressable>
-            )}
+            {locUploading && <ActivityIndicator size="small" color={COLORS.neon} style={{ marginRight: 6 }} />}
+            {lastSynced && isSharing && <Text style={s.syncTime}>{formatTime(lastSynced.toISOString())}</Text>}
           </View>
 
-          {permission?.granted && isSharing && (
-            <View style={[styles.gpsStatus, { backgroundColor: "rgba(74,222,128,0.1)" }]}>
-              <View style={styles.gpsStatusDot} />
-              <Text style={styles.gpsStatusText}>자녀가 내 위치를 확인할 수 있어요</Text>
-            </View>
-          )}
-          {!permission?.granted && !permission?.canAskAgain && Platform.OS !== "web" && (
-            <Pressable onPress={() => { try { Linking.openSettings(); } catch {} }} style={styles.settingsBtn}>
-              <Text style={styles.settingsBtnText}>설정에서 위치 권한 허용하기</Text>
+          {permission?.granted ? (
+            <Pressable onPress={toggleShare} style={[s.toggle, { backgroundColor: isSharing ? COLORS.neon : "rgba(255,255,255,0.12)" }]}>
+              <View style={[s.toggleKnob, { transform: [{ translateX: isSharing ? 22 : 2 }] }]} />
             </Pressable>
+          ) : (
+            <Pressable onPress={requestPermission} style={s.permBtn}>
+              <Text style={s.permBtnText}>허용</Text>
+            </Pressable>
+          )}
+
+          {permission?.granted && isSharing && (
+            <View style={s.gpsActiveBar}>
+              <View style={s.gpsActiveDot} />
+              <Text style={s.gpsActiveText}>자녀가 내 위치를 실시간으로 확인하고 있어요</Text>
+            </View>
           )}
         </View>
 
         {/* ── 사진 슬라이드쇼 ── */}
-        <View style={styles.photoCard}>
-          <Animated.Image source={{ uri: DEMO_PHOTOS[photoIndex].url }} style={styles.photoImage} resizeMode="cover" />
-          <View style={styles.photoOverlay} />
-          <View style={styles.photoBottom}>
-            <View style={styles.photoCaptionRow}>
-              <View style={styles.senderBadge}><Ionicons name="image" size={14} color={COLORS.white} /></View>
+        <View style={s.photoCard}>
+          <Animated.Image source={{ uri: DEMO_PHOTOS[photoIdx].url }} style={s.photoImg} resizeMode="cover" />
+          <View style={s.photoGrad} />
+          <View style={s.photoBottom}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+              <View style={s.photoAvatar}><Ionicons name="image" size={14} color={COLORS.white} /></View>
               <View>
-                <Text style={styles.photoCaption}>자녀가 보낸 사진</Text>
-                <Text style={styles.photoTime}>슬라이드쇼</Text>
+                <Text style={s.photoCaption}>자녀가 보낸 사진</Text>
+                <Text style={s.photoTime}>슬라이드쇼</Text>
               </View>
             </View>
-            <Pressable onPress={() => { setHeartedPhotos(p => ({ ...p, [photoIndex]: (p[photoIndex] || 0) + 1 })); spawnHearts(); }} style={styles.heartBtn}>
-              <Ionicons name="heart" size={20} color={(heartedPhotos[photoIndex] || 0) > 0 ? COLORS.coral : "rgba(255,255,255,0.6)"} />
-              {(heartedPhotos[photoIndex] || 0) > 0 && <Text style={styles.heartCount}>{heartedPhotos[photoIndex]}</Text>}
+            <Pressable onPress={() => { setHearts(p => ({ ...p, [photoIdx]: (p[photoIdx] || 0) + 1 })); spawnHearts(); }} style={s.heartBtn}>
+              <Ionicons name="heart" size={18} color={(hearts[photoIdx] || 0) > 0 ? COLORS.coral : "rgba(255,255,255,0.5)"} />
+              {(hearts[photoIdx] || 0) > 0 && <Text style={s.heartCount}>{hearts[photoIdx]}</Text>}
             </Pressable>
           </View>
-          <View style={styles.indicators}>
+          <View style={s.dots}>
             {DEMO_PHOTOS.map((_, i) => (
-              <Pressable key={i} onPress={() => setPhotoIndex(i)}
-                style={[styles.indicator, { width: i === photoIndex ? 22 : 7, backgroundColor: i === photoIndex ? COLORS.white : "rgba(255,255,255,0.35)" }]}
+              <Pressable key={i} onPress={() => setPhotoIdx(i)}
+                style={[s.dot, { width: i === photoIdx ? 20 : 6, backgroundColor: i === photoIdx ? COLORS.neon : "rgba(255,255,255,0.3)" }]}
               />
             ))}
           </View>
         </View>
 
-        {/* ── 자녀들의 안부 ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>자녀들의 안부</Text>
-            <View style={styles.liveChip}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>실시간</Text>
-            </View>
+        {/* ── 안부 섹션 헤더 ── */}
+        <View style={s.sectionRow}>
+          <View style={s.sectionPill}><Text style={s.sectionPillText}>실시간</Text></View>
+          <Text style={s.sectionTitle}>안부 메시지</Text>
+          <View style={{ flex: 1 }} />
+          <View style={s.liveDot} />
+          <Text style={s.liveText}>Live</Text>
+        </View>
+
+        {loadingMsgs && <ActivityIndicator color={COLORS.neon} style={{ marginVertical: 20 }} />}
+
+        {!loadingMsgs && msgs.length === 0 && (
+          <View style={s.emptyCard}>
+            <Ionicons name="chatbubble-outline" size={28} color="rgba(255,255,255,0.25)" />
+            <Text style={s.emptyText}>
+              {isConnected ? "자녀에게 코드를 공유해보세요" : "가족 연결 후 안부가 표시됩니다"}
+            </Text>
+            {!isConnected && (
+              <Pressable style={s.connectBtn} onPress={() => router.push("/setup")}>
+                <Text style={s.connectBtnText}>가족 연결하기</Text>
+              </Pressable>
+            )}
           </View>
+        )}
 
-          {loadingMsgs && <View style={styles.loadingRow}><ActivityIndicator size="small" color={COLORS.parent.textSub} /></View>}
-
-          {!loadingMsgs && messages.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Ionicons name="mail-outline" size={32} color={COLORS.parent.textMuted} />
-              <Text style={styles.emptyText}>
-                {isConnected ? "자녀에게 연결 코드를 공유해보세요" : "가족 연결 후 안부 메시지가 표시됩니다"}
-              </Text>
-              {!isConnected && (
-                <Pressable style={styles.setupBtn} onPress={() => router.push("/setup")}>
-                  <Text style={styles.setupBtnText}>가족 연결하기</Text>
-                </Pressable>
+        {msgs.map((msg, idx) => {
+          const isFirst = idx === 0;
+          return (
+            <View key={msg.id} style={[s.msgCard, isFirst && s.msgCardNeon]}>
+              {isFirst && (
+                <>
+                  <View style={s.deco1} /><View style={s.deco2} /><View style={s.deco3} />
+                </>
               )}
-            </View>
-          )}
-
-          {messages.map(msg => (
-            <View key={msg.id} style={styles.msgCard}>
-              <View style={styles.msgCardTop}>
-                <View style={styles.msgAvatar}>
-                  <Text style={styles.msgAvatarText}>{msg.fromName[0]}</Text>
+              <View style={s.msgTop}>
+                <View style={[s.msgAvatar, isFirst && s.msgAvatarDark]}>
+                  <Text style={[s.msgAvatarText, isFirst && { color: COLORS.neonText }]}>{msg.fromName[0]}</Text>
                 </View>
-                <View style={styles.msgBody}>
-                  <Text style={styles.msgSender}>{msg.fromName} · {formatTime(msg.createdAt)}</Text>
-                  {!!msg.text && <Text style={styles.msgText}>{msg.text}</Text>}
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.msgName, isFirst && { color: COLORS.neonText }]}>{msg.fromName}</Text>
+                  <Text style={[s.msgTime, isFirst && { color: "rgba(26,37,53,0.6)" }]}>{formatTime(msg.createdAt)}</Text>
                 </View>
-                <Pressable onPress={() => heartMessage(msg)} style={styles.msgHeartBtn}>
-                  <Ionicons name="heart" size={22} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.3)"} />
-                  <Text style={styles.msgHeartCount}>{msg.hearts}</Text>
+                <Pressable onPress={() => heartMsg(msg)} style={s.msgHeartBtn}>
+                  <Ionicons name="heart" size={20} color={msg.hearts > 0 ? COLORS.coral : (isFirst ? "rgba(26,37,53,0.3)" : "rgba(255,255,255,0.2)")} />
+                  {msg.hearts > 0 && <Text style={[s.msgHeartN, isFirst && { color: COLORS.neonText }]}>{msg.hearts}</Text>}
                 </Pressable>
               </View>
+              {!!msg.text && (
+                <Text style={[s.msgText, isFirst && { color: COLORS.neonText }]}>{msg.text}</Text>
+              )}
               {msg.photoData && (
-                <Pressable onPress={() => setViewerUri(msg.photoData!)} style={styles.msgPhotoWrap}>
-                  <Image source={{ uri: msg.photoData }} style={styles.msgPhoto} resizeMode="cover" />
-                  <View style={styles.msgPhotoOverlay}>
-                    <Ionicons name="expand" size={16} color={COLORS.white} />
-                    <Text style={styles.msgPhotoHint}>탭하면 크게 볼 수 있어요</Text>
-                  </View>
+                <Pressable onPress={() => setViewerUri(msg.photoData!)} style={{ marginTop: 10, borderRadius: 16, overflow: "hidden" }}>
+                  <Image source={{ uri: msg.photoData }} style={{ width: "100%", height: 200, borderRadius: 16 }} resizeMode="cover" />
                 </Pressable>
               )}
             </View>
-          ))}
-        </View>
+          );
+        })}
       </ScrollView>
 
-      <DevSwitcher />
+      {/* ── 개발 스위처 ── */}
+      <View style={dev.bar}>
+        <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
+        <Text style={dev.label}>개발 모드</Text>
+        <Pressable onPress={() => router.replace("/child")} style={dev.btn}>
+          <Ionicons name="people" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>자녀 화면</Text>
+        </Pressable>
+        <Pressable onPress={() => router.replace("/")} style={[dev.btn, dev.btnAlt]}>
+          <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>홈</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.parent.bg },
-
-  // Header
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingHorizontal: 20, paddingVertical: 14 },
-  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.parent.text, letterSpacing: 2 },
-  headerSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.parent.textSub, marginTop: 2 },
-  headerRight: { flexDirection: "column", alignItems: "flex-end", gap: 6 },
-  codeChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(232,133,106,0.12)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(232,133,106,0.2)" },
-  codeChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.coral, letterSpacing: 1 },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
-  backBtnText: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.parent.textSub },
-
-  // Scroll
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16 },
+const s = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 20, paddingBottom: 16 },
+  logo: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white, letterSpacing: 3, marginBottom: 2 },
+  logoSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)" },
+  codeChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
+  codeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.neon, letterSpacing: 1 },
 
   // GPS card
-  gpsCard: { backgroundColor: COLORS.parent.bgCard, borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.parent.bgCardBorder },
-  gpsCardHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  gpsIconWrap: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(74,222,128,0.1)", alignItems: "center", justifyContent: "center" },
-  gpsCardTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.parent.text, marginBottom: 3 },
-  gpsCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.parent.textSub, flexShrink: 1 },
-  syncTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.parent.textMuted },
-  toggleBtn: { width: 50, height: 28, borderRadius: 14, justifyContent: "center", paddingHorizontal: 2 },
-  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.white },
-  permBtn: { backgroundColor: COLORS.coral, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  permBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.white },
-  gpsStatus: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, padding: 10, marginTop: 12 },
-  gpsStatusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#4ade80" },
-  gpsStatusText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "#4ade80" },
-  settingsBtn: { marginTop: 10, alignItems: "center" },
-  settingsBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.coral },
+  gpsCard: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 24, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", overflow: "hidden" },
+  gpsCardLeft: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 0 },
+  gpsIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  gpsTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.white, marginBottom: 3 },
+  gpsSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)", flex: 1 },
+  syncTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.3)" },
+  toggle: { width: 50, height: 28, borderRadius: 14, justifyContent: "center", paddingHorizontal: 2, marginLeft: "auto" as any },
+  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.mapBg },
+  permBtn: { backgroundColor: COLORS.neon, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 14, marginLeft: "auto" as any },
+  permBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.neonText },
+  gpsActiveBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(212,242,0,0.08)", borderRadius: 12, padding: 10, marginTop: 12 },
+  gpsActiveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
+  gpsActiveText: { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.neon, flex: 1 },
 
-  // Photo slideshow
-  photoCard: { borderRadius: 24, overflow: "hidden", height: Math.min(width * 0.7, 340), backgroundColor: "#111", marginBottom: 20, position: "relative" },
-  photoImage: { width: "100%", height: "100%" },
-  photoOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, height: "55%", backgroundColor: "rgba(0,0,0,0.5)" },
-  photoBottom: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", padding: 18 },
-  photoCaptionRow: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  senderBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.coral, alignItems: "center", justifyContent: "center" },
+  // Photo
+  photoCard: { borderRadius: 24, overflow: "hidden", height: Math.min(width * 0.7, 320), backgroundColor: "#111", marginBottom: 24, position: "relative" },
+  photoImg: { width: "100%", height: "100%" },
+  photoGrad: { position: "absolute", bottom: 0, left: 0, right: 0, height: "60%", backgroundColor: "rgba(0,0,0,0.55)" },
+  photoBottom: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", alignItems: "flex-end", padding: 18 },
+  photoAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(212,242,0,0.25)", alignItems: "center", justifyContent: "center" },
   photoCaption: { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.white, marginBottom: 2 },
-  photoTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.6)" },
-  heartBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", borderRadius: 30, paddingHorizontal: 14, paddingVertical: 8 },
+  photoTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)" },
+  heartBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 30, paddingHorizontal: 12, paddingVertical: 8 },
   heartCount: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.white },
-  indicators: { position: "absolute", top: 14, right: 16, flexDirection: "row", alignItems: "center", gap: 5 },
-  indicator: { height: 6, borderRadius: 3 },
+  dots: { position: "absolute", top: 14, right: 16, flexDirection: "row", alignItems: "center", gap: 5 },
+  dot: { height: 6, borderRadius: 3 },
 
-  // Messages section
-  section: { marginBottom: 20 },
-  sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, paddingHorizontal: 4 },
-  sectionTitle: { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.parent.textSub, letterSpacing: 2, textTransform: "uppercase" },
-  liveChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(74,222,128,0.12)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: "rgba(74,222,128,0.2)" },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#4ade80" },
-  liveText: { fontFamily: "Inter_500Medium", fontSize: 11, color: "#4ade80" },
-  loadingRow: { alignItems: "center", padding: 20 },
-  emptyCard: { alignItems: "center", backgroundColor: COLORS.parent.bgCard, borderRadius: 20, padding: 32, borderWidth: 1, borderColor: COLORS.parent.bgCardBorder, gap: 10 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.parent.textMuted, textAlign: "center" },
-  setupBtn: { backgroundColor: COLORS.coral, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginTop: 4 },
-  setupBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.white },
+  // Section
+  sectionRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14, paddingHorizontal: 2 },
+  sectionPill: { backgroundColor: COLORS.navPill, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  sectionPillText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "rgba(255,255,255,0.7)" },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.white },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
+  liveText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.neon },
+
+  // Empty
+  emptyCard: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 24, padding: 32, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)", gap: 10 },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center" },
+  connectBtn: { backgroundColor: COLORS.neon, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 50, marginTop: 4 },
+  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.neonText },
 
   // Message cards
-  msgCard: { backgroundColor: COLORS.parent.bgCard, borderWidth: 1, borderColor: COLORS.parent.bgCardBorder, borderRadius: 20, padding: 16, marginBottom: 12, overflow: "hidden" },
-  msgCardTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  msgCard: { backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", borderRadius: 24, padding: 18, marginBottom: 12, overflow: "hidden" },
+  msgCardNeon: { backgroundColor: COLORS.neon, borderColor: "transparent" },
+  deco1: { position: "absolute", right: -28, top: -28, width: 120, height: 120, borderRadius: 60, borderWidth: 20, borderColor: "rgba(0,0,0,0.06)" },
+  deco2: { position: "absolute", right: -65, top: -65, width: 200, height: 200, borderRadius: 100, borderWidth: 20, borderColor: "rgba(0,0,0,0.04)" },
+  deco3: { position: "absolute", right: -100, top: -100, width: 280, height: 280, borderRadius: 140, borderWidth: 20, borderColor: "rgba(0,0,0,0.025)" },
+  msgTop: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   msgAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.coral, alignItems: "center", justifyContent: "center" },
-  msgAvatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.white },
-  msgBody: { flex: 1 },
-  msgSender: { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.coral, marginBottom: 5 },
-  msgText: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.parent.text, lineHeight: 22 },
-  msgHeartBtn: { alignItems: "center", paddingTop: 2, gap: 3 },
-  msgHeartCount: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.coral },
-  msgPhotoWrap: { marginTop: 12, borderRadius: 14, overflow: "hidden", position: "relative" },
-  msgPhoto: { width: "100%", height: 200, borderRadius: 14 },
-  msgPhotoOverlay: { position: "absolute", bottom: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  msgPhotoHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.white },
-
-  // Photo viewer
-  viewerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
-  viewerClose: { position: "absolute", top: 54, right: 20, zIndex: 10 },
-  viewerImg: { width: "100%", borderRadius: 16 },
+  msgAvatarDark: { backgroundColor: "rgba(0,0,0,0.15)" },
+  msgAvatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
+  msgName: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 2 },
+  msgTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.4)" },
+  msgHeartBtn: { alignItems: "center", gap: 3 },
+  msgHeartN: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.coral },
+  msgText: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.white, lineHeight: 22 },
 });
 
-const devStyles = StyleSheet.create({
-  bar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
-  label: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: 4 },
-  labelText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)" },
+const dev = StyleSheet.create({
+  bar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  label: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)", marginRight: 4 },
   btn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  btnHome: { backgroundColor: "rgba(232,133,106,0.18)", borderColor: "rgba(232,133,106,0.25)" },
+  btnAlt: { backgroundColor: "rgba(212,242,0,0.15)", borderColor: "rgba(212,242,0,0.25)" },
   btnText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.75)" },
 });
