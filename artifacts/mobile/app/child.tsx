@@ -229,19 +229,26 @@ function MapScreen({ familyCode, topInset, navH }: { familyCode: string | null; 
       {/* ── 부모님 정보 카드 ── */}
       {parentLoc && (
         <Animated.View style={[map.infoCard, { transform: [{ translateY: cardAnim }], opacity: cardAlpha, bottom: navH + 24 }]}>
-          <View style={map.infoRow}>
-            <View style={[map.statusDot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
-            <Text style={map.infoStatus}>{isRecent ? "안전 · 실시간 공유 중" : `${minsAgo}분 전 업데이트`}</Text>
-            <View style={{ flex: 1 }} />
-            {/* 아이콘 액션 */}
-            <CircleBtn icon="call"     size={17} bg="rgba(212,242,0,0.15)" color={COLORS.neon}             style={{ width: 38, height: 38, borderRadius: 19 }} onPress={() => Linking.openURL("tel:")} />
-            <CircleBtn icon="navigate" size={17} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.8)"  style={{ width: 38, height: 38, borderRadius: 19 }} onPress={openMaps} />
-            <CircleBtn icon="refresh"  size={17} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.5)"  style={{ width: 38, height: 38, borderRadius: 19 }} onPress={load} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            {/* 왼쪽: 이름 + 주소 */}
+            <View style={{ flex: 1 }}>
+              <View style={map.infoRow}>
+                <View style={[map.statusDot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
+                <Text style={map.infoStatus}>{isRecent ? "안전 · 실시간" : `${minsAgo}분 전`}</Text>
+              </View>
+              <Text style={map.infoName}>{parentLoc.memberName}</Text>
+              <Text style={map.infoAddress} numberOfLines={2}>
+                {parentLoc.address || `${lat.toFixed(5)}, ${lon.toFixed(5)}`}
+                {parentLoc.accuracy != null ? `  ±${Math.round(parentLoc.accuracy)}m` : ""}
+              </Text>
+            </View>
+            {/* 오른쪽: 아이콘 버튼 세로 정렬 */}
+            <View style={{ alignItems: "center", gap: 8 }}>
+              <CircleBtn icon="call"     size={17} bg="rgba(212,242,0,0.18)" color={COLORS.neon}            style={{ width: 40, height: 40, borderRadius: 20 }} onPress={() => Linking.openURL("tel:")} />
+              <CircleBtn icon="navigate" size={17} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.8)" style={{ width: 40, height: 40, borderRadius: 20 }} onPress={openMaps} />
+              <CircleBtn icon="refresh"  size={17} bg="rgba(255,255,255,0.08)" color="rgba(255,255,255,0.45)" style={{ width: 40, height: 40, borderRadius: 20 }} onPress={load} />
+            </View>
           </View>
-          <Text style={map.infoAddress} numberOfLines={1}>
-            <Ionicons name="location" size={12} color={COLORS.neon} /> {"  "}{parentLoc.address || `${lat.toFixed(5)}, ${lon.toFixed(5)}`}
-            {parentLoc.accuracy != null ? `  ±${Math.round(parentLoc.accuracy)}m` : ""}
-          </Text>
         </Animated.View>
       )}
     </View>
@@ -607,21 +614,6 @@ function GiftScreen({ topInset }: { topInset: number }) {
   );
 }
 
-// ─── 개발 스위처 ──────────────────────────────────────────────────────────────
-function DevBar() {
-  return (
-    <View style={dev.bar}>
-      <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
-      <Text style={dev.label}>개발 모드</Text>
-      <Pressable onPress={() => router.replace("/parent")} style={dev.btn}>
-        <Ionicons name="home" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>부모님</Text>
-      </Pressable>
-      <Pressable onPress={() => router.replace("/")} style={[dev.btn, dev.btnAlt]}>
-        <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>홈</Text>
-      </Pressable>
-    </View>
-  );
-}
 
 // ─── 메인 ─────────────────────────────────────────────────────────────────────
 export default function ChildScreen() {
@@ -629,24 +621,31 @@ export default function ChildScreen() {
   const { familyCode, myName, myRole, deviceId, isConnected } = useFamilyContext();
   const [tab, setTab] = useState<Tab>("지도");
 
-  const topInset = Platform.OS === "web" ? 0 : insets.top;
+  const topInset    = Platform.OS === "web" ? 0  : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  // Height of the floating nav pill + dev bar
-  const NAV_H = 70 + bottomInset;
+  // 플로팅 네비 높이: 피쳐(70) + 개발바(34) + safe area
+  const NAV_H = 70 + 34 + bottomInset;
 
   const isMap = tab === "지도";
 
   return (
     <View style={{ flex: 1, backgroundColor: isMap ? COLORS.mapBg : COLORS.bg }}>
-      {/* ── 콘텐츠 ── */}
-      <View style={{ flex: 1, position: "relative" }}>
-        {isMap && <MapScreen familyCode={familyCode} topInset={topInset} navH={NAV_H} />}
-        {tab === "안부" && <AnbuScreen familyCode={familyCode} myName={myName} myRole={myRole} deviceId={deviceId} topInset={topInset} />}
-        {tab === "선물샵" && <GiftScreen topInset={topInset} />}
 
-        {/* ── 최상단 로고 바 (지도 아닐 때만 고정 bg) ── */}
-        {!isMap && (
+      {/* ══ 지도 탭: 진짜 전체화면 ══ */}
+      {isMap && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <MapScreen familyCode={familyCode} topInset={topInset} navH={NAV_H} />
+        </View>
+      )}
+
+      {/* ══ 비지도 탭: 일반 스크롤 화면 ══ */}
+      {!isMap && (
+        <View style={{ flex: 1 }}>
+          {tab === "안부"   && <AnbuScreen familyCode={familyCode} myName={myName} myRole={myRole} deviceId={deviceId} topInset={topInset} />}
+          {tab === "선물샵" && <GiftScreen topInset={topInset} />}
+
+          {/* 상단 로고 바 */}
           <View style={[top.bar, { paddingTop: topInset + 14, backgroundColor: COLORS.bg }]}>
             <Text style={top.logo}>DUGO</Text>
             <View style={{ flex: 1 }} />
@@ -656,25 +655,40 @@ export default function ChildScreen() {
                 <Text style={top.chipText}>{familyCode}</Text>
               </View>
             )}
-            <CircleBtn icon="chevron-back" size={16} bg="rgba(0,0,0,0.07)" color={COLORS.textMid} style={{ width: 38, height: 38, borderRadius: 19, marginLeft: 8 }} onPress={() => router.replace("/")} />
+            <CircleBtn icon="chevron-back" size={16} bg="rgba(0,0,0,0.07)" color={COLORS.textMid}
+              style={{ width: 38, height: 38, borderRadius: 19, marginLeft: 8 }} onPress={() => router.replace("/")} />
           </View>
-        )}
+        </View>
+      )}
 
-        {/* 지도 탭의 나가기 버튼 */}
-        {isMap && (
-          <View style={[top.bar, { paddingTop: topInset + 14, backgroundColor: "transparent" }]} pointerEvents="box-none">
-            <View style={{ flex: 1 }} />
-            <CircleBtn icon="chevron-back" size={16} bg="rgba(26,34,48,0.7)" color={COLORS.white} style={{ width: 38, height: 38, borderRadius: 19 }} onPress={() => router.replace("/")} />
-          </View>
-        )}
-      </View>
-
-      {/* ── 플로팅 필 네비 ── */}
-      <View style={[nav.wrap, { paddingBottom: bottomInset + 8 }, isMap && nav.wrapMap]}>
+      {/* ══ 플로팅 필 네비 — 지도 탭에서는 absolutePositioned ══ */}
+      <View style={[
+        nav.wrap,
+        { paddingBottom: bottomInset + 8 },
+        isMap && { position: "absolute", bottom: 34, left: 0, right: 0, backgroundColor: "transparent", borderTopWidth: 0 },
+      ]}>
         <FloatNav active={tab} onChange={setTab} />
       </View>
 
-      <DevBar />
+      {/* ══ 개발 스위처 — 항상 맨 아래 절대 위치 ══ */}
+      <View style={[dev.bar, { position: "absolute", bottom: 0, left: 0, right: 0 }]}>
+        <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
+        <Text style={dev.label}>개발 모드</Text>
+        <Pressable onPress={() => router.replace("/parent")} style={dev.btn}>
+          <Ionicons name="home" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>부모님</Text>
+        </Pressable>
+        <Pressable onPress={() => router.replace("/")} style={[dev.btn, dev.btnAlt]}>
+          <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>홈</Text>
+        </Pressable>
+      </View>
+
+      {/* 지도 탭 나가기 버튼 (우측 상단) */}
+      {isMap && (
+        <View style={{ position: "absolute", top: topInset + 14, right: 16, zIndex: 300 }}>
+          <CircleBtn icon="chevron-back" size={16} bg="rgba(26,34,48,0.75)" color={COLORS.white}
+            style={{ width: 40, height: 40, borderRadius: 20 }} onPress={() => router.replace("/")} />
+        </View>
+      )}
     </View>
   );
 }
@@ -711,10 +725,11 @@ const map = StyleSheet.create({
   emptyBtn: { backgroundColor: COLORS.neon, paddingHorizontal: 22, paddingVertical: 11, borderRadius: 22 },
   emptyBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.neonText },
   infoCard: { position: "absolute", left: 16, right: 16, backgroundColor: "rgba(26,34,48,0.88)", borderRadius: 22, padding: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)" },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  statusDot: { width: 9, height: 9, borderRadius: 5 },
-  infoStatus: { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.8)" },
-  infoAddress: { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.55)", paddingLeft: 2 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  infoStatus: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.65)" },
+  infoName: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.white, marginBottom: 4 },
+  infoAddress: { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 18 },
 });
 
 const anbu = StyleSheet.create({
