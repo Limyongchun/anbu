@@ -1,0 +1,302 @@
+import { useState, useEffect, useRef } from "react";
+
+const photos = [
+  { id: 1, url: "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=600&q=80", caption: "민준이가 보냈어요 💕", sender: "민준" },
+  { id: 2, url: "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=600&q=80", caption: "지은이가 보냈어요 🌸", sender: "지은" },
+  { id: 3, url: "https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=600&q=80", caption: "민준이가 보냈어요 ☀️", sender: "민준" },
+];
+
+const messages = [
+  { id: 1, from: "민준", text: "엄마 오늘 날씨 좋죠? 산책 다녀오셨어요? 🌿", time: "오전 10:23", hearts: 3 },
+  { id: 2, from: "지은", text: "아버지 건강하게 계세요! 다음 주에 갈게요 😊", time: "어제", hearts: 5 },
+];
+
+const gifts = [
+  { id: 1, name: "제철 과일 선물세트", price: "39,000원", emoji: "🍎" },
+  { id: 2, name: "한우 정육 세트", price: "89,000원", emoji: "🥩" },
+  { id: 3, name: "홍삼 건강세트", price: "59,000원", emoji: "🌿" },
+  { id: 4, name: "꽃바구니", price: "45,000원", emoji: "💐" },
+];
+
+export default function App() {
+  const [mode, setMode] = useState(null); // null | 'parent' | 'child'
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [heartedPhotos, setHeartedPhotos] = useState({});
+  const [heartedMessages, setHeartedMessages] = useState({});
+  const [activeTab, setActiveTab] = useState("안부");
+  const [safetyStatus, setSafetyStatus] = useState({ lastSeen: "방금 전", location: "서울 강남구 자택", status: "안전" });
+  const [floatingHearts, setFloatingHearts] = useState([]);
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [purchasedGift, setPurchasedGift] = useState(null);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (mode === "parent") {
+      intervalRef.current = setInterval(() => {
+        setPhotoIndex(i => (i + 1) % photos.length);
+      }, 3500);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [mode]);
+
+  const spawnHearts = (id, type) => {
+    const newHearts = Array.from({ length: 6 }, (_, i) => ({
+      id: Date.now() + i,
+      x: Math.random() * 80 + 10,
+      delay: i * 80,
+    }));
+    setFloatingHearts(prev => [...prev, ...newHearts]);
+    setTimeout(() => setFloatingHearts(prev => prev.filter(h => !newHearts.find(n => n.id === h.id))), 1500);
+    if (type === "photo") setHeartedPhotos(p => ({ ...p, [id]: (p[id] || 0) + 1 }));
+    if (type === "msg") setHeartedMessages(p => ({ ...p, [id]: (p[id] || 0) + 1 }));
+  };
+
+  // Splash
+  if (!mode) return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(145deg, #1a0a2e 0%, #2d1b4e 40%, #1a3a2e 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Georgia', serif", padding: "20px" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #1a0a2e; }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { transform: scale(1); opacity:0.8 } 50% { transform: scale(1.08); opacity:1 } }
+        .float-heart { position:fixed; animation: floatUp 1.2s ease-out forwards; font-size:24px; pointer-events:none; z-index:9999; }
+        @keyframes floatUp { 0%{transform:translateY(0) scale(0.5);opacity:1} 100%{transform:translateY(-120px) scale(1.2);opacity:0} }
+        .btn-press:active { transform: scale(0.95); }
+        .slide-in { animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+        .tab-active { background: rgba(255,255,255,0.15) !important; }
+      `}</style>
+      <div style={{ textAlign: "center", marginBottom: "60px" }}>
+        <div style={{ fontSize: "72px", marginBottom: "20px" }} className="pulse">🏠</div>
+        <div style={{ fontFamily: "'Noto Serif KR', serif", fontSize: "36px", fontWeight: "700", color: "#f0e6d3", letterSpacing: "4px", marginBottom: "8px" }}>마음잇기</div>
+        <div style={{ color: "#a89878", fontSize: "15px", letterSpacing: "2px", fontFamily: "'Noto Sans KR', sans-serif" }}>부모님과 자녀를 잇는 따뜻한 연결</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "320px" }}>
+        <button className="btn-press" onClick={() => setMode("child")} style={{ padding: "20px", borderRadius: "20px", background: "linear-gradient(135deg, #e8a87c, #d4845a)", border: "none", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif", fontSize: "17px", fontWeight: "500", color: "#fff", letterSpacing: "1px", boxShadow: "0 8px 30px rgba(232,168,124,0.4)" }}>
+          👨‍👩‍👧 자녀 화면으로
+        </button>
+        <button className="btn-press" onClick={() => setMode("parent")} style={{ padding: "20px", borderRadius: "20px", background: "linear-gradient(135deg, #7ca8d4, #5a84b4)", border: "none", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif", fontSize: "17px", fontWeight: "500", color: "#fff", letterSpacing: "1px", boxShadow: "0 8px 30px rgba(124,168,212,0.4)" }}>
+          👴👵 부모님 화면으로
+        </button>
+      </div>
+    </div>
+  );
+
+  // Parent Mode
+  if (mode === "parent") return (
+    <div style={{ minHeight: "100vh", background: "#0d0d14", fontFamily: "'Noto Sans KR', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; }
+        .float-heart { position:fixed; animation: floatUp 1.2s ease-out forwards; font-size:32px; pointer-events:none; z-index:9999; }
+        @keyframes floatUp { 0%{transform:translateY(0) scale(0.5);opacity:1} 100%{transform:translateY(-150px) scale(1.3);opacity:0} }
+        .photo-slide { animation: fadeSlide 0.8s ease-in-out; }
+        @keyframes fadeSlide { from{opacity:0;transform:scale(1.05)} to{opacity:1;transform:scale(1)} }
+        .heart-btn { transition: transform 0.15s; }
+        .heart-btn:active { transform: scale(1.3); }
+        .msg-card { animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+      `}</style>
+
+      {floatingHearts.map(h => (
+        <div key={h.id} className="float-heart" style={{ left: `${h.x}%`, bottom: "30%", animationDelay: `${h.delay}ms` }}>❤️</div>
+      ))}
+
+      {/* Top bar */}
+      <div style={{ width: "100%", maxWidth: "420px", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: "22px", fontWeight: "700", color: "#f0e6d3", fontFamily: "'Noto Serif KR', serif" }}>마음잇기</span>
+        <button onClick={() => setMode(null)} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#aaa", padding: "6px 14px", borderRadius: "12px", cursor: "pointer", fontSize: "13px" }}>← 나가기</button>
+      </div>
+
+      {/* Photo Slideshow */}
+      <div style={{ width: "100%", maxWidth: "420px", padding: "0 16px", marginBottom: "20px" }}>
+        <div style={{ borderRadius: "24px", overflow: "hidden", position: "relative", aspectRatio: "4/3", background: "#111" }}>
+          <img key={photoIndex} src={photos[photoIndex].url} className="photo-slide" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.75))", padding: "30px 20px 16px" }}>
+            <div style={{ color: "#fff", fontSize: "16px", fontWeight: "500" }}>{photos[photoIndex].caption}</div>
+          </div>
+          {/* Photo indicator */}
+          <div style={{ position: "absolute", top: "14px", right: "14px", display: "flex", gap: "6px" }}>
+            {photos.map((_, i) => (
+              <div key={i} style={{ width: i === photoIndex ? "20px" : "6px", height: "6px", borderRadius: "3px", background: i === photoIndex ? "#fff" : "rgba(255,255,255,0.4)", transition: "all 0.3s" }} />
+            ))}
+          </div>
+          {/* Heart button on photo */}
+          <button className="heart-btn" onClick={() => spawnHearts(photoIndex, "photo")} style={{ position: "absolute", bottom: "16px", right: "16px", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "50px", padding: "10px 18px", cursor: "pointer", fontSize: "22px", display: "flex", alignItems: "center", gap: "6px" }}>
+            ❤️ <span style={{ color: "#fff", fontSize: "15px", fontWeight: "600" }}>{heartedPhotos[photoIndex] || 0}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ width: "100%", maxWidth: "420px", padding: "0 16px", flex: 1 }}>
+        <div style={{ color: "#a89878", fontSize: "13px", letterSpacing: "2px", marginBottom: "12px", paddingLeft: "4px" }}>자녀들의 안부</div>
+        {messages.map(msg => (
+          <div key={msg.id} className="msg-card" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "18px 20px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#e8a87c", fontSize: "13px", marginBottom: "6px", fontWeight: "500" }}>{msg.from} · {msg.time}</div>
+              <div style={{ color: "#e8e0d0", fontSize: "16px", lineHeight: "1.6", fontWeight: "300" }}>{msg.text}</div>
+            </div>
+            <button className="heart-btn" onClick={() => spawnHearts(msg.id, "msg")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "26px", marginLeft: "12px", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "2px" }}>
+              ❤️
+              <span style={{ color: "#e8a87c", fontSize: "12px", fontWeight: "600" }}>{(heartedMessages[msg.id] || 0) + msg.hearts}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+      <div style={{ height: "30px" }} />
+    </div>
+  );
+
+  // Child Mode
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #fdf6ee 0%, #fef9f4 100%)", fontFamily: "'Noto Sans KR', sans-serif", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; }
+        .tab-btn { transition: all 0.2s; }
+        .action-btn { transition: all 0.15s; }
+        .action-btn:active { transform: scale(0.95); }
+        .gift-card:active { transform: scale(0.97); }
+        .slide-up { animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+        .modal-bg { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ width: "100%", maxWidth: "420px", padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: "22px", fontWeight: "700", color: "#3d2b1f", fontFamily: "'Noto Serif KR', serif" }}>마음잇기</span>
+        <button onClick={() => setMode(null)} style={{ background: "rgba(0,0,0,0.06)", border: "none", color: "#888", padding: "6px 14px", borderRadius: "12px", cursor: "pointer", fontSize: "13px" }}>← 나가기</button>
+      </div>
+
+      {/* Tab Bar */}
+      <div style={{ width: "100%", maxWidth: "420px", padding: "16px 16px 0", display: "flex", gap: "8px" }}>
+        {["안부", "위치", "선물샵"].map(tab => (
+          <button key={tab} className="tab-btn" onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: "10px", borderRadius: "14px", border: "none", cursor: "pointer", background: activeTab === tab ? "#3d2b1f" : "rgba(0,0,0,0.06)", color: activeTab === tab ? "#fff" : "#888", fontFamily: "'Noto Sans KR', sans-serif", fontSize: "14px", fontWeight: activeTab === tab ? "600" : "400" }}>
+            {tab === "안부" ? "💌 안부" : tab === "위치" ? "📍 위치" : "🎁 선물샵"}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ width: "100%", maxWidth: "420px", padding: "16px", flex: 1 }}>
+
+        {/* 안부 탭 */}
+        {activeTab === "안부" && (
+          <div className="slide-up">
+            {/* Safety Card */}
+            <div style={{ background: "linear-gradient(135deg, #e8f5e9, #f1f8e9)", borderRadius: "20px", padding: "18px 20px", marginBottom: "16px", border: "1px solid #c8e6c9" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <span style={{ fontWeight: "600", color: "#2e7d32", fontSize: "15px" }}>✅ 부모님 안전 상태</span>
+                <span style={{ background: "#4caf50", color: "#fff", fontSize: "11px", padding: "3px 10px", borderRadius: "10px" }}>정상</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                {[["마지막 활동", safetyStatus.lastSeen], ["위치", safetyStatus.location], ["앱 접속", "오늘 3회"], ["배터리", "78%"]].map(([k, v]) => (
+                  <div key={k} style={{ background: "rgba(255,255,255,0.6)", borderRadius: "12px", padding: "10px 12px" }}>
+                    <div style={{ color: "#888", fontSize: "11px", marginBottom: "3px" }}>{k}</div>
+                    <div style={{ color: "#3d2b1f", fontSize: "13px", fontWeight: "500" }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Send Photo */}
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "18px 20px", marginBottom: "12px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid #f0e8df" }}>
+              <div style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>사진 보내기</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px", marginBottom: "12px" }}>
+                {photos.map((p, i) => (
+                  <div key={i} style={{ aspectRatio: "1", borderRadius: "12px", overflow: "hidden", cursor: "pointer", border: "2px solid #e8a87c" }}>
+                    <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+              <button className="action-btn" style={{ width: "100%", padding: "12px", borderRadius: "14px", background: "#3d2b1f", border: "none", color: "#fff", fontSize: "15px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>
+                📸 사진 선택해서 보내기
+              </button>
+            </div>
+
+            {/* Send Message */}
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "18px 20px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid #f0e8df" }}>
+              <div style={{ color: "#888", fontSize: "13px", marginBottom: "10px" }}>안부 메시지</div>
+              <textarea placeholder="부모님께 따뜻한 메시지를 남겨보세요..." style={{ width: "100%", minHeight: "80px", border: "1px solid #e8e0d8", borderRadius: "12px", padding: "12px", fontSize: "14px", fontFamily: "'Noto Sans KR', sans-serif", resize: "none", outline: "none", color: "#3d2b1f", background: "#fdf8f4" }} />
+              <button className="action-btn" style={{ width: "100%", padding: "12px", borderRadius: "14px", background: "#e8a87c", border: "none", color: "#fff", fontSize: "15px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif", marginTop: "10px" }}>
+                💌 안부 보내기
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 위치 탭 */}
+        {activeTab === "위치" && (
+          <div className="slide-up">
+            <div style={{ background: "#fff", borderRadius: "20px", overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.08)", marginBottom: "14px" }}>
+              <div style={{ background: "linear-gradient(135deg, #667eea22, #764ba222)", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+                {/* Fake Map */}
+                <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, #f0f0f0 0px, #f0f0f0 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, #f0f0f0 0px, #f0f0f0 1px, transparent 1px, transparent 40px)", opacity: 0.5 }} />
+                <div style={{ position: "absolute", inset: 0, background: "url(https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&q=60)", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.25 }} />
+                <div style={{ position: "relative", textAlign: "center" }}>
+                  <div style={{ fontSize: "48px", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))" }}>📍</div>
+                  <div style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(10px)", color: "#fff", padding: "8px 16px", borderRadius: "20px", fontSize: "13px", marginTop: "8px" }}>서울 강남구 자택</div>
+                </div>
+              </div>
+              <div style={{ padding: "16px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                  <span style={{ color: "#3d2b1f", fontWeight: "600" }}>어머니</span>
+                  <span style={{ color: "#4caf50", fontSize: "13px", fontWeight: "500" }}>● 방금 전 업데이트</span>
+                </div>
+                <div style={{ color: "#888", fontSize: "13px", marginBottom: "4px" }}>📍 서울특별시 강남구 대치동 102-3</div>
+                <div style={{ color: "#888", fontSize: "13px" }}>🕐 마지막 이동: 2시간 전 (마트 다녀오심)</div>
+              </div>
+            </div>
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "18px", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid #f0e8df" }}>
+              <div style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>오늘의 이동 기록</div>
+              {[["오전 8:30", "자택 → 공원 산책 ☀️"], ["오전 10:15", "마트 방문 🛒"], ["오후 12:00", "자택 귀가 🏠"]].map(([time, act]) => (
+                <div key={time} style={{ display: "flex", gap: "12px", marginBottom: "12px", alignItems: "center" }}>
+                  <span style={{ color: "#e8a87c", fontSize: "12px", minWidth: "60px", fontWeight: "500" }}>{time}</span>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#e8a87c", flexShrink: 0 }} />
+                  <span style={{ color: "#3d2b1f", fontSize: "14px" }}>{act}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 선물샵 탭 */}
+        {activeTab === "선물샵" && (
+          <div className="slide-up">
+            <div style={{ color: "#888", fontSize: "13px", marginBottom: "14px", paddingLeft: "4px" }}>🎁 부모님께 마음을 전하세요</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              {gifts.map(gift => (
+                <div key={gift.id} className="gift-card" onClick={() => { setShowGiftModal(true); setPurchasedGift(gift); }} style={{ background: "#fff", borderRadius: "18px", padding: "20px 14px", textAlign: "center", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid #f0e8df", transition: "all 0.2s" }}>
+                  <div style={{ fontSize: "40px", marginBottom: "10px" }}>{gift.emoji}</div>
+                  <div style={{ color: "#3d2b1f", fontSize: "13px", fontWeight: "500", marginBottom: "6px", lineHeight: "1.4" }}>{gift.name}</div>
+                  <div style={{ color: "#e8a87c", fontWeight: "700", fontSize: "14px" }}>{gift.price}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Gift Modal */}
+      {showGiftModal && purchasedGift && (
+        <div className="modal-bg" onClick={() => setShowGiftModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }}>
+          <div onClick={e => e.stopPropagation()} className="slide-up" style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: "420px" }}>
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <div style={{ fontSize: "56px", marginBottom: "12px" }}>{purchasedGift.emoji}</div>
+              <div style={{ fontSize: "18px", fontWeight: "700", color: "#3d2b1f", marginBottom: "4px" }}>{purchasedGift.name}</div>
+              <div style={{ color: "#e8a87c", fontWeight: "700", fontSize: "20px" }}>{purchasedGift.price}</div>
+            </div>
+            <button className="action-btn" onClick={() => setShowGiftModal(false)} style={{ width: "100%", padding: "15px", borderRadius: "16px", background: "#3d2b1f", border: "none", color: "#fff", fontSize: "16px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif", fontWeight: "600", marginBottom: "10px" }}>
+              🎁 바로 선물하기
+            </button>
+            <button onClick={() => setShowGiftModal(false)} style={{ width: "100%", padding: "12px", borderRadius: "16px", background: "transparent", border: "1px solid #e0d8d0", color: "#888", fontSize: "14px", cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" }}>
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
