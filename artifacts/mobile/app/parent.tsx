@@ -7,11 +7,9 @@ import {
   Animated,
   Dimensions,
   Image,
-  Linking,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -24,75 +22,170 @@ import { api, FamilyMessage } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
 
-const DEMO_PHOTOS = [
-  { id: 1, url: "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=600&q=80" },
-  { id: 2, url: "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=600&q=80" },
-  { id: 3, url: "https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=600&q=80" },
+// ── 데모 슬라이드 (메시지 없을 때 표시) ────────────────────────────────────────
+const DEMO_SLIDES = [
+  { id: -1, emoji: "☀️", text: "오늘 날씨가 너무 좋아요!\n건강하게 지내세요 엄마 아빠 💛", name: "예진", bg: "#1a3a2a" },
+  { id: -2, emoji: "🏠", text: "학교 잘 다녀왔어요~\n저녁 맛있게 드세요!", name: "민준", bg: "#1a2a3a" },
+  { id: -3, emoji: "💌", text: "빨리 보고싶어요!\n사랑해요 ❤️", name: "예진", bg: "#2a1a3a" },
 ];
 
-interface FloatHeart { id: number; x: number; delay: number; anim: Animated.Value; }
+const INTERVAL_MS = 5000;
+
+// ── 하트 파티클 ──────────────────────────────────────────────────────────────
+interface FloatHeart { id: number; x: number; delay: number; anim: Animated.Value }
 
 function HeartParticle({ h }: { h: FloatHeart }) {
   useEffect(() => {
     Animated.timing(h.anim, { toValue: 1, duration: 1400, delay: h.delay, useNativeDriver: false }).start();
   }, []);
-  const ty = h.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -150] });
-  const op = h.anim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.8, 0] });
-  const sc = h.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.4, 1.3, 1.1] });
+  const ty = h.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -180] });
+  const op = h.anim.interpolate({ inputRange: [0, 0.55, 1], outputRange: [1, 0.85, 0] });
+  const sc = h.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.4, 1.5, 1.1] });
   return (
-    <Animated.View style={{ position: "absolute", left: `${h.x}%` as any, bottom: "35%", transform: [{ translateY: ty }, { scale: sc }], opacity: op, zIndex: 9999 }}>
-      <Ionicons name="heart" size={26} color={COLORS.coral} />
+    <Animated.View style={{ position: "absolute", left: `${h.x}%` as any, bottom: "38%", transform: [{ translateY: ty }, { scale: sc }], opacity: op, zIndex: 999 }}>
+      <Ionicons name="heart" size={30} color={COLORS.coral} />
     </Animated.View>
   );
 }
 
 function formatTime(s: string): string {
-  const d = new Date(s), now = new Date();
-  const m = Math.floor((now.getTime() - d.getTime()) / 60000);
-  if (m < 1) return "방금 전";
-  if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  const m = Math.floor((Date.now() - new Date(s).getTime()) / 60000);
+  if (m < 1) return "방금 전"; if (m < 60) return `${m}분 전`;
+  const hh = Math.floor(m / 60); if (hh < 24) return `${hh}시간 전`;
+  return `${Math.floor(hh / 24)}일 전`;
 }
 
-function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
-  icon: keyof typeof Ionicons.glyphMap; size?: number; bg?: string; color?: string; onPress?: () => void; style?: object;
-}) {
+// ── 슬라이드 타입 ─────────────────────────────────────────────────────────────
+type Slide =
+  | { kind: "msg";  msg: FamilyMessage }
+  | { kind: "demo"; id: number; emoji: string; text: string; name: string; bg: string };
+
+function buildSlides(msgs: FamilyMessage[]): Slide[] {
+  if (msgs.length > 0) return msgs.map(msg => ({ kind: "msg", msg }));
+  return DEMO_SLIDES.map(d => ({ kind: "demo", ...d }));
+}
+
+// ── 슬라이드 카드 내용 ────────────────────────────────────────────────────────
+function SlideCard({ slide, onHeart }: { slide: Slide; onHeart: () => void }) {
+  if (slide.kind === "demo") {
+    return (
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: slide.bg }]}>
+        {/* 장식 원 */}
+        <View style={[sl.decoCircle1, { borderColor: "rgba(212,242,0,0.08)" }]} />
+        <View style={[sl.decoCircle2, { borderColor: "rgba(212,242,0,0.05)" }]} />
+        {/* 중앙 콘텐츠 */}
+        <View style={sl.textCenter}>
+          <Text style={{ fontSize: 72, marginBottom: 24, textAlign: "center" }}>{slide.emoji}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 22 }}>
+            <View style={sl.avatarWrap}><Text style={sl.avatarText}>{slide.name[0]}</Text></View>
+            <Text style={sl.fromName}>{slide.name}</Text>
+          </View>
+          <Text style={sl.bigQuote}>"</Text>
+          <Text style={sl.bigText}>{slide.text}</Text>
+          <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
+        </View>
+        <Pressable style={[sl.heartBtn, { bottom: 32 }]} onPress={onHeart}>
+          <Ionicons name="heart" size={26} color={COLORS.coral} />
+        </Pressable>
+      </View>
+    );
+  }
+
+  const { msg } = slide;
+  const hasPhoto = !!msg.photoData;
+
+  if (hasPhoto) {
+    return (
+      <View style={StyleSheet.absoluteFillObject}>
+        <Image source={{ uri: msg.photoData! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+        <View style={sl.overlay} />
+        <View style={sl.bottomInfo}>
+          <View style={sl.avatarWrap}><Text style={sl.avatarText}>{msg.fromName[0]}</Text></View>
+          <View style={{ flex: 1 }}>
+            <Text style={sl.fromName}>{msg.fromName}</Text>
+            <Text style={sl.timeText}>{formatTime(msg.createdAt)}</Text>
+            {!!msg.text && <Text style={sl.msgText} numberOfLines={3}>{msg.text}</Text>}
+          </View>
+        </View>
+        <Pressable style={sl.heartBtn} onPress={onHeart}>
+          <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.45)"} />
+          {msg.hearts > 0 && <Text style={sl.heartN}>{msg.hearts}</Text>}
+        </Pressable>
+      </View>
+    );
+  }
+
+  // 텍스트 전용 슬라이드
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ width: 42, height: 42, borderRadius: 21, backgroundColor: bg ?? "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center", opacity: pressed ? 0.7 : 1 }, style]}>
-      <Ionicons name={icon} size={size} color={color ?? COLORS.white} />
-    </Pressable>
+    <View style={[StyleSheet.absoluteFillObject, sl.textSlideBg]}>
+      {/* 배경 장식 */}
+      <View style={sl.decoCircle1} />
+      <View style={sl.decoCircle2} />
+      <View style={sl.textCenter}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 22 }}>
+          <View style={sl.avatarWrap}><Text style={sl.avatarText}>{msg.fromName[0]}</Text></View>
+          <View>
+            <Text style={sl.fromName}>{msg.fromName}</Text>
+            <Text style={sl.timeText}>{formatTime(msg.createdAt)}</Text>
+          </View>
+        </View>
+        <Text style={sl.bigQuote}>"</Text>
+        <Text style={sl.bigText}>{msg.text}</Text>
+        <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
+      </View>
+      <Pressable style={[sl.heartBtn, { bottom: 32 }]} onPress={onHeart}>
+        <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.3)"} />
+        {msg.hearts > 0 && <Text style={sl.heartN}>{msg.hearts}</Text>}
+      </Pressable>
+    </View>
   );
 }
 
+// ── 부모님 메인 화면 ──────────────────────────────────────────────────────────
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, myName, deviceId, isConnected } = useFamilyContext();
 
-  const [photoIdx, setPhotoIdx] = useState(0);
-  const [hearts, setHearts] = useState<Record<number, number>>({});
-  const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
-  const [msgs, setMsgs] = useState<FamilyMessage[]>([]);
+  // ── 슬라이드쇼 상태 ──
+  const [msgs,       setMsgs]       = useState<FamilyMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [viewerUri, setViewerUri] = useState<string | null>(null);
+  const [curIdx,     setCurIdx]     = useState(0);
+  const [nextIdx,    setNextIdx]    = useState<number | null>(null);
+  const [isPlaying,  setIsPlaying]  = useState(true);
+  const [isPaused,   setIsPaused]   = useState(false); // finger-hold pause
+  const [transitioning, setTransitioning] = useState(false);
 
-  const [permission, requestPermission] = Location.useForegroundPermissions();
-  const [isSharing, setIsSharing] = useState(true);
-  const [currentLoc, setCurrentLoc] = useState<Location.LocationObject | null>(null);
-  const [address, setAddress] = useState("");
-  const [locUploading, setLocUploading] = useState(false);
-  const [lastSynced, setLastSynced] = useState<Date | null>(null);
-  const watchRef = useRef<Location.LocationSubscription | null>(null);
+  // ── 애니메이션 ──
+  const curY  = useRef(new Animated.Value(0)).current;
+  const nxtY  = useRef(new Animated.Value(height)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressRef = useRef<Animated.CompositeAnimation | null>(null);
+  const touchStartY = useRef(0);
 
-  const topInset = Platform.OS === "web" ? 0 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-
-  useEffect(() => {
-    const iv = setInterval(() => setPhotoIdx(i => (i + 1) % DEMO_PHOTOS.length), 4000);
-    return () => clearInterval(iv);
+  // ── 하트 파티클 ──
+  const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
+  const spawnHearts = useCallback(() => {
+    const hs: FloatHeart[] = Array.from({ length: 7 }, (_, i) => ({
+      id: Date.now() + i, x: Math.random() * 70 + 10, delay: i * 80, anim: new Animated.Value(0),
+    }));
+    setFloatHearts(p => [...p, ...hs]);
+    setTimeout(() => setFloatHearts(p => p.filter(h => !hs.some(n => n.id === h.id))), 1700);
   }, []);
 
+  // ── GPS ──
+  const [permission, requestPermission] = Location.useForegroundPermissions();
+  const [isSharing,  setIsSharing]   = useState(true);
+  const [currentLoc, setCurrentLoc]  = useState<Location.LocationObject | null>(null);
+  const [address,    setAddress]     = useState("");
+  const [locUploading, setLocUploading] = useState(false);
+  const [lastSynced, setLastSynced]  = useState<Date | null>(null);
+  const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  const topInset    = Platform.OS === "web" ? 0 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+
+  // ── 메시지 로드 ──
   const loadMsgs = useCallback(async () => {
     if (!familyCode) return;
     try { setMsgs(await api.getMessages(familyCode)); } catch {}
@@ -106,6 +199,7 @@ export default function ParentScreen() {
     return () => clearInterval(iv);
   }, [familyCode, loadMsgs]);
 
+  // ── GPS 업로드 ──
   const uploadLoc = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
     if (!familyCode || !myName || !deviceId) return;
     setLocUploading(true);
@@ -118,8 +212,7 @@ export default function ParentScreen() {
       setAddress(addr);
       await api.updateLocation(familyCode, { deviceId, memberName: myName, latitude: loc.coords.latitude, longitude: loc.coords.longitude, address: addr, accuracy: loc.coords.accuracy ?? undefined, isSharing: sharing });
       setLastSynced(new Date());
-    } catch {}
-    finally { setLocUploading(false); }
+    } catch {} finally { setLocUploading(false); }
   }, [familyCode, myName, deviceId]);
 
   const startWatch = useCallback(async () => {
@@ -136,7 +229,8 @@ export default function ParentScreen() {
     if (!permission) return;
     if (!permission.granted) { requestPermission(); return; }
     if (isSharing) {
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).then(l => { setCurrentLoc(l); uploadLoc(l, true); }).catch(() => {});
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        .then(l => { setCurrentLoc(l); uploadLoc(l, true); }).catch(() => {});
       startWatch();
     } else if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; }
     return () => { if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; } };
@@ -147,265 +241,314 @@ export default function ParentScreen() {
     if (currentLoc) await uploadLoc(currentLoc, next);
   };
 
-  const spawnHearts = useCallback(() => {
-    const hs: FloatHeart[] = Array.from({ length: 6 }, (_, i) => ({ id: Date.now() + i, x: Math.random() * 70 + 10, delay: i * 80, anim: new Animated.Value(0) }));
-    setFloatHearts(p => [...p, ...hs]);
-    setTimeout(() => setFloatHearts(p => p.filter(h => !hs.some(n => n.id === h.id))), 1600);
+  // ── 슬라이드 데이터 ──
+  const slides = buildSlides(msgs);
+  const total  = slides.length;
+
+  // ── 슬라이드 이동 (방향: 'up'=다음, 'down'=이전) ──
+  const goTo = useCallback((targetIdx: number, dir: "up" | "down" = "up") => {
+    if (transitioning || total === 0) return;
+    const safeIdx = ((targetIdx % total) + total) % total;
+    setNextIdx(safeIdx);
+    setTransitioning(true);
+
+    // 진입 슬라이드 초기 위치
+    nxtY.setValue(dir === "up" ? height : -height);
+    progressAnim.stopAnimation();
+
+    Animated.parallel([
+      Animated.timing(curY, { toValue: dir === "up" ? -height : height, duration: 420, useNativeDriver: false }),
+      Animated.timing(nxtY, { toValue: 0, duration: 420, useNativeDriver: false }),
+    ]).start(() => {
+      setCurIdx(safeIdx);
+      setNextIdx(null);
+      curY.setValue(0);
+      nxtY.setValue(height);
+      setTransitioning(false);
+    });
+  }, [transitioning, total, curY, nxtY, progressAnim]);
+
+  const goNext = useCallback(() => goTo(curIdx + 1, "up"),   [curIdx, goTo]);
+  const goPrev = useCallback(() => goTo(curIdx - 1, "down"), [curIdx, goTo]);
+
+  // ── 프로그레스 바 애니메이션 ──
+  const startProgress = useCallback(() => {
+    progressAnim.setValue(0);
+    progressRef.current = Animated.timing(progressAnim, {
+      toValue: 1, duration: INTERVAL_MS, useNativeDriver: false,
+    });
+    progressRef.current.start(({ finished }) => {
+      if (finished) goNext();
+    });
+  }, [progressAnim, goNext]);
+
+  const stopProgress = useCallback(() => {
+    progressRef.current?.stop();
   }, []);
 
-  const heartMsg = async (msg: FamilyMessage) => {
+  // ── 자동 재생 ──
+  useEffect(() => {
+    if (isPlaying && !isPaused && !transitioning && total > 0) {
+      startProgress();
+    } else {
+      stopProgress();
+    }
+    return stopProgress;
+  }, [isPlaying, isPaused, transitioning, curIdx, total]);
+
+  // ── 터치 핸들러 ──
+  const onTouchStart = (e: any) => {
+    touchStartY.current = e.nativeEvent?.pageY ?? e.touches?.[0]?.pageY ?? 0;
+    setIsPaused(true);
+    stopProgress();
+  };
+
+  const onTouchEnd = (e: any) => {
+    const endY = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
+    const delta = endY - touchStartY.current;
+    setIsPaused(false);
+    if (delta < -60)      goNext();   // 위로 스와이프 → 다음
+    else if (delta > 60)  goPrev();   // 아래로 스와이프 → 이전
+    else if (!transitioning && isPlaying) startProgress();
+  };
+
+  // ── 하트 ──
+  const heartSlide = async (slide: Slide) => {
     spawnHearts();
-    if (!familyCode) return;
+    if (slide.kind !== "msg" || !familyCode) return;
     try {
-      const u = await api.heartMessage(familyCode, msg.id);
-      setMsgs(p => p.map(m => m.id === u.id ? u : m));
+      const updated = await api.heartMessage(familyCode, slide.msg.id);
+      setMsgs(p => p.map(m => m.id === updated.id ? updated : m));
     } catch {
-      setMsgs(p => p.map(m => m.id === msg.id ? { ...m, hearts: m.hearts + 1 } : m));
+      setMsgs(p => p.map(m => m.id === slide.msg.id ? { ...m, hearts: m.hearts + 1 } : m));
     }
   };
 
+  const currentSlide = slides[curIdx] ?? null;
+  const pendingSlide  = nextIdx !== null ? slides[nextIdx] : null;
+
+  const progressWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.mapBg }}>
+      {/* 하트 파티클 */}
       {floatHearts.map(h => <HeartParticle key={h.id} h={h} />)}
 
-      {/* Photo viewer */}
-      <Modal visible={!!viewerUri} transparent animationType="fade" onRequestClose={() => setViewerUri(null)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.96)", alignItems: "center", justifyContent: "center" }}>
-          <Pressable style={{ position: "absolute", top: 54, right: 20, zIndex: 10 }} onPress={() => setViewerUri(null)}>
-            <Ionicons name="close-circle" size={36} color={COLORS.white} />
-          </Pressable>
-          {viewerUri && <Image source={{ uri: viewerUri }} style={{ width: "100%", height: height * 0.72, borderRadius: 16 }} resizeMode="contain" />}
-        </View>
-      </Modal>
-
       {/* ── 상단 헤더 ── */}
-      <View style={[s.header, { paddingTop: topInset + 14 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.logo}>DUGO</Text>
-          {myName && <Text style={s.logoSub}>{myName} · 부모님</Text>}
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          {isConnected && familyCode && (
-            <View style={s.codeChip}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.neon }} />
-              <Text style={s.codeText}>{familyCode}</Text>
-            </View>
-          )}
-          <CircleBtn icon="chevron-back" bg="rgba(255,255,255,0.08)" onPress={() => router.replace("/")} />
-        </View>
+      <View style={[p.header, { paddingTop: topInset + 10 }]}>
+        <Text style={p.logo}>DUGO</Text>
+        <View style={{ flex: 1 }} />
+
+        {/* GPS 상태 칩 */}
+        {isSharing && permission?.granted && (
+          <Pressable onPress={toggleShare} style={p.gpsChip}>
+            {locUploading
+              ? <ActivityIndicator size="small" color={COLORS.neon} style={{ width: 12, height: 12 }} />
+              : <View style={p.gpsDot} />}
+            <Text style={p.gpsChipText} numberOfLines={1}>
+              {address || "위치 공유 중"}
+            </Text>
+          </Pressable>
+        )}
+        {(!isSharing || !permission?.granted) && (
+          <Pressable onPress={permission?.granted ? toggleShare : requestPermission} style={[p.gpsChip, p.gpsChipOff]}>
+            <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.45)" />
+            <Text style={[p.gpsChipText, { color: "rgba(255,255,255,0.4)" }]}>
+              {permission?.granted ? "공유 중지됨" : "위치 권한 필요"}
+            </Text>
+          </Pressable>
+        )}
+
+        {isConnected && familyCode && (
+          <View style={p.codeChip}>
+            <View style={p.codeDot} />
+            <Text style={p.codeText}>{familyCode}</Text>
+          </View>
+        )}
+        <Pressable onPress={() => router.replace("/")} style={p.backBtn}>
+          <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.6)" />
+        </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomInset + 32 }}>
-
-        {/* ── GPS 공유 카드 ── */}
-        <View style={s.gpsCard}>
-          <View style={s.gpsCardLeft}>
-            <View style={[s.gpsIcon, { backgroundColor: isSharing ? "rgba(212,242,0,0.15)" : "rgba(255,255,255,0.07)" }]}>
-              <Ionicons name="location" size={20} color={isSharing ? COLORS.neon : "rgba(255,255,255,0.4)"} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.gpsTitle}>내 위치 공유</Text>
-              <Text style={s.gpsSub} numberOfLines={1}>
-                {permission?.granted
-                  ? isSharing
-                    ? (address || (currentLoc ? `${currentLoc.coords.latitude.toFixed(4)}, ${currentLoc.coords.longitude.toFixed(4)}` : "위치 확인 중..."))
-                    : "공유 중지됨"
-                  : "위치 권한이 필요합니다"}
-              </Text>
-            </View>
-            {locUploading && <ActivityIndicator size="small" color={COLORS.neon} style={{ marginRight: 6 }} />}
-            {lastSynced && isSharing && <Text style={s.syncTime}>{formatTime(lastSynced.toISOString())}</Text>}
+      {/* ── 슬라이드쇼 영역 ── */}
+      <View
+        style={p.slideWrap}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        {loadingMsgs && msgs.length === 0 ? (
+          <View style={p.loadingWrap}>
+            <ActivityIndicator color={COLORS.neon} size="large" />
+            <Text style={p.loadingText}>메시지 불러오는 중...</Text>
           </View>
+        ) : currentSlide ? (
+          <>
+            {/* 현재 슬라이드 */}
+            <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: curY }] }]}>
+              <SlideCard slide={currentSlide} onHeart={() => heartSlide(currentSlide)} />
+            </Animated.View>
 
-          {permission?.granted ? (
-            <Pressable onPress={toggleShare} style={[s.toggle, { backgroundColor: isSharing ? COLORS.neon : "rgba(255,255,255,0.12)" }]}>
-              <View style={[s.toggleKnob, { transform: [{ translateX: isSharing ? 22 : 2 }] }]} />
-            </Pressable>
-          ) : (
-            <Pressable onPress={requestPermission} style={s.permBtn}>
-              <Text style={s.permBtnText}>허용</Text>
-            </Pressable>
-          )}
+            {/* 다음 슬라이드 (트랜지션 중) */}
+            {pendingSlide && (
+              <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: nxtY }] }]}>
+                <SlideCard slide={pendingSlide} onHeart={() => heartSlide(pendingSlide)} />
+              </Animated.View>
+            )}
 
-          {permission?.granted && isSharing && (
-            <View style={s.gpsActiveBar}>
-              <View style={s.gpsActiveDot} />
-              <Text style={s.gpsActiveText}>자녀가 내 위치를 실시간으로 확인하고 있어요</Text>
-            </View>
-          )}
-        </View>
-
-        {/* ── 사진 슬라이드쇼 ── */}
-        <View style={s.photoCard}>
-          <Animated.Image source={{ uri: DEMO_PHOTOS[photoIdx].url }} style={s.photoImg} resizeMode="cover" />
-          <View style={s.photoGrad} />
-          <View style={s.photoBottom}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-              <View style={s.photoAvatar}><Ionicons name="image" size={14} color={COLORS.white} /></View>
-              <View>
-                <Text style={s.photoCaption}>자녀가 보낸 사진</Text>
-                <Text style={s.photoTime}>슬라이드쇼</Text>
+            {/* 일시정지 오버레이 */}
+            {isPaused && !transitioning && (
+              <View style={p.pauseOverlay} pointerEvents="none">
+                <View style={p.pauseBadge}>
+                  <Ionicons name="pause" size={16} color="rgba(255,255,255,0.9)" />
+                  <Text style={p.pauseText}>일시정지</Text>
+                </View>
               </View>
-            </View>
-            <Pressable onPress={() => { setHearts(p => ({ ...p, [photoIdx]: (p[photoIdx] || 0) + 1 })); spawnHearts(); }} style={s.heartBtn}>
-              <Ionicons name="heart" size={18} color={(hearts[photoIdx] || 0) > 0 ? COLORS.coral : "rgba(255,255,255,0.5)"} />
-              {(hearts[photoIdx] || 0) > 0 && <Text style={s.heartCount}>{hearts[photoIdx]}</Text>}
-            </Pressable>
-          </View>
-          <View style={s.dots}>
-            {DEMO_PHOTOS.map((_, i) => (
-              <Pressable key={i} onPress={() => setPhotoIdx(i)}
-                style={[s.dot, { width: i === photoIdx ? 20 : 6, backgroundColor: i === photoIdx ? COLORS.neon : "rgba(255,255,255,0.3)" }]}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* ── 안부 섹션 헤더 ── */}
-        <View style={s.sectionRow}>
-          <View style={s.sectionPill}><Text style={s.sectionPillText}>실시간</Text></View>
-          <Text style={s.sectionTitle}>안부 메시지</Text>
-          <View style={{ flex: 1 }} />
-          <View style={s.liveDot} />
-          <Text style={s.liveText}>Live</Text>
-        </View>
-
-        {loadingMsgs && <ActivityIndicator color={COLORS.neon} style={{ marginVertical: 20 }} />}
-
-        {!loadingMsgs && msgs.length === 0 && (
-          <View style={s.emptyCard}>
-            <Ionicons name="chatbubble-outline" size={28} color="rgba(255,255,255,0.25)" />
-            <Text style={s.emptyText}>
-              {isConnected ? "자녀에게 코드를 공유해보세요" : "가족 연결 후 안부가 표시됩니다"}
-            </Text>
+            )}
+          </>
+        ) : (
+          /* 빈 상태 */
+          <View style={p.emptyWrap}>
+            <Ionicons name="chatbubble-ellipses-outline" size={48} color="rgba(255,255,255,0.2)" />
+            <Text style={p.emptyTitle}>아직 메시지가 없어요</Text>
+            <Text style={p.emptySubTitle}>{isConnected ? "자녀가 안부를 보내면 여기 표시됩니다" : "가족 코드로 연결해보세요"}</Text>
             {!isConnected && (
-              <Pressable style={s.connectBtn} onPress={() => router.push("/setup")}>
-                <Text style={s.connectBtnText}>가족 연결하기</Text>
+              <Pressable style={p.connectBtn} onPress={() => router.push("/setup")}>
+                <Text style={p.connectBtnText}>가족 연결하기</Text>
               </Pressable>
             )}
           </View>
         )}
+      </View>
 
-        {msgs.map((msg, idx) => {
-          const isFirst = idx === 0;
-          return (
-            <View key={msg.id} style={[s.msgCard, isFirst && s.msgCardNeon]}>
-              {isFirst && (
-                <>
-                  <View style={s.deco1} /><View style={s.deco2} /><View style={s.deco3} />
-                </>
-              )}
-              <View style={s.msgTop}>
-                <View style={[s.msgAvatar, isFirst && s.msgAvatarDark]}>
-                  <Text style={[s.msgAvatarText, isFirst && { color: COLORS.neonText }]}>{msg.fromName[0]}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.msgName, isFirst && { color: COLORS.neonText }]}>{msg.fromName}</Text>
-                  <Text style={[s.msgTime, isFirst && { color: "rgba(26,37,53,0.6)" }]}>{formatTime(msg.createdAt)}</Text>
-                </View>
-                <Pressable onPress={() => heartMsg(msg)} style={s.msgHeartBtn}>
-                  <Ionicons name="heart" size={20} color={msg.hearts > 0 ? COLORS.coral : (isFirst ? "rgba(26,37,53,0.3)" : "rgba(255,255,255,0.2)")} />
-                  {msg.hearts > 0 && <Text style={[s.msgHeartN, isFirst && { color: COLORS.neonText }]}>{msg.hearts}</Text>}
-                </Pressable>
-              </View>
-              {!!msg.text && (
-                <Text style={[s.msgText, isFirst && { color: COLORS.neonText }]}>{msg.text}</Text>
-              )}
-              {msg.photoData && (
-                <Pressable onPress={() => setViewerUri(msg.photoData!)} style={{ marginTop: 10, borderRadius: 16, overflow: "hidden" }}>
-                  <Image source={{ uri: msg.photoData }} style={{ width: "100%", height: 200, borderRadius: 16 }} resizeMode="cover" />
-                </Pressable>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
+      {/* ── 하단 컨트롤 ── */}
+      {total > 0 && (
+        <View style={p.controls}>
+          {/* 프로그레스 바 */}
+          <View style={p.progressTrack}>
+            <Animated.View style={[p.progressFill, { width: progressWidth }]} />
+          </View>
+
+          <View style={p.controlRow}>
+            {/* 인덱스 표시 */}
+            <Text style={p.countText}>{curIdx + 1} / {total}</Text>
+
+            <View style={{ flex: 1 }} />
+
+            {/* 이전 */}
+            <Pressable style={p.ctrlBtn} onPress={goPrev}>
+              <Ionicons name="chevron-up" size={20} color="rgba(255,255,255,0.8)" />
+            </Pressable>
+
+            {/* 재생 / 일시정지 */}
+            <Pressable style={[p.ctrlBtn, p.ctrlBtnMain]} onPress={() => {
+              const next = !isPlaying;
+              setIsPlaying(next);
+              if (!next) stopProgress(); else startProgress();
+            }}>
+              <Ionicons name={isPlaying ? "pause" : "play"} size={20} color={COLORS.neonText} />
+            </Pressable>
+
+            {/* 다음 */}
+            <Pressable style={p.ctrlBtn} onPress={goNext}>
+              <Ionicons name="chevron-down" size={20} color="rgba(255,255,255,0.8)" />
+            </Pressable>
+          </View>
+
+          {/* 점 인디케이터 */}
+          <View style={p.dots}>
+            {slides.map((_, i) => (
+              <Pressable key={i} onPress={() => goTo(i, i > curIdx ? "up" : "down")}
+                style={[p.dot, { width: i === curIdx ? 22 : 6, backgroundColor: i === curIdx ? COLORS.neon : "rgba(255,255,255,0.25)" }]} />
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* ── 개발 스위처 ── */}
       <View style={dev.bar}>
         <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
         <Text style={dev.label}>개발 모드</Text>
         <Pressable onPress={() => router.replace("/child")} style={dev.btn}>
-          <Ionicons name="people" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>자녀 화면</Text>
+          <Ionicons name="people" size={12} color="rgba(255,255,255,0.7)" />
+          <Text style={dev.btnText}>자녀 화면</Text>
         </Pressable>
         <Pressable onPress={() => router.replace("/")} style={[dev.btn, dev.btnAlt]}>
-          <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" /><Text style={dev.btnText}>홈</Text>
+          <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" />
+          <Text style={dev.btnText}>홈</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 20, paddingBottom: 16 },
-  logo: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white, letterSpacing: 3, marginBottom: 2 },
-  logoSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)" },
-  codeChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
-  codeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.neon, letterSpacing: 1 },
+// ── 슬라이드 스타일 ───────────────────────────────────────────────────────────
+const sl = StyleSheet.create({
+  overlay:      { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.28)" },
+  bottomInfo:   { position: "absolute", bottom: 0, left: 0, right: 70, padding: 24, flexDirection: "row", alignItems: "flex-end", gap: 14 },
+  avatarWrap:   { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.coral, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  avatarText:   { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.white },
+  fromName:     { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white, marginBottom: 3 },
+  timeText:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 4 },
+  msgText:      { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 20 },
+  heartBtn:     { position: "absolute", right: 20, bottom: 28, alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.35)", borderRadius: 30, paddingHorizontal: 14, paddingVertical: 10 },
+  heartN:       { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.white },
 
-  // GPS card
-  gpsCard: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 24, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", overflow: "hidden" },
-  gpsCardLeft: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 0 },
-  gpsIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  gpsTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.white, marginBottom: 3 },
-  gpsSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)", flex: 1 },
-  syncTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.3)" },
-  toggle: { width: 50, height: 28, borderRadius: 14, justifyContent: "center", paddingHorizontal: 2, marginLeft: "auto" as any },
-  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.mapBg },
-  permBtn: { backgroundColor: COLORS.neon, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 14, marginLeft: "auto" as any },
-  permBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.neonText },
-  gpsActiveBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(212,242,0,0.08)", borderRadius: 12, padding: 10, marginTop: 12 },
-  gpsActiveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
-  gpsActiveText: { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.neon, flex: 1 },
+  // 텍스트 전용 슬라이드
+  textSlideBg:  { backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
+  decoCircle1:  { position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, borderWidth: 30, borderColor: "rgba(212,242,0,0.07)" },
+  decoCircle2:  { position: "absolute", left: -80, bottom: -80, width: 300, height: 300, borderRadius: 150, borderWidth: 30, borderColor: "rgba(212,242,0,0.05)" },
+  textCenter:   { paddingHorizontal: 32, paddingVertical: 24, maxWidth: 340 },
+  bigQuote:     { fontFamily: "Inter_700Bold", fontSize: 52, color: COLORS.neon, lineHeight: 52 },
+  bigText:      { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white, lineHeight: 32, marginTop: -8 },
+});
 
-  // Photo
-  photoCard: { borderRadius: 24, overflow: "hidden", height: Math.min(width * 0.7, 320), backgroundColor: "#111", marginBottom: 24, position: "relative" },
-  photoImg: { width: "100%", height: "100%" },
-  photoGrad: { position: "absolute", bottom: 0, left: 0, right: 0, height: "60%", backgroundColor: "rgba(0,0,0,0.55)" },
-  photoBottom: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", alignItems: "flex-end", padding: 18 },
-  photoAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(212,242,0,0.25)", alignItems: "center", justifyContent: "center" },
-  photoCaption: { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.white, marginBottom: 2 },
-  photoTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)" },
-  heartBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 30, paddingHorizontal: 12, paddingVertical: 8 },
-  heartCount: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.white },
-  dots: { position: "absolute", top: 14, right: 16, flexDirection: "row", alignItems: "center", gap: 5 },
-  dot: { height: 6, borderRadius: 3 },
+// ── 부모님 화면 스타일 ────────────────────────────────────────────────────────
+const p = StyleSheet.create({
+  header:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 10, gap: 8, zIndex: 10 },
+  logo:         { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.white, letterSpacing: 3 },
 
-  // Section
-  sectionRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14, paddingHorizontal: 2 },
-  sectionPill: { backgroundColor: COLORS.navPill, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  sectionPillText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "rgba(255,255,255,0.7)" },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.white },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
-  liveText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.neon },
+  gpsChip:      { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)", maxWidth: 160 },
+  gpsChipOff:   { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" },
+  gpsDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.neon },
+  gpsChipText:  { fontFamily: "Inter_500Medium", fontSize: 11, color: COLORS.neon, flex: 1 },
 
-  // Empty
-  emptyCard: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 24, padding: 32, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)", gap: 10 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center" },
-  connectBtn: { backgroundColor: COLORS.neon, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 50, marginTop: 4 },
-  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.neonText },
+  codeChip:     { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.07)", paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20 },
+  codeDot:      { width: 5, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.4)" },
+  codeText:     { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: 1 },
+  backBtn:      { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
 
-  // Message cards
-  msgCard: { backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", borderRadius: 24, padding: 18, marginBottom: 12, overflow: "hidden" },
-  msgCardNeon: { backgroundColor: COLORS.neon, borderColor: "transparent" },
-  deco1: { position: "absolute", right: -28, top: -28, width: 120, height: 120, borderRadius: 60, borderWidth: 20, borderColor: "rgba(0,0,0,0.06)" },
-  deco2: { position: "absolute", right: -65, top: -65, width: 200, height: 200, borderRadius: 100, borderWidth: 20, borderColor: "rgba(0,0,0,0.04)" },
-  deco3: { position: "absolute", right: -100, top: -100, width: 280, height: 280, borderRadius: 140, borderWidth: 20, borderColor: "rgba(0,0,0,0.025)" },
-  msgTop: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
-  msgAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.coral, alignItems: "center", justifyContent: "center" },
-  msgAvatarDark: { backgroundColor: "rgba(0,0,0,0.15)" },
-  msgAvatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
-  msgName: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 2 },
-  msgTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.4)" },
-  msgHeartBtn: { alignItems: "center", gap: 3 },
-  msgHeartN: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.coral },
-  msgText: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.white, lineHeight: 22 },
+  slideWrap:    { flex: 1, overflow: "hidden", borderRadius: 0, position: "relative", backgroundColor: "#111" },
+
+  // 컨트롤
+  controls:     { backgroundColor: "rgba(22,30,44,0.98)", paddingTop: 10, paddingBottom: 4, paddingHorizontal: 20, gap: 8 },
+  progressTrack:{ height: 3, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 2, overflow: "hidden" },
+  progressFill: { height: "100%", backgroundColor: COLORS.neon, borderRadius: 2 },
+  controlRow:   { flexDirection: "row", alignItems: "center", gap: 10 },
+  countText:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "rgba(255,255,255,0.5)" },
+  ctrlBtn:      { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.09)", alignItems: "center", justifyContent: "center" },
+  ctrlBtnMain:  { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.neon },
+  dots:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingBottom: 4 },
+  dot:          { height: 6, borderRadius: 3 },
+
+  // 일시정지 오버레이
+  pauseOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "flex-start", paddingTop: 18 },
+  pauseBadge:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50 },
+  pauseText:    { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.9)" },
+
+  // 로딩 / 빈 상태
+  loadingWrap:  { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
+  loadingText:  { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)" },
+  emptyWrap:    { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
+  emptyTitle:   { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.white, textAlign: "center" },
+  emptySubTitle:{ fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", lineHeight: 20 },
+  connectBtn:   { backgroundColor: COLORS.neon, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 50, marginTop: 8 },
+  connectBtnText:{ fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.neonText },
 });
 
 const dev = StyleSheet.create({
-  bar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
-  label: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)", marginRight: 4 },
-  btn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  bar:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  label:  { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)", marginRight: 4 },
+  btn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
   btnAlt: { backgroundColor: "rgba(212,242,0,0.15)", borderColor: "rgba(212,242,0,0.25)" },
-  btnText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.75)" },
+  btnText:{ fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.75)" },
 });
