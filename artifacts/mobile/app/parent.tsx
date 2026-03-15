@@ -350,12 +350,6 @@ export default function ParentScreen() {
           </Pressable>
         )}
 
-        {isConnected && familyCode && (
-          <View style={p.codeChip}>
-            <View style={p.codeDot} />
-            <Text style={p.codeText}>{familyCode}</Text>
-          </View>
-        )}
         <Pressable onPress={() => router.push("/profile")} style={p.backBtn}>
           <Ionicons name="person-circle-outline" size={20} color="rgba(255,255,255,0.7)" />
         </Pressable>
@@ -480,7 +474,7 @@ const p = StyleSheet.create({
   header:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 10, gap: 8, zIndex: 10 },
   logo:         { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.white, letterSpacing: 3 },
 
-  gpsChip:      { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)", maxWidth: 160 },
+  gpsChip:      { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)", maxWidth: 130 },
   gpsChipOff:   { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" },
   gpsDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.neon },
   gpsChipText:  { fontFamily: "Inter_500Medium", fontSize: 11, color: COLORS.neon, flex: 1 },

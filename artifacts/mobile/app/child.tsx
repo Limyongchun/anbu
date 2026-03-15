@@ -61,9 +61,8 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 }
 
 // ─── 상단 바 (로고 + 카테고리 탭) ───────────────────────────────────────────
-function TopBar({ tab, onTab, topInset, isMap, familyCode, isConnected }: {
-  tab: Tab; onTab: (t: Tab) => void; topInset: number;
-  isMap: boolean; familyCode: string | null; isConnected: boolean;
+function TopBar({ tab, onTab, topInset, isMap }: {
+  tab: Tab; onTab: (t: Tab) => void; topInset: number; isMap: boolean;
 }) {
   const tabs: Tab[] = ["지도", "안부", "선물샵"];
   return (
@@ -73,23 +72,13 @@ function TopBar({ tab, onTab, topInset, isMap, familyCode, isConnected }: {
       borderBottomWidth: isMap ? 0 : 1,
       borderBottomColor: isMap ? "transparent" : COLORS.border,
     }]}>
-      {/* 로고 */}
+      {/* 로고 + 마이페이지 */}
       <Text style={[tb.logo, !isMap && { color: COLORS.textDark }]}>DUGO</Text>
-
-      {/* 마이페이지 버튼 */}
       <Pressable style={[tb.profileBtn, isMap && tb.profileBtnDark]} onPress={() => router.push("/profile")}>
-        <Ionicons name="person-circle-outline" size={20} color={isMap ? "rgba(255,255,255,0.8)" : COLORS.navPill} />
+        <Ionicons name="person-circle-outline" size={20} color={isMap ? "rgba(255,255,255,0.75)" : COLORS.navPill} />
       </Pressable>
 
       <View style={{ flex: 1 }} />
-
-      {/* 가족코드 칩 (연결됐을 때) */}
-      {isConnected && familyCode && (
-        <View style={[tb.codeChip, { marginRight: 8 }]}>
-          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.neon }} />
-          <Text style={tb.codeText}>{familyCode}</Text>
-        </View>
-      )}
 
       {/* 카테고리 탭 */}
       <View style={[tb.tabRow, !isMap && tb.tabRowLight]}>
@@ -677,7 +666,7 @@ export default function ChildScreen() {
       )}
 
       {/* ══ 상단 바 — 항상 위에 떠 있음 ══ */}
-      <TopBar tab={tab} onTab={setTab} topInset={topInset} isMap={isMap} familyCode={familyCode} isConnected={isConnected} />
+      <TopBar tab={tab} onTab={setTab} topInset={topInset} isMap={isMap} />
 
       {/* ══ 나가기 버튼 (지도 탭: 상단 바 오른쪽 끝에 이미 있음; 비지도 탭: 별도) ══ */}
       {!isMap && (
