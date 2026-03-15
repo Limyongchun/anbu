@@ -319,8 +319,8 @@ function PulsingPin() {
 }
 
 // ─── 안부 화면 ────────────────────────────────────────────────────────────────
-function AnbuScreen({ familyCode, myName, myRole, deviceId, topBarH }: {
-  familyCode: string | null; myName: string | null; myRole: string | null; deviceId: string; topBarH: number;
+function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topBarH }: {
+  familyCode: string | null; allFamilyCodes: string[]; myName: string | null; myRole: string | null; deviceId: string; topBarH: number;
 }) {
   const [subView, setSubView] = useState<"messages" | "gallery">("messages");
   const [text, setText]       = useState("");
@@ -337,9 +337,15 @@ function AnbuScreen({ familyCode, myName, myRole, deviceId, topBarH }: {
   const THUMB  = (width - 52) / 3;
 
   const load = useCallback(async () => {
-    if (!familyCode) return;
-    try { setMsgs(await api.getMessages(familyCode)); } catch {}
-  }, [familyCode]);
+    if (allFamilyCodes.length === 0) return;
+    try {
+      const results = await Promise.allSettled(allFamilyCodes.map(c => api.getMessages(c)));
+      const all: FamilyMessage[] = [];
+      results.forEach(r => { if (r.status === "fulfilled") all.push(...r.value); });
+      all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setMsgs(all);
+    } catch {}
+  }, [allFamilyCodes]);
 
   useEffect(() => {
     setLoading(true);
@@ -369,11 +375,14 @@ function AnbuScreen({ familyCode, myName, myRole, deviceId, topBarH }: {
   };
 
   const send = async () => {
-    if ((!text.trim() && !photo) || !familyCode || !myName || !myRole) return;
+    if ((!text.trim() && !photo) || allFamilyCodes.length === 0 || !myName || !myRole) return;
     setSending(true);
     try {
-      const m = await api.sendMessage(familyCode, deviceId, myName, myRole, text.trim(), photo || null);
-      setMsgs(p => [m, ...p]);
+      const results = await Promise.allSettled(
+        allFamilyCodes.map(c => api.sendMessage(c, deviceId, myName, myRole, text.trim(), photo || null))
+      );
+      const first = results.find(r => r.status === "fulfilled") as PromiseFulfilledResult<FamilyMessage> | undefined;
+      if (first) setMsgs(p => [first.value, ...p]);
       setText(""); setPhoto(null); setSent(true); setShowCompose(false);
       setTimeout(() => setSent(false), 2500);
     } catch (e: any) {
@@ -383,12 +392,14 @@ function AnbuScreen({ familyCode, myName, myRole, deviceId, topBarH }: {
   };
 
   const del = async (id: number) => {
-    if (!familyCode) return;
+    const msg = msgs.find(m => m.id === id);
+    const code = msg?.familyCode ?? familyCode;
+    if (!code) return;
     Alert.alert("삭제", "이 메시지를 삭제할까요?", [
       { text: "취소", style: "cancel" },
       { text: "삭제", style: "destructive", onPress: async () => {
         setDelId(id);
-        try { await api.deleteMessage(familyCode, id, deviceId); setMsgs(p => p.filter(m => m.id !== id)); }
+        try { await api.deleteMessage(code, id, deviceId); setMsgs(p => p.filter(m => m.id !== id)); }
         catch { Alert.alert("오류", "삭제 실패"); }
         finally { setDelId(null); }
       }},
@@ -638,7 +649,7 @@ function GiftScreen({ topBarH }: { topBarH: number }) {
 // ─── 메인 ─────────────────────────────────────────────────────────────────────
 export default function ChildScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, myName, myRole, deviceId, isConnected } = useFamilyContext();
+  const { familyCode, allFamilyCodes, myName, myRole, deviceId, isConnected } = useFamilyContext();
   const [tab, setTab] = useState<Tab>("지도");
 
   const topInset    = Platform.OS === "web" ? 0  : insets.top;
@@ -660,7 +671,7 @@ export default function ChildScreen() {
       {/* ══ 비지도 탭 ══ */}
       {!isMap && (
         <View style={{ flex: 1 }}>
-          {tab === "안부"   && <AnbuScreen familyCode={familyCode} myName={myName} myRole={myRole} deviceId={deviceId} topBarH={TOP_H} />}
+          {tab === "안부"   && <AnbuScreen familyCode={familyCode} allFamilyCodes={allFamilyCodes} myName={myName} myRole={myRole} deviceId={deviceId} topBarH={TOP_H} />}
           {tab === "선물샵" && <GiftScreen topBarH={TOP_H} />}
         </View>
       )}

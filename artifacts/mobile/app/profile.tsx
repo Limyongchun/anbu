@@ -92,7 +92,7 @@ function Divider() {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, myName, myRole, deviceId, isConnected, connect, updateName, disconnect } = useFamilyContext();
+  const { familyCode, allFamilyCodes, myName, myRole, deviceId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
 
   const [showNameModal, setShowNameModal] = useState(false);
   const [nameInput, setNameInput] = useState(myName ?? "");
@@ -100,6 +100,57 @@ export default function ProfileScreen() {
 
   const [showFaq, setShowFaq] = useState<number | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
+
+  // ── 이미 연결된 자녀가 부모님 추가 ──
+  const [showAddParentSheet, setShowAddParentSheet] = useState(false);
+  const [addParentCode, setAddParentCode] = useState("");
+  const [addingParent, setAddingParent] = useState(false);
+  const [addParentError, setAddParentError] = useState("");
+
+  const handleAddParent = async () => {
+    const code = addParentCode.trim().toUpperCase();
+    if (!code || !myName || !myRole) return;
+    if (allFamilyCodes.includes(code)) {
+      setAddParentError("이미 연결된 가족 코드입니다.");
+      return;
+    }
+    setAddingParent(true); setAddParentError("");
+    try {
+      await api.joinFamily(code, deviceId, myName, myRole);
+      await addExtraFamily(code);
+      setShowAddParentSheet(false);
+      setAddParentCode("");
+    } catch {
+      setAddParentError("코드를 확인해주세요. 가족방이 존재하지 않을 수 있어요.");
+    } finally {
+      setAddingParent(false);
+    }
+  };
+
+  const handleRemoveFamily = (code: string) => {
+    const isPrimary = code === familyCode;
+    Alert.alert(
+      isPrimary ? "가족방 나가기" : "부모님 연결 해제",
+      isPrimary
+        ? "이 가족방에서 나가면 모든 연결이 해제됩니다."
+        : "이 부모님과의 연결을 해제할까요?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "연결 해제",
+          style: "destructive",
+          onPress: async () => {
+            if (isPrimary) {
+              await disconnect();
+              router.replace("/");
+            } else {
+              await removeExtraFamily(code);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // ── 코드 연결 (참가) ──
   const [showJoinSheet, setShowJoinSheet] = useState(false);
@@ -252,29 +303,50 @@ export default function ProfileScreen() {
         <SectionHeader title="가족 연결 코드" />
         <View style={s.card}>
           {isConnected && familyCode ? (
-            <>
-              <View style={s.codeDisplay}>
-                {familyCode.split("").map((ch, i) => (
-                  <View key={i} style={s.codeCell}>
-                    <Text style={s.codeCellText}>{ch.toUpperCase()}</Text>
+            myRole === "child" ? (
+              /* ── 자녀: 연결된 부모님 코드 목록 ── */
+              <View>
+                {allFamilyCodes.map((code, idx) => (
+                  <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                    <View style={s.parentCodeBadge}>
+                      <Text style={s.parentCodeText}>{code}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.parentRowLabel}>부모님 {idx + 1}</Text>
+                      <Text style={s.parentRowSub}>{idx === 0 ? "기본 연결" : "추가 연결"}</Text>
+                    </View>
+                    <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
+                      <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
+                    </Pressable>
                   </View>
                 ))}
+                <Pressable
+                  style={s.addParentBtn}
+                  onPress={() => { setAddParentCode(""); setAddParentError(""); setShowAddParentSheet(true); }}
+                >
+                  <Ionicons name="add-circle" size={18} color={COLORS.navPill} />
+                  <Text style={s.addParentBtnText}>부모님 추가하기</Text>
+                </Pressable>
               </View>
-              <Text style={s.codeHint}>이 코드를 가족과 공유하면 연결됩니다</Text>
-              <Pressable
-                style={[s.copyBtn, codeCopied && s.copyBtnDone]}
-                onPress={copyCode}
-              >
-                <Ionicons
-                  name={codeCopied ? "checkmark" : "copy-outline"}
-                  size={16}
-                  color={codeCopied ? COLORS.neonText : COLORS.navPill}
-                />
-                <Text style={[s.copyBtnText, codeCopied && { color: COLORS.neonText }]}>
-                  {codeCopied ? "복사됨!" : "코드 복사"}
-                </Text>
-              </Pressable>
-            </>
+            ) : (
+              /* ── 부모님: 단일 코드 표시 + 복사 ── */
+              <>
+                <View style={s.codeDisplay}>
+                  {familyCode.split("").map((ch, i) => (
+                    <View key={i} style={s.codeCell}>
+                      <Text style={s.codeCellText}>{ch.toUpperCase()}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={s.codeHint}>이 코드를 가족과 공유하면 연결됩니다</Text>
+                <Pressable style={[s.copyBtn, codeCopied && s.copyBtnDone]} onPress={copyCode}>
+                  <Ionicons name={codeCopied ? "checkmark" : "copy-outline"} size={16} color={codeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Text style={[s.copyBtnText, codeCopied && { color: COLORS.neonText }]}>
+                    {codeCopied ? "복사됨!" : "코드 복사"}
+                  </Text>
+                </Pressable>
+              </>
+            )
           ) : (
             <View style={s.connectSection}>
               <Text style={s.connectSectionTitle}>가족과 연결해보세요</Text>
@@ -441,6 +513,41 @@ export default function ProfileScreen() {
             </Pressable>
           </Pressable>
         </View>
+      </Modal>
+
+      {/* ── 부모님 추가 모달 (자녀가 이미 연결된 상태에서 추가) ── */}
+      <Modal visible={showAddParentSheet} transparent animationType="slide" onRequestClose={() => setShowAddParentSheet(false)}>
+        <KeyboardAvoidingView style={{ flex: 1, justifyContent: "flex-end" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowAddParentSheet(false)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+          </Pressable>
+          <Pressable onPress={() => {}} style={s.bigSheet}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>부모님 추가하기</Text>
+            <Text style={s.sheetSub}>부모님이 공유한 6자리 코드를 입력하세요</Text>
+            <Text style={s.fieldLabel}>가족 코드</Text>
+            <TextInput
+              style={[s.sheetInput, s.codeInputStyle]}
+              value={addParentCode}
+              onChangeText={(t) => setAddParentCode(t.toUpperCase())}
+              placeholder="AB1234"
+              placeholderTextColor={COLORS.textMuted}
+              maxLength={6}
+              autoCapitalize="characters"
+              autoFocus={false}
+            />
+            {!!addParentError && <Text style={s.errorText}>{addParentError}</Text>}
+            <Pressable
+              style={[s.saveBtn, (!addParentCode.trim() || addingParent) && { opacity: 0.4 }]}
+              disabled={!addParentCode.trim() || addingParent}
+              onPress={handleAddParent}
+            >
+              {addingParent
+                ? <ActivityIndicator color={COLORS.white} size="small" />
+                : <Text style={s.saveBtnText}>부모님 추가하기</Text>}
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── 코드로 참가 모달 ── */}
@@ -627,6 +734,16 @@ const s = StyleSheet.create({
 
   connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
   connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.neonText },
+
+  // ── 자녀 다중 부모님 섹션 ──
+  parentRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
+  parentCodeBadge:  { backgroundColor: COLORS.navPill, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, minWidth: 72, alignItems: "center" },
+  parentCodeText:   { fontFamily: "Inter_700Bold", fontSize: 13, color: COLORS.neon, letterSpacing: 2 },
+  parentRowLabel:   { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark },
+  parentRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  parentRemoveBtn:  { padding: 4 },
+  addParentBtn:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 50, borderWidth: 1.5, borderColor: COLORS.navPill },
+  addParentBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.navPill },
 
   // ── 미연결 연결 섹션 ──
   connectSection:   { paddingTop: 4, paddingBottom: 8 },
