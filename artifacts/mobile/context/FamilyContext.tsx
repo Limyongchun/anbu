@@ -14,6 +14,7 @@ export interface FamilyState {
 interface FamilyContextValue extends FamilyState {
   connect: (code: string, name: string, role: FamilyRole) => Promise<void>;
   disconnect: () => Promise<void>;
+  updateName: (name: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -87,6 +88,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const updateName = async (name: string) => {
+    await AsyncStorage.setItem(STORAGE_KEYS.myName, name);
+    setState((prev) => ({ ...prev, myName: name }));
+  };
+
   const disconnect = async () => {
     await Promise.all([
       AsyncStorage.removeItem(STORAGE_KEYS.familyCode),
@@ -103,7 +109,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <FamilyContext.Provider value={{ ...state, connect, disconnect, loading }}>
+    <FamilyContext.Provider value={{ ...state, connect, disconnect, updateName, loading }}>
       {children}
     </FamilyContext.Provider>
   );

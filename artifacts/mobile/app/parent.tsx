@@ -356,6 +356,9 @@ export default function ParentScreen() {
             <Text style={p.codeText}>{familyCode}</Text>
           </View>
         )}
+        <Pressable onPress={() => router.push("/profile")} style={p.backBtn}>
+          <Ionicons name="person-circle-outline" size={20} color="rgba(255,255,255,0.7)" />
+        </Pressable>
         <Pressable onPress={() => router.replace("/")} style={p.backBtn}>
           <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.6)" />
         </Pressable>

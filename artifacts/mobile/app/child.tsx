@@ -76,6 +76,11 @@ function TopBar({ tab, onTab, topInset, isMap, familyCode, isConnected }: {
       {/* 로고 */}
       <Text style={[tb.logo, !isMap && { color: COLORS.textDark }]}>DUGO</Text>
 
+      {/* 마이페이지 버튼 */}
+      <Pressable style={[tb.profileBtn, isMap && tb.profileBtnDark]} onPress={() => router.push("/profile")}>
+        <Ionicons name="person-circle-outline" size={20} color={isMap ? "rgba(255,255,255,0.8)" : COLORS.navPill} />
+      </Pressable>
+
       <View style={{ flex: 1 }} />
 
       {/* 가족코드 칩 (연결됐을 때) */}
@@ -703,6 +708,8 @@ export default function ChildScreen() {
 const tb = StyleSheet.create({
   wrap:         { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 16, paddingBottom: 10 },
   logo:         { fontFamily: "Inter_700Bold", fontSize: 19, color: COLORS.white, letterSpacing: 3 },
+  profileBtn:   { marginLeft: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" },
+  profileBtnDark:{ backgroundColor: "rgba(255,255,255,0.12)" },
   codeChip:     { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
   codeText:     { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.neon, letterSpacing: 1 },
   tabRow:       { flexDirection: "row", gap: 4, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 50, padding: 3 },
