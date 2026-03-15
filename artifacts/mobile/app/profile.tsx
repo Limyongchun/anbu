@@ -3,7 +3,9 @@ import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -16,7 +18,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
-import { useFamilyContext } from "@/context/FamilyContext";
+import { FamilyRole, useFamilyContext } from "@/context/FamilyContext";
+import { api } from "@/lib/api";
 
 const APP_VERSION = "1.0.0";
 const SUPPORT_EMAIL = "support@dugo.app";
@@ -89,7 +92,7 @@ function Divider() {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, myName, myRole, deviceId, isConnected, updateName, disconnect } = useFamilyContext();
+  const { familyCode, myName, myRole, deviceId, isConnected, connect, updateName, disconnect } = useFamilyContext();
 
   const [showNameModal, setShowNameModal] = useState(false);
   const [nameInput, setNameInput] = useState(myName ?? "");
@@ -97,6 +100,68 @@ export default function ProfileScreen() {
 
   const [showFaq, setShowFaq] = useState<number | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
+
+  // ── 코드 연결 (참가) ──
+  const [showJoinSheet, setShowJoinSheet] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinName, setJoinName] = useState("");
+  const [joinRole, setJoinRole] = useState<FamilyRole | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
+  // ── 가족방 만들기 ──
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createRole, setCreateRole] = useState<FamilyRole | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [createCodeCopied, setCreateCodeCopied] = useState(false);
+
+  const handleJoin = async () => {
+    const code = joinCode.trim().toUpperCase();
+    const name = joinName.trim();
+    if (!code || !name || !joinRole) return;
+    setJoining(true); setJoinError("");
+    try {
+      await api.joinFamily(code, deviceId, name, joinRole);
+      await connect(code, name, joinRole);
+      setShowJoinSheet(false);
+      router.replace(joinRole === "parent" ? "/parent" : "/child");
+    } catch {
+      setJoinError("코드를 확인해주세요. 가족방이 존재하지 않을 수 있어요.");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    const name = createName.trim();
+    if (!name || !createRole) return;
+    setCreating(true); setCreateError("");
+    try {
+      const group = await api.createFamily(deviceId, name, createRole);
+      setCreatedCode(group.code);
+    } catch {
+      setCreateError("가족방 만들기에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCompleteCreate = async () => {
+    if (!createdCode || !createName.trim() || !createRole) return;
+    await connect(createdCode, createName.trim(), createRole);
+    setShowCreateSheet(false);
+    router.replace(createRole === "parent" ? "/parent" : "/child");
+  };
+
+  const copyCreatedCode = async () => {
+    if (!createdCode) return;
+    await Clipboard.setStringAsync(createdCode);
+    setCreateCodeCopied(true);
+    setTimeout(() => setCreateCodeCopied(false), 2000);
+  };
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -211,10 +276,43 @@ export default function ProfileScreen() {
               </Pressable>
             </>
           ) : (
-            <View style={{ alignItems: "center", paddingVertical: 8 }}>
-              <Text style={s.rowValue}>연결된 가족이 없어요</Text>
-              <Pressable style={s.connectNowBtn} onPress={() => router.push("/setup")}>
-                <Text style={s.connectNowText}>가족 연결하기</Text>
+            <View style={s.connectSection}>
+              <Text style={s.connectSectionTitle}>가족과 연결해보세요</Text>
+
+              {/* 코드로 참가 */}
+              <Pressable
+                style={s.connectBigBtn}
+                onPress={() => { setJoinCode(""); setJoinName(""); setJoinRole(null); setJoinError(""); setShowJoinSheet(true); }}
+              >
+                <View style={[s.connectBigIcon, { backgroundColor: "rgba(58,90,138,0.1)" }]}>
+                  <Ionicons name="enter-outline" size={24} color="#3a5a8a" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.connectBigLabel}>코드로 참가하기</Text>
+                  <Text style={s.connectBigDesc}>가족이 공유한 6자리 코드 입력</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
+              </Pressable>
+
+              <View style={s.connectOrRow}>
+                <View style={s.connectOrLine} />
+                <Text style={s.connectOrText}>또는</Text>
+                <View style={s.connectOrLine} />
+              </View>
+
+              {/* 새 가족방 만들기 */}
+              <Pressable
+                style={s.connectBigBtn}
+                onPress={() => { setCreateName(""); setCreateRole(null); setCreateError(""); setCreatedCode(null); setShowCreateSheet(true); }}
+              >
+                <View style={[s.connectBigIcon, { backgroundColor: "rgba(212,242,0,0.12)" }]}>
+                  <Ionicons name="add-circle-outline" size={24} color={COLORS.navPill} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.connectBigLabel}>새 가족방 만들기</Text>
+                  <Text style={s.connectBigDesc}>코드를 생성해서 가족과 공유</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
               </Pressable>
             </View>
           )}
@@ -344,6 +442,150 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </Modal>
+
+      {/* ── 코드로 참가 모달 ── */}
+      <Modal visible={showJoinSheet} transparent animationType="slide" onRequestClose={() => setShowJoinSheet(false)}>
+        <KeyboardAvoidingView style={{ flex: 1, justifyContent: "flex-end" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowJoinSheet(false)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+          </Pressable>
+          <Pressable onPress={() => {}} style={s.bigSheet}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>코드로 가족 연결</Text>
+            <Text style={s.sheetSub}>가족이 공유한 6자리 코드를 입력하세요</Text>
+
+            {/* 역할 선택 */}
+            <Text style={s.fieldLabel}>나는</Text>
+            <View style={s.roleRow}>
+              {([["parent", "부모님"], ["child", "자녀"]] as [FamilyRole, string][]).map(([r, label]) => (
+                <Pressable
+                  key={r}
+                  style={[s.roleChip, joinRole === r && s.roleChipActive]}
+                  onPress={() => setJoinRole(r)}
+                >
+                  <Text style={[s.roleChipText, joinRole === r && s.roleChipTextActive]}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* 이름 */}
+            <Text style={s.fieldLabel}>이름</Text>
+            <TextInput
+              style={s.sheetInput}
+              value={joinName}
+              onChangeText={setJoinName}
+              placeholder="가족에게 표시될 이름"
+              placeholderTextColor={COLORS.textMuted}
+              maxLength={20}
+              autoFocus={false}
+            />
+
+            {/* 코드 */}
+            <Text style={s.fieldLabel}>가족 코드</Text>
+            <TextInput
+              style={[s.sheetInput, s.codeInputStyle]}
+              value={joinCode}
+              onChangeText={(t) => setJoinCode(t.toUpperCase())}
+              placeholder="AB1234"
+              placeholderTextColor={COLORS.textMuted}
+              maxLength={6}
+              autoCapitalize="characters"
+            />
+
+            {!!joinError && <Text style={s.errorText}>{joinError}</Text>}
+
+            <Pressable
+              style={[s.saveBtn, (!joinCode.trim() || !joinName.trim() || !joinRole || joining) && { opacity: 0.4 }]}
+              disabled={!joinCode.trim() || !joinName.trim() || !joinRole || joining}
+              onPress={handleJoin}
+            >
+              {joining ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <Text style={s.saveBtnText}>연결하기</Text>
+              )}
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── 새 가족방 만들기 모달 ── */}
+      <Modal visible={showCreateSheet} transparent animationType="slide" onRequestClose={() => setShowCreateSheet(false)}>
+        <KeyboardAvoidingView style={{ flex: 1, justifyContent: "flex-end" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowCreateSheet(false)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+          </Pressable>
+          <Pressable onPress={() => {}} style={s.bigSheet}>
+            <View style={s.sheetHandle} />
+            {createdCode ? (
+              /* ── 코드 발급 완료 ── */
+              <>
+                <View style={{ alignItems: "center", marginBottom: 8 }}>
+                  <Ionicons name="checkmark-circle" size={52} color="#4ade80" />
+                </View>
+                <Text style={[s.sheetTitle, { textAlign: "center" }]}>가족방이 만들어졌어요!</Text>
+                <Text style={[s.sheetSub, { textAlign: "center" }]}>아래 코드를 가족에게 공유해주세요</Text>
+                <View style={s.createdCodeBox}>
+                  <Text style={s.createdCodeText}>{createdCode}</Text>
+                </View>
+                <Pressable style={[s.copyBtn, createCodeCopied && s.copyBtnDone, { marginBottom: 16 }]} onPress={copyCreatedCode}>
+                  <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={16} color={createCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Text style={[s.copyBtnText, createCodeCopied && { color: COLORS.neonText }]}>
+                    {createCodeCopied ? "복사됨!" : "코드 복사"}
+                  </Text>
+                </Pressable>
+                <Pressable style={s.saveBtn} onPress={handleCompleteCreate}>
+                  <Text style={s.saveBtnText}>시작하기</Text>
+                </Pressable>
+              </>
+            ) : (
+              /* ── 입력 폼 ── */
+              <>
+                <Text style={s.sheetTitle}>새 가족방 만들기</Text>
+                <Text style={s.sheetSub}>새 방을 만들고 코드를 가족과 공유해요</Text>
+
+                <Text style={s.fieldLabel}>나는</Text>
+                <View style={s.roleRow}>
+                  {([["parent", "부모님"], ["child", "자녀"]] as [FamilyRole, string][]).map(([r, label]) => (
+                    <Pressable
+                      key={r}
+                      style={[s.roleChip, createRole === r && s.roleChipActive]}
+                      onPress={() => setCreateRole(r)}
+                    >
+                      <Text style={[s.roleChipText, createRole === r && s.roleChipTextActive]}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={s.fieldLabel}>이름</Text>
+                <TextInput
+                  style={s.sheetInput}
+                  value={createName}
+                  onChangeText={setCreateName}
+                  placeholder="가족에게 표시될 이름"
+                  placeholderTextColor={COLORS.textMuted}
+                  maxLength={20}
+                  autoFocus={false}
+                />
+
+                {!!createError && <Text style={s.errorText}>{createError}</Text>}
+
+                <Pressable
+                  style={[s.saveBtn, (!createName.trim() || !createRole || creating) && { opacity: 0.4 }]}
+                  disabled={!createName.trim() || !createRole || creating}
+                  onPress={handleCreate}
+                >
+                  {creating ? (
+                    <ActivityIndicator color={COLORS.white} size="small" />
+                  ) : (
+                    <Text style={s.saveBtnText}>가족방 만들기</Text>
+                  )}
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -385,6 +627,34 @@ const s = StyleSheet.create({
 
   connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
   connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.neonText },
+
+  // ── 미연결 연결 섹션 ──
+  connectSection:   { paddingTop: 4, paddingBottom: 8 },
+  connectSectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.textMid, textAlign: "center", marginBottom: 14 },
+  connectBigBtn:    { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 4 },
+  connectBigIcon:   { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  connectBigLabel:  { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.textDark, marginBottom: 2 },
+  connectBigDesc:   { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
+  connectOrRow:     { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10, paddingHorizontal: 16 },
+  connectOrLine:    { flex: 1, height: 1, backgroundColor: COLORS.border },
+  connectOrText:    { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
+
+  // ── 참가 / 만들기 시트 ──
+  bigSheet:         { backgroundColor: COLORS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 },
+  sheetSub:         { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginTop: -10, marginBottom: 20 },
+  fieldLabel:       { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.textMid, letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
+  roleRow:          { flexDirection: "row", gap: 10, marginBottom: 16 },
+  roleChip:         { flex: 1, paddingVertical: 10, borderRadius: 50, borderWidth: 1.5, borderColor: COLORS.border, alignItems: "center" },
+  roleChipActive:   { backgroundColor: COLORS.navPill, borderColor: COLORS.navPill },
+  roleChipText:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textMid },
+  roleChipTextActive:{ color: COLORS.white },
+  sheetInput:       { backgroundColor: COLORS.white, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
+  codeInputStyle:   { fontFamily: "Inter_700Bold", fontSize: 22, letterSpacing: 8, textAlign: "center" },
+  errorText:        { fontFamily: "Inter_400Regular", fontSize: 13, color: "#ef4444", textAlign: "center", marginBottom: 12 },
+
+  // ── 코드 발급 완료 ──
+  createdCodeBox:   { backgroundColor: COLORS.navPill, borderRadius: 18, paddingVertical: 22, marginBottom: 14, alignItems: "center" },
+  createdCodeText:  { fontFamily: "Inter_700Bold", fontSize: 34, color: COLORS.neon, letterSpacing: 10 },
 
   faqQ:         { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },
   faqQText:     { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textDark, flex: 1, lineHeight: 20 },
