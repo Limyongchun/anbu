@@ -73,24 +73,27 @@ function TopBar({ tab, onTab, topInset }: {
       borderBottomColor: COLORS.border,
     }]}>
       <Text style={[tb.logo, { color: COLORS.textDark }]}>A N B U</Text>
-      <Pressable style={tb.profileBtn} onPress={() => router.push("/profile")}>
-        <Ionicons name="person-circle-outline" size={20} color={COLORS.navPill} />
-      </Pressable>
 
       <View style={{ flex: 1 }} />
 
-      <View style={[tb.tabRow, tb.tabRowLight]}>
-        {tabs.map(t => {
-          const active = tab === t;
-          return (
-            <Pressable key={t} onPress={() => onTab(t)}
-              style={[tb.tabChip, active && tb.tabChipOnLight]}>
-              <Text style={[tb.tabText, { color: active ? COLORS.white : COLORS.textMid }]}>
-                {t}
-              </Text>
-            </Pressable>
-          );
-        })}
+      {/* 탭 + 프로필 — 우측 그룹 */}
+      <View style={tb.rightGroup}>
+        <View style={[tb.tabRow, tb.tabRowLight]}>
+          {tabs.map(t => {
+            const active = tab === t;
+            return (
+              <Pressable key={t} onPress={() => onTab(t)}
+                style={[tb.tabChip, active && tb.tabChipOnLight]}>
+                <Text style={[tb.tabText, { color: active ? COLORS.white : COLORS.textMid }]}>
+                  {t}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Pressable style={tb.profileBtn} onPress={() => router.push("/profile")}>
+          <Ionicons name="person-circle-outline" size={21} color={COLORS.navPill} />
+        </Pressable>
       </View>
     </View>
   );
@@ -1006,10 +1009,11 @@ const hm = StyleSheet.create({
 const tb = StyleSheet.create({
   wrap:         { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 16, paddingBottom: 10 },
   logo:         { fontFamily: "Inter_700Bold", fontSize: 19, color: COLORS.white, letterSpacing: 1 },
-  profileBtn:   { marginLeft: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" },
+  profileBtn:   { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" },
   profileBtnDark:{ backgroundColor: "rgba(255,255,255,0.12)" },
   codeChip:     { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
   codeText:     { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.neon, letterSpacing: 1 },
+  rightGroup:   { flexDirection: "row", alignItems: "center", gap: 8 },
   tabRow:       { flexDirection: "row", gap: 4, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 50, padding: 3 },
   tabRowLight:  { backgroundColor: "rgba(0,0,0,0.06)" },
   tabChip:      { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50 },
