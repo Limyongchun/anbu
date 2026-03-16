@@ -327,7 +327,7 @@ export default function ParentScreen() {
 
       {/* ── 상단 헤더 ── */}
       <View style={[p.header, { paddingTop: topInset + 10 }]}>
-        <Text style={p.logo}>DUGO</Text>
+        <Text style={p.logo}>A N B U</Text>
         <View style={{ flex: 1 }} />
 
         {/* GPS 상태 칩 */}

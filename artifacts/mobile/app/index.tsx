@@ -92,7 +92,7 @@ export default function SplashScreen() {
 
         {/* ── 로고 ── */}
         <PulsingDot />
-        <Text style={st.logo}>DUGO</Text>
+        <Text style={st.logo}>A N B U</Text>
         <Text style={st.sub}>부모님과 자녀를 잇는 안전 연결</Text>
 
         <View style={st.divider} />

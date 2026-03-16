@@ -73,7 +73,7 @@ function TopBar({ tab, onTab, topInset, isMap }: {
       borderBottomColor: isMap ? "transparent" : COLORS.border,
     }]}>
       {/* 로고 + 마이페이지 */}
-      <Text style={[tb.logo, !isMap && { color: COLORS.textDark }]}>DUGO</Text>
+      <Text style={[tb.logo, !isMap && { color: COLORS.textDark }]}>A N B U</Text>
       <Pressable style={[tb.profileBtn, isMap && tb.profileBtnDark]} onPress={() => router.push("/profile")}>
         <Ionicons name="person-circle-outline" size={20} color={isMap ? "rgba(255,255,255,0.75)" : COLORS.navPill} />
       </Pressable>
@@ -315,6 +315,75 @@ function PulsingPin() {
       <Animated.View style={{ position: "absolute", width: 34, height: 34, borderRadius: 17, backgroundColor: "#4285F4", transform: [{ scale: s }], opacity: o }} />
       <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#4285F4", borderWidth: 3, borderColor: "#fff" }} />
     </View>
+  );
+}
+
+// ─── 오늘 안부 상태창 ─────────────────────────────────────────────────────────
+function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
+  allFamilyCodes: string[]; deviceId: string; topBarH: number;
+}) {
+  const [todayMsgs, setTodayMsgs] = useState<FamilyMessage[]>([]);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const loadToday = useCallback(async () => {
+    if (allFamilyCodes.length === 0) return;
+    try {
+      const results = await Promise.allSettled(allFamilyCodes.map(c => api.getMessages(c)));
+      const all: FamilyMessage[] = [];
+      results.forEach(r => { if (r.status === "fulfilled") all.push(...r.value); });
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const mine = all.filter(m => m.deviceId === deviceId && new Date(m.createdAt).getTime() >= todayStart);
+      mine.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setTodayMsgs(mine);
+    } catch {}
+  }, [allFamilyCodes, deviceId]);
+
+  useEffect(() => {
+    loadToday();
+    const iv = setInterval(loadToday, 30000);
+    return () => clearInterval(iv);
+  }, [loadToday]);
+
+  if (allFamilyCodes.length === 0) return null;
+
+  const latest = todayMsgs[0];
+  const count  = todayMsgs.length;
+
+  const previewText = latest
+    ? (latest.text ? latest.text.slice(0, 36) + (latest.text.length > 36 ? "…" : "") : "📷 사진")
+    : "오늘 아직 안부를 보내지 않았어요";
+
+  return (
+    <Pressable
+      style={[sw.card, { top: topBarH + 8 }]}
+      onPress={() => setCollapsed(c => !c)}
+    >
+      <View style={sw.header}>
+        <View style={sw.dot} />
+        <Text style={sw.label}>오늘 안부</Text>
+        {count > 0 && (
+          <View style={sw.badge}>
+            <Text style={sw.badgeText}>{count}</Text>
+          </View>
+        )}
+        <View style={{ flex: 1 }} />
+        <Ionicons
+          name={collapsed ? "chevron-down" : "chevron-up"}
+          size={13}
+          color="rgba(255,255,255,0.35)"
+        />
+      </View>
+
+      {!collapsed && (
+        <View style={sw.body}>
+          <Text style={sw.preview} numberOfLines={2}>{previewText}</Text>
+          {count > 1 && (
+            <Text style={sw.more}>외 {count - 1}건 더</Text>
+          )}
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -679,6 +748,11 @@ export default function ChildScreen() {
       {/* ══ 상단 바 — 항상 위에 떠 있음 ══ */}
       <TopBar tab={tab} onTab={setTab} topInset={topInset} isMap={isMap} />
 
+      {/* ══ 오늘 안부 상태창 — 지도 탭에서만 표시 ══ */}
+      {isMap && isConnected && (
+        <AnbuStatusWidget allFamilyCodes={allFamilyCodes} deviceId={deviceId} topBarH={TOP_H} />
+      )}
+
       {/* ══ 나가기 버튼 (지도 탭: 상단 바 오른쪽 끝에 이미 있음; 비지도 탭: 별도) ══ */}
       {!isMap && (
         <View style={{ position: "absolute", top: topInset + 12, right: 16, zIndex: 300 }}>
@@ -707,7 +781,7 @@ export default function ChildScreen() {
 // 상단 바
 const tb = StyleSheet.create({
   wrap:         { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 16, paddingBottom: 10 },
-  logo:         { fontFamily: "Inter_700Bold", fontSize: 19, color: COLORS.white, letterSpacing: 3 },
+  logo:         { fontFamily: "Inter_700Bold", fontSize: 19, color: COLORS.white, letterSpacing: 1 },
   profileBtn:   { marginLeft: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" },
   profileBtnDark:{ backgroundColor: "rgba(255,255,255,0.12)" },
   codeChip:     { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
@@ -748,6 +822,19 @@ const mp = StyleSheet.create({
   // Native 핀 힌트
   pinHint:        { position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: "rgba(22,30,44,0.82)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7 },
   pinHintText:    { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white },
+});
+
+// 오늘 안부 상태창
+const sw = StyleSheet.create({
+  card:    { position: "absolute", left: 16, right: 16, zIndex: 250, backgroundColor: "rgba(20,28,42,0.88)", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)" },
+  header:  { flexDirection: "row", alignItems: "center", gap: 7 },
+  dot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
+  label:   { fontFamily: "Inter_700Bold", fontSize: 13, color: COLORS.white },
+  badge:   { backgroundColor: COLORS.neon, borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
+  badgeText: { fontFamily: "Inter_700Bold", fontSize: 11, color: COLORS.neonText },
+  body:    { marginTop: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", paddingTop: 10 },
+  preview: { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 18 },
+  more:    { fontFamily: "Inter_500Medium", fontSize: 11, color: "rgba(212,242,0,0.6)", marginTop: 5 },
 });
 
 // 안부
