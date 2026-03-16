@@ -770,6 +770,7 @@ function HomeScreen({
   const [parentJoined, setParentJoined] = useState(false);
   const [parentChecked, setParentChecked] = useState(false);
   const [parentMemberName, setParentMemberName] = useState<string | null>(null);
+  const [parentPhoto, setParentPhoto] = useState<string | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   // ── 부모 연결 감지 (5초 폴링) ──
@@ -784,6 +785,7 @@ function HomeScreen({
           setParentChecked(true);
           if (parentMember) {
             setParentMemberName(parentMember.memberName);
+            if (parentMember.photoData) setParentPhoto(parentMember.photoData);
             revealAnim.setValue(1);
             setParentJoined(true);
           }
@@ -917,7 +919,11 @@ function HomeScreen({
       {/* 부모님 카드 */}
       <View style={hm.parentCard}>
         <View style={hm.parentAvatar}>
-          <Ionicons name="person" size={26} color="#3b82f6" />
+          {parentPhoto ? (
+            <Image source={{ uri: parentPhoto }} style={{ width: 50, height: 50, borderRadius: 25 }} />
+          ) : (
+            <Ionicons name="person" size={26} color="#3b82f6" />
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={hm.parentName}>{parentName}</Text>
@@ -1422,7 +1428,7 @@ const hm = StyleSheet.create({
   statusTitle:     { fontFamily: "Inter_700Bold", fontSize: 20, color: "#1a2535", flex: 1, lineHeight: 26 },
   statusSub:       { fontFamily: "Inter_400Regular", fontSize: 14, color: "#64748b", lineHeight: 20 },
   parentCard:      { marginHorizontal: 16, marginBottom: 6, borderRadius: 20, backgroundColor: "#fff", padding: 16, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  parentAvatar:    { width: 52, height: 52, borderRadius: 26, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center" },
+  parentAvatar:    { width: 52, height: 52, borderRadius: 26, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   parentName:      { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1a2535", marginBottom: 4 },
   parentStatusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   parentStatusText:{ fontFamily: "Inter_500Medium", fontSize: 13, color: "#64748b" },

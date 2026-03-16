@@ -129,12 +129,24 @@ export default function ProfileScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5,
+      base64: true,
     });
-    if (!result.canceled && result.assets[0]?.uri) {
-      const uri = result.assets[0].uri;
+    if (!result.canceled && result.assets[0]) {
+      const { uri, base64 } = result.assets[0];
       setProfilePhoto(uri);
       await AsyncStorage.setItem(PHOTO_KEY, uri);
+      if (base64 && familyCode && deviceId) {
+        const photoData = `data:image/jpeg;base64,${base64}`;
+        api.updateMemberPhoto(familyCode, deviceId, photoData).catch(() => {});
+        if (allFamilyCodes.length > 1) {
+          allFamilyCodes.forEach(code => {
+            if (code !== familyCode) {
+              api.updateMemberPhoto(code, deviceId, photoData).catch(() => {});
+            }
+          });
+        }
+      }
     }
   };
 

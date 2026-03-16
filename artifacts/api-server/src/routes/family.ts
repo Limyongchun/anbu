@@ -401,4 +401,19 @@ router.delete("/family/:code/messages/:messageId", async (req, res) => {
   }
 });
 
+// PATCH /api/family/:code/member/:deviceId/photo
+router.patch("/family/:code/member/:deviceId/photo", async (req, res) => {
+  try {
+    const { code, deviceId } = req.params;
+    const { photoData } = req.body;
+    if (!photoData) return res.status(400).json({ error: "photoData required" });
+    await db.update(familyMembersTable)
+      .set({ photoData })
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)));
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to update photo" });
+  }
+});
+
 export default router;

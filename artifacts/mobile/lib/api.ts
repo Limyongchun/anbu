@@ -20,6 +20,7 @@ export interface FamilyMember {
   deviceId: string;
   memberName: string;
   role: string;
+  photoData?: string | null;
   joinedAt: string;
 }
 
@@ -129,6 +130,12 @@ export const api = {
 
   confirmPayment: (code: string, subDeviceId: string): Promise<{ success: boolean; paymentStatus: string }> =>
     request(`/family/${code}/subscription/${encodeURIComponent(subDeviceId)}/confirm`, { method: "POST" }),
+
+  updateMemberPhoto: (code: string, deviceId: string, photoData: string): Promise<{ success: boolean }> =>
+    request(`/family/${code}/member/${encodeURIComponent(deviceId)}/photo`, {
+      method: "PATCH",
+      body: JSON.stringify({ photoData }),
+    }),
 };
 
 export interface SubscriptionInfo {
