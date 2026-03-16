@@ -113,6 +113,7 @@ Expo React Native app called A N B U. Korean family safety app.
 - **API client**: `lib/api.ts` — typed fetch client using `EXPO_PUBLIC_DOMAIN` env var
 - **Auth**: OTP via `POST /api/auth/send-otp` + `POST /api/auth/verify-otp`; devCode returned in non-production
 - **DB schema** `familyMembersTable`: includes `childRole text` column (null for parents, "master"/"sub" for children)
+- **Parent Activity Logs**: `parentActivityLogsTable` in DB; API `POST /api/family/:code/activity` + `GET /api/family/:code/activities`; parent app logs heart/view_slide/location/app_open activities with throttling; child app fetches real logs for "최근 활동" section
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
 - **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
 

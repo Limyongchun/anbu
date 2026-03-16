@@ -136,7 +136,32 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ photoData }),
     }),
+
+  logParentActivity: (
+    code: string,
+    deviceId: string,
+    parentName: string,
+    activityType: string,
+    detail?: string
+  ): Promise<ParentActivityLog> =>
+    request(`/family/${code}/activity`, {
+      method: "POST",
+      body: JSON.stringify({ deviceId, parentName, activityType, detail }),
+    }),
+
+  getParentActivities: (code: string, limit = 30): Promise<ParentActivityLog[]> =>
+    request(`/family/${code}/activities?limit=${limit}`),
 };
+
+export interface ParentActivityLog {
+  id: number;
+  familyCode: string;
+  deviceId: string;
+  parentName: string;
+  activityType: string;
+  detail?: string | null;
+  createdAt: string;
+}
 
 export interface SubscriptionInfo {
   id: number;

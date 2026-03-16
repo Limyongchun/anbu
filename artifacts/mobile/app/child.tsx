@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
-import { api, FamilyMessage, LocationData, SubscriptionInfo, MySubscriptionStatus } from "@/lib/api";
+import { api, FamilyMessage, LocationData, SubscriptionInfo, MySubscriptionStatus, ParentActivityLog } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
 type Tab = "홈" | "사진" | "위치" | "알림";
@@ -799,12 +799,15 @@ function HomeScreen({
     return () => { cancelled = true; clearInterval(iv); };
   }, [familyCode]);
 
+  const [parentActivities, setParentActivities] = useState<ParentActivityLog[]>([]);
+
   const load = useCallback(async () => {
     if (!allFamilyCodes.length) { setLoading(false); return; }
     try {
-      const [locsArr, msgsArr] = await Promise.all([
+      const [locsArr, msgsArr, actsArr] = await Promise.all([
         Promise.all(allFamilyCodes.map(c => api.getAllLocations(c))),
         Promise.all(allFamilyCodes.map(c => api.getMessages(c))),
+        Promise.all(allFamilyCodes.map(c => api.getParentActivities(c).catch(() => [] as ParentActivityLog[]))),
       ]);
       const parentLocs = locsArr.flat().filter(l => l.role === "parent");
       const newest = parentLocs.sort(
@@ -814,13 +817,16 @@ function HomeScreen({
       setMessages(
         msgsArr.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       );
+      setParentActivities(
+        actsArr.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      );
     } catch {}
     setLoading(false);
   }, [allFamilyCodes]);
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60000);
+    const t = setInterval(load, 30000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -845,31 +851,30 @@ function HomeScreen({
   const statusColor = STATUS_COLOR[statusLevel];
   const statusMsg   = STATUS_MSG[statusLevel];
 
+  const ACTIVITY_ICON_MAP: Record<string, { icon: keyof typeof Ionicons.glyphMap; iconColor: string; iconBg: string }> = {
+    heart:      { icon: "heart",           iconColor: "#ec4899", iconBg: "#fdf2f8" },
+    view_slide: { icon: "eye",             iconColor: "#8b5cf6", iconBg: "#f5f3ff" },
+    location:   { icon: "location",        iconColor: "#3b82f6", iconBg: "#eff6ff" },
+    app_open:   { icon: "phone-portrait",  iconColor: "#22c55e", iconBg: "#f0fdf4" },
+    quiz:       { icon: "bulb",            iconColor: "#f59e0b", iconBg: "#fffbeb" },
+    message:    { icon: "chatbubble",      iconColor: "#06b6d4", iconBg: "#ecfeff" },
+  };
+  const DEFAULT_ICON = { icon: "ellipse" as keyof typeof Ionicons.glyphMap, iconColor: "#94a3b8", iconBg: "#f1f5f9" };
+
   const activities = useMemo<ActivityItem[]>(() => {
-    const items: ActivityItem[] = [];
-    if (parentLoc) {
-      items.push({
-        id: "loc", icon: "location", iconColor: "#3b82f6", iconBg: "#eff6ff",
-        label: "위치 공유됨", time: formatTime(parentLoc.updatedAt),
-        timestamp: new Date(parentLoc.updatedAt).getTime(),
-      });
-    }
-    messages.slice(0, 30).forEach(m => {
-      if (m.fromRole === "parent") {
-        if (m.photoData) {
-          items.push({ id: `mp${m.id}`, icon: "image", iconColor: "#8b5cf6", iconBg: "#f5f3ff", label: "부모님이 사진을 보내셨어요", time: formatTime(m.createdAt), timestamp: new Date(m.createdAt).getTime() });
-        } else {
-          items.push({ id: `mt${m.id}`, icon: "chatbubble", iconColor: "#06b6d4", iconBg: "#ecfeff", label: "안부 메시지 도착", time: formatTime(m.createdAt), timestamp: new Date(m.createdAt).getTime() });
-        }
-      } else if (m.deviceId === deviceId) {
-        items.push({ id: `cs${m.id}`, icon: "paper-plane", iconColor: "#22c55e", iconBg: "#f0fdf4", label: "안부를 보냈어요", time: formatTime(m.createdAt), timestamp: new Date(m.createdAt).getTime() });
-      }
-      if (m.hearts > 0) {
-        items.push({ id: `ht${m.id}`, icon: "heart", iconColor: "#ec4899", iconBg: "#fdf2f8", label: "하트를 받았어요", time: formatTime(m.createdAt), timestamp: new Date(m.createdAt).getTime() });
-      }
+    return parentActivities.slice(0, showAll ? 20 : 4).map((a) => {
+      const style = ACTIVITY_ICON_MAP[a.activityType] || DEFAULT_ICON;
+      return {
+        id: `pa${a.id}`,
+        icon: style.icon,
+        iconColor: style.iconColor,
+        iconBg: style.iconBg,
+        label: a.detail || a.activityType,
+        time: formatTime(a.createdAt),
+        timestamp: new Date(a.createdAt).getTime(),
+      };
     });
-    return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, showAll ? 20 : 4);
-  }, [parentLoc, messages, showAll, deviceId]);
+  }, [parentActivities, showAll]);
 
   const parentName = parentLoc?.memberName ?? parentMemberName ?? "부모님";
   const hour = new Date().getHours();
@@ -964,7 +969,7 @@ function HomeScreen({
         </View>
       )}
 
-      {!showAll && activities.length >= 4 && (
+      {!showAll && parentActivities.length > 4 && (
         <Pressable style={hm.viewAllBtn} onPress={() => setShowAll(true)}>
           <Text style={hm.viewAllText}>전체 활동 보기</Text>
         </Pressable>

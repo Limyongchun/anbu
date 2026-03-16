@@ -6,6 +6,7 @@ import {
   familyLocationsTable,
   familyMessagesTable,
   familySubscriptionsTable,
+  parentActivityLogsTable,
 } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -413,6 +414,42 @@ router.patch("/family/:code/member/:deviceId/photo", async (req, res) => {
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ error: "Failed to update photo" });
+  }
+});
+
+// POST /api/family/:code/activity — log a parent activity
+router.post("/family/:code/activity", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { deviceId, parentName, activityType, detail } = req.body;
+    if (!deviceId || !parentName || !activityType) {
+      return res.status(400).json({ error: "deviceId, parentName, activityType required" });
+    }
+    const [log] = await db.insert(parentActivityLogsTable).values({
+      familyCode: code,
+      deviceId,
+      parentName,
+      activityType,
+      detail: detail || null,
+    }).returning();
+    return res.json(log);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to log activity" });
+  }
+});
+
+// GET /api/family/:code/activities — get parent activity logs
+router.get("/family/:code/activities", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const limit = Math.min(parseInt(req.query.limit as string) || 30, 100);
+    const logs = await db.select().from(parentActivityLogsTable)
+      .where(eq(parentActivityLogsTable.familyCode, code))
+      .orderBy(desc(parentActivityLogsTable.createdAt))
+      .limit(limit);
+    return res.json(logs);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to fetch activities" });
   }
 });
 

@@ -19,6 +19,11 @@ import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { api, FamilyMessage } from "@/lib/api";
 
+function logActivity(familyCode: string | null, deviceId: string | null, parentName: string | null, type: string, detail?: string) {
+  if (!familyCode || !deviceId || !parentName) return;
+  api.logParentActivity(familyCode, deviceId, parentName, type, detail).catch(() => {});
+}
+
 const { width, height } = Dimensions.get("window");
 const INTERVAL_MS = 6000;
 
@@ -192,6 +197,13 @@ export default function ParentScreen() {
     return () => clearInterval(iv);
   }, [allFamilyCodes, loadMsgs]);
 
+  useEffect(() => {
+    if (familyCode && deviceId && myName) {
+      logActivity(familyCode, deviceId, myName, "app_open", "앱을 열었습니다");
+    }
+  }, [familyCode, deviceId, myName]);
+
+  const lastLocLogRef = useRef(0);
   const uploadLoc = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
     if (!familyCode || !myName || !deviceId) return;
     setLocUploading(true);
@@ -203,6 +215,11 @@ export default function ParentScreen() {
       } catch {}
       setAddress(addr);
       await api.updateLocation(familyCode, { deviceId, memberName: myName, latitude: loc.coords.latitude, longitude: loc.coords.longitude, address: addr, accuracy: loc.coords.accuracy ?? undefined, isSharing: sharing });
+      const now = Date.now();
+      if (sharing && addr && now - lastLocLogRef.current > 300000) {
+        lastLocLogRef.current = now;
+        logActivity(familyCode, deviceId, myName, "location", `위치를 공유했습니다 · ${addr}`);
+      }
     } catch {} finally { setLocUploading(false); }
   }, [familyCode, myName, deviceId]);
 
@@ -237,6 +254,9 @@ export default function ParentScreen() {
   const total  = slides.length;
 
   // ── 슬라이드 이동 ──
+  const slideViewCountRef = useRef(0);
+  const lastSlideLogRef = useRef(0);
+
   const goTo = useCallback((targetIdx: number, dir: "up" | "down" = "up") => {
     if (transitioning || total === 0) return;
     const safeIdx = ((targetIdx % total) + total) % total;
@@ -244,6 +264,18 @@ export default function ParentScreen() {
     setTransitioning(true);
     nxtY.setValue(dir === "up" ? height : -height);
     progressAnim.stopAnimation();
+
+    slideViewCountRef.current += 1;
+    const now = Date.now();
+    if (now - lastSlideLogRef.current > 60000) {
+      lastSlideLogRef.current = now;
+      const s = slides[safeIdx];
+      const detail = s?.kind === "msg" && s.msg.photoData
+        ? "사진을 감상하고 계세요"
+        : "메시지를 확인하고 계세요";
+      logActivity(familyCode, deviceId, myName, "view_slide", detail);
+    }
+
     Animated.parallel([
       Animated.timing(curY, { toValue: dir === "up" ? -height : height, duration: 480, useNativeDriver: false }),
       Animated.timing(nxtY, { toValue: 0, duration: 480, useNativeDriver: false }),
@@ -252,7 +284,7 @@ export default function ParentScreen() {
       curY.setValue(0); nxtY.setValue(height);
       setTransitioning(false);
     });
-  }, [transitioning, total, curY, nxtY, progressAnim]);
+  }, [transitioning, total, curY, nxtY, progressAnim, slides, familyCode, deviceId, myName]);
 
   const goNext = useCallback(() => goTo(curIdx + 1, "up"),   [curIdx, goTo]);
   const goPrev = useCallback(() => goTo(curIdx - 1, "down"), [curIdx, goTo]);
@@ -304,6 +336,8 @@ export default function ParentScreen() {
   const heartSlide = async (slide: Slide) => {
     spawnHearts();
     if (slide.kind !== "msg" || !familyCode) return;
+    const hasPhoto = !!slide.msg.photoData;
+    logActivity(familyCode, deviceId, myName, "heart", hasPhoto ? "사진에 좋아요를 눌렀습니다" : "메시지에 좋아요를 눌렀습니다");
     try {
       const updated = await api.heartMessage(familyCode, slide.msg.id);
       setMsgs(p => p.map(m => m.id === updated.id ? updated : m));
