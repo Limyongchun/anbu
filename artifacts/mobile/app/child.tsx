@@ -941,7 +941,7 @@ function HomeScreen({
               {i > 0 && <View style={hm.activityDivider} />}
               <View style={hm.activityRow}>
                 <View style={[hm.activityIconBg, { backgroundColor: item.iconBg }]}>
-                  <Ionicons name={item.icon} size={17} color={item.iconColor} />
+                  <Ionicons name={item.icon} size={14} color={item.iconColor} />
                 </View>
                 <Text style={hm.activityLabel}>{item.label}</Text>
                 <Text style={hm.activityTime}>{item.time}</Text>
@@ -1028,7 +1028,7 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
                 <View style={[hm.activityIconBg, { backgroundColor: m.fromRole === "parent" ? "#eff6ff" : "#f0fdf4" }]}>
                   <Ionicons
                     name={m.photoData ? "image" : m.fromRole === "parent" ? "chatbubble" : "paper-plane"}
-                    size={17}
+                    size={14}
                     color={m.fromRole === "parent" ? "#3b82f6" : "#22c55e"}
                   />
                 </View>
@@ -1226,9 +1226,9 @@ const hm = StyleSheet.create({
   parentTime:      { fontFamily: "Inter_400Regular", fontSize: 12, color: "#94a3b8", marginTop: 3 },
   sectionTitle:    { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1a2535", marginHorizontal: 20, marginTop: 22, marginBottom: 10 },
   activityCard:    { marginHorizontal: 16, borderRadius: 20, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  activityRow:     { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, paddingHorizontal: 16 },
-  activityDivider: { height: 1, backgroundColor: "#f1f5f9", marginHorizontal: 16 },
-  activityIconBg:  { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  activityRow:     { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7, paddingHorizontal: 14 },
+  activityDivider: { height: 1, backgroundColor: "#f1f5f9", marginHorizontal: 14 },
+  activityIconBg:  { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   activityLabel:   { fontFamily: "Inter_500Medium", fontSize: 14, color: "#1e293b", flex: 1 },
   activityTime:    { fontFamily: "Inter_400Regular", fontSize: 12, color: "#94a3b8" },
   viewAllBtn:      { marginHorizontal: 16, marginTop: 10, borderRadius: 16, borderWidth: 1.5, borderColor: "#e2e8f0", paddingVertical: 14, alignItems: "center", backgroundColor: "#fff" },
