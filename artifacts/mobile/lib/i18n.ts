@@ -7,7 +7,7 @@ const translations = {
     appSubSplash: "부모님과 자녀를 잇는 안전 연결",
     preview:      "미리보기",
     childScreen:  "자녀 화면",
-    parentScreen: "부모님 화면",
+    parentScreen: "부모",
     footer:       "가족과의 소중한 순간을 연결합니다",
     next:         "다음",
     back:         "뒤로가기",
