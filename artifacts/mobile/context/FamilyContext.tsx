@@ -83,7 +83,22 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         let extras: string[] = [];
         try { extras = extrasRaw ? JSON.parse(extrasRaw) : []; } catch {}
 
-        const childRole = (cr as ChildRole) || null;
+        let childRole = (cr as ChildRole) || null;
+
+        if (!childRole && code && role === "child" && effectiveDeviceId) {
+          try {
+            const BASE = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+            const res = await fetch(`${BASE}/api/family/${code}`);
+            if (res.ok) {
+              const data = await res.json();
+              const me = (data.members ?? []).find((m: { deviceId: string; childRole: string | null }) => m.deviceId === effectiveDeviceId);
+              if (me?.childRole) {
+                childRole = me.childRole as ChildRole;
+                await AsyncStorage.setItem(STORAGE_KEYS.childRole, childRole as string);
+              }
+            }
+          } catch {}
+        }
 
         setState({
           familyCode:     code,
