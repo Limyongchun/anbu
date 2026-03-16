@@ -360,19 +360,21 @@ export default function ProfileScreen() {
           <>
             <SectionHeader title="마스터 코드" />
             <View style={s.card}>
-              <View style={s.childCodeDisplay}>
-                {familyCode.split("").map((ch, i) => (
-                  <View key={i} style={s.childCodeCell}>
-                    <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
-                  </View>
-                ))}
+              <View style={{ padding: 16, paddingBottom: 12 }}>
+                <View style={s.childCodeDisplay}>
+                  {familyCode.split("").map((ch, i) => (
+                    <View key={i} style={s.childCodeCell}>
+                      <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
+                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
+                    {childCodeCopied ? "복사됨!" : "코드 복사"}
+                  </Text>
+                </Pressable>
               </View>
-              <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
-                <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
-                <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
-                  {childCodeCopied ? "복사됨!" : "코드 복사"}
-                </Text>
-              </Pressable>
             </View>
           </>
         )}
