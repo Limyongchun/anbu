@@ -41,9 +41,9 @@ function WhiteSplash({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     Animated.sequence([
-      Animated.timing(letterSpread, { toValue: 1, duration: 700, useNativeDriver: false }),
-      Animated.delay(2000),
-      Animated.timing(opacity, { toValue: 0, duration: 800, useNativeDriver: false }),
+      Animated.timing(letterSpread, { toValue: 1, duration: 400, useNativeDriver: false }),
+      Animated.delay(800),
+      Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: false }),
     ]).start(() => onDone());
   }, []);
 
@@ -73,7 +73,7 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: "#ffffff" }} />;
 
   return (
     <SafeAreaProvider>
