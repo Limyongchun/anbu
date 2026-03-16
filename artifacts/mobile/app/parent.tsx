@@ -316,125 +316,121 @@ export default function ParentScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
 
-      {/* ── 하트 파티클 ── */}
-      {floatHearts.map(h => <HeartParticle key={h.id} h={h} />)}
+      {/* ══ 슬라이드 + 오버레이 영역 (flex: 1 — 화면을 꽉 채움) ══ */}
+      <View style={ps.slideArea}>
 
-      {/* ══ 전체화면 슬라이드쇼 ══ */}
-      <View
-        style={StyleSheet.absoluteFillObject}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        {loadingMsgs && msgs.length === 0 ? (
-          <View style={ps.loadingWrap}>
-            <ActivityIndicator color={COLORS.neon} size="large" />
-            <Text style={ps.loadingText}>사진 불러오는 중...</Text>
-          </View>
-        ) : currentSlide ? (
-          <>
-            <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: curY }] }]}>
-              <SlideCard slide={currentSlide} />
-            </Animated.View>
-            {pendingSlide && (
-              <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: nxtY }] }]}>
-                <SlideCard slide={pendingSlide} />
+        {/* ── 전체화면 슬라이드쇼 ── */}
+        <View
+          style={StyleSheet.absoluteFillObject}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          {loadingMsgs && msgs.length === 0 ? (
+            <View style={ps.loadingWrap}>
+              <ActivityIndicator color={COLORS.neon} size="large" />
+              <Text style={ps.loadingText}>사진 불러오는 중...</Text>
+            </View>
+          ) : currentSlide ? (
+            <>
+              <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: curY }] }]}>
+                <SlideCard slide={currentSlide} />
               </Animated.View>
+              {pendingSlide && (
+                <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: nxtY }] }]}>
+                  <SlideCard slide={pendingSlide} />
+                </Animated.View>
+              )}
+            </>
+          ) : (
+            <View style={ps.emptyWrap}>
+              <Ionicons name="images-outline" size={56} color="rgba(255,255,255,0.15)" />
+              <Text style={ps.emptyTitle}>아직 사진이 없어요</Text>
+              <Text style={ps.emptySub}>자녀가 사진을 보내면{"\n"}여기 표시됩니다</Text>
+              {!isConnected && (
+                <Pressable style={ps.connectBtn} onPress={() => router.push("/profile")}>
+                  <Text style={ps.connectBtnText}>가족 연결하기</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* ── 하트 파티클 ── */}
+        {floatHearts.map(h => <HeartParticle key={h.id} h={h} />)}
+
+        {/* ── 프로그레스 바 (항상 표시) ── */}
+        {total > 1 && (
+          <View style={[ps.storyBars, { top: topInset + 10 }]} pointerEvents="none">
+            {slides.map((_, i) => (
+              <View key={i} style={ps.storyBar}>
+                <Animated.View style={[ps.storyBarFill, {
+                  width: i < curIdx ? "100%" : i === curIdx ? progressWidth : "0%",
+                }]} />
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ══ 상단 오버레이 (탭 시 내려옴) ══ */}
+        <Animated.View
+          style={[ps.topOverlay, { paddingTop: topInset + 14, transform: [{ translateY: topBarAnim }] }]}
+          pointerEvents={uiVisible ? "box-none" : "none"}
+        >
+          <View style={ps.topGradient} pointerEvents="none" />
+          <View style={ps.topRow}>
+            <Text style={ps.logo}>A N B U</Text>
+            <View style={{ flex: 1 }} />
+            <Pressable
+              onPress={permission?.granted ? toggleShare : requestPermission}
+              style={[ps.gpsChip, !isSharing && ps.gpsChipOff]}
+            >
+              {locUploading
+                ? <ActivityIndicator size="small" color={COLORS.neon} style={{ width: 10, height: 10 }} />
+                : <View style={[ps.gpsDot, !isSharing && { backgroundColor: "rgba(255,255,255,0.3)" }]} />}
+              <Text style={[ps.gpsText, !isSharing && { color: "rgba(255,255,255,0.35)" }]} numberOfLines={1}>
+                {isSharing ? (address || "위치 공유 중") : "공유 중지됨"}
+              </Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+
+        {/* ══ 하단 오버레이 (탭 시 올라옴) ══ */}
+        <Animated.View
+          style={[ps.bottomOverlay, { paddingBottom: Math.max(bottomInset, 22), transform: [{ translateY: bottomBarAnim }] }]}
+          pointerEvents={uiVisible ? "box-none" : "none"}
+        >
+          <View style={ps.bottomGradient} pointerEvents="none" />
+          <View style={ps.bottomRow}>
+            <Pressable style={ps.heartPill} onPress={() => currentSlide && heartSlide(currentSlide)}>
+              <Ionicons name="heart" size={19} color={COLORS.coral} />
+              {currentHearts > 0 && <Text style={ps.heartCount}>{currentHearts}</Text>}
+            </Pressable>
+            {total > 0 && (
+              <Text style={ps.slideCounter}>{curIdx + 1} / {total}</Text>
             )}
-          </>
-        ) : (
-          <View style={ps.emptyWrap}>
-            <Ionicons name="images-outline" size={56} color="rgba(255,255,255,0.15)" />
-            <Text style={ps.emptyTitle}>아직 사진이 없어요</Text>
-            <Text style={ps.emptySub}>자녀가 사진을 보내면{"\n"}여기 표시됩니다</Text>
-            {!isConnected && (
-              <Pressable style={ps.connectBtn} onPress={() => router.push("/profile")}>
-                <Text style={ps.connectBtnText}>가족 연결하기</Text>
+            <View style={ps.iconGroup}>
+              <Pressable style={ps.iconBtn} onPress={() => router.push("/profile")}>
+                <Ionicons name="person-circle-outline" size={23} color="rgba(255,255,255,0.88)" />
               </Pressable>
-            )}
+              <Pressable style={ps.iconBtn} onPress={() => router.replace("/")}>
+                <Ionicons name="home-outline" size={21} color="rgba(255,255,255,0.88)" />
+              </Pressable>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* ── 일시정지 표시 ── */}
+        {isPaused && !transitioning && (
+          <View style={ps.pauseOverlay} pointerEvents="none">
+            <View style={ps.pauseBadge}>
+              <Ionicons name="pause" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={ps.pauseText}>일시정지</Text>
+            </View>
           </View>
         )}
       </View>
 
-      {/* ── 프로그레스 바 (항상 표시 — 최상단) ── */}
-      {total > 1 && (
-        <View style={[ps.storyBars, { top: topInset + 10 }]} pointerEvents="none">
-          {slides.map((_, i) => (
-            <View key={i} style={ps.storyBar}>
-              <Animated.View style={[ps.storyBarFill, {
-                width: i < curIdx ? "100%" : i === curIdx ? progressWidth : "0%",
-              }]} />
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* ══ 상단 오버레이 (탭 시 내려옴) ══ */}
-      <Animated.View
-        style={[ps.topOverlay, { paddingTop: topInset + 14, transform: [{ translateY: topBarAnim }] }]}
-        pointerEvents={uiVisible ? "box-none" : "none"}
-      >
-        {/* 배경 그라디언트 효과 */}
-        <View style={ps.topGradient} pointerEvents="none" />
-        <View style={ps.topRow}>
-          <Text style={ps.logo}>A N B U</Text>
-          <View style={{ flex: 1 }} />
-          {/* GPS 칩 */}
-          <Pressable
-            onPress={permission?.granted ? toggleShare : requestPermission}
-            style={[ps.gpsChip, !isSharing && ps.gpsChipOff]}
-          >
-            {locUploading
-              ? <ActivityIndicator size="small" color={COLORS.neon} style={{ width: 10, height: 10 }} />
-              : <View style={[ps.gpsDot, !isSharing && { backgroundColor: "rgba(255,255,255,0.3)" }]} />}
-            <Text style={[ps.gpsText, !isSharing && { color: "rgba(255,255,255,0.35)" }]} numberOfLines={1}>
-              {isSharing ? (address || "위치 공유 중") : "공유 중지됨"}
-            </Text>
-          </Pressable>
-        </View>
-      </Animated.View>
-
-      {/* ══ 하단 오버레이 (탭 시 올라옴) ══ */}
-      <Animated.View
-        style={[ps.bottomOverlay, { paddingBottom: Math.max(bottomInset, 22), transform: [{ translateY: bottomBarAnim }] }]}
-        pointerEvents={uiVisible ? "box-none" : "none"}
-      >
-        <View style={ps.bottomGradient} pointerEvents="none" />
-        <View style={ps.bottomRow}>
-
-          {/* ❤️ 하트 버튼 */}
-          <Pressable style={ps.heartPill} onPress={() => currentSlide && heartSlide(currentSlide)}>
-            <Ionicons name="heart" size={19} color={COLORS.coral} />
-            {currentHearts > 0 && <Text style={ps.heartCount}>{currentHearts}</Text>}
-          </Pressable>
-
-          {/* 슬라이드 카운터 */}
-          {total > 0 && (
-            <Text style={ps.slideCounter}>{curIdx + 1} / {total}</Text>
-          )}
-
-          {/* 우측 아이콘 버튼 */}
-          <View style={ps.iconGroup}>
-            <Pressable style={ps.iconBtn} onPress={() => router.push("/profile")}>
-              <Ionicons name="person-circle-outline" size={23} color="rgba(255,255,255,0.88)" />
-            </Pressable>
-            <Pressable style={ps.iconBtn} onPress={() => router.replace("/")}>
-              <Ionicons name="home-outline" size={21} color="rgba(255,255,255,0.88)" />
-            </Pressable>
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* ── 일시정지 표시 ── */}
-      {isPaused && !transitioning && (
-        <View style={ps.pauseOverlay} pointerEvents="none">
-          <View style={ps.pauseBadge}>
-            <Ionicons name="pause" size={12} color="rgba(255,255,255,0.9)" />
-            <Text style={ps.pauseText}>일시정지</Text>
-          </View>
-        </View>
-      )}
-
-      {/* ── 개발 스위처 ── */}
+      {/* ── 개발 스위처 (하단 고정) ── */}
       <View style={dev.bar}>
         <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
         <Text style={dev.label}>개발 모드</Text>
@@ -467,6 +463,9 @@ const sl = StyleSheet.create({
 
 // ── 화면 스타일 ───────────────────────────────────────────────────────────────
 const ps = StyleSheet.create({
+  // 슬라이드 + 오버레이 래퍼
+  slideArea:      { flex: 1, overflow: "hidden", backgroundColor: "#000" },
+
   // 로딩 / 빈 화면
   loadingWrap:    { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: "#111" },
   loadingText:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)" },
