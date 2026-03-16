@@ -98,7 +98,7 @@ const translations = {
 
     // ── 프로필 ──
     profileTitle:     "마이페이지",
-    sectionFamily:    "가족 연결 코드",
+    sectionFamily:    "부모 관리",
     sectionAccount:   "계정 정보",
     sectionSupport:   "고객센터",
     sectionFaq:       "자주 묻는 질문",
