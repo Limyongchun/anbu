@@ -57,22 +57,28 @@ export default function SetupScreen() {
   };
 
   const handleJoinFamily = async () => {
-    if (!joinCodeInput.trim() || !name.trim() || !role) return;
+    if (!joinCodeInput.trim() || !role) return;
     setLoading(true);
     setError("");
     try {
       const code = joinCodeInput.trim().toUpperCase();
-      let finalName = name.trim();
-      if (role === "parent") {
-        try {
-          const family = await api.getFamily(code);
-          const existingParents = (family.members ?? []).filter((m: { role: string }) => m.role === "parent");
-          if (existingParents.length >= 1 && finalName === "부모님") {
+      let finalName = name.trim() || "부모님";
+
+      try {
+        const family = await api.getFamily(code);
+        const members = family.members ?? [];
+        const existingMe = members.find((m: { deviceId: string }) => m.deviceId === deviceId);
+        if (existingMe?.memberName) {
+          finalName = existingMe.memberName;
+        } else if (role === "parent") {
+          const existingParents = members.filter((m: { role: string }) => m.role === "parent");
+          if (existingParents.length >= 1 && !name.trim()) {
             finalName = "부모님 2";
-            setName("부모님 2");
           }
-        } catch {}
-      }
+        }
+      } catch {}
+
+      setName(finalName);
       await api.joinFamily(code, deviceId, finalName, role);
       await connect(code, finalName, role);
       router.replace(role === "parent" ? "/parent" : "/child");
