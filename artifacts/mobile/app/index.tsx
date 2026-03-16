@@ -106,7 +106,7 @@ const st = StyleSheet.create({
   previewLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 10 },
   previewRow:   { width: "100%", flexDirection: "row", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", marginBottom: 28 },
   previewBtn:   { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 42 },
-  previewText:  { fontFamily: "Inter_700Bold", fontSize: 42, color: "rgba(255,255,255,0.7)" },
+  previewText:  { fontFamily: "Inter_700Bold", fontSize: 25, color: "rgba(255,255,255,0.7)" },
   previewDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.09)" },
   footer:       { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.22)", letterSpacing: 0.5, marginBottom: 36 },
 
