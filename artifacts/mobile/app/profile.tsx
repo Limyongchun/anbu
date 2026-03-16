@@ -142,7 +142,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             if (isPrimary) {
               await disconnect();
-              router.replace("/");
+              router.replace("/setup");
             } else {
               await removeExtraFamily(code);
             }
@@ -253,7 +253,7 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             await disconnect();
-            router.replace("/");
+            router.replace("/setup");
           },
         },
       ]
