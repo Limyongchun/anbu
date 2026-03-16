@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
+import { useLang } from "@/context/LanguageContext";
 import { api, FamilyMessage, LocationData } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
@@ -82,20 +83,21 @@ function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
 }
 
 // ─── 하단 탭 바 ───────────────────────────────────────────────────────────────
-const NAV_ITEMS = [
-  { id: "홈",  iconOn: "home"          as const, iconOff: "home-outline"          as const, label: "홈"  },
-  { id: "사진", iconOn: "images"        as const, iconOff: "images-outline"        as const, label: "사진" },
-  { id: "위치", iconOn: "location"      as const, iconOff: "location-outline"      as const, label: "위치" },
-  { id: "알림", iconOn: "notifications" as const, iconOff: "notifications-outline" as const, label: "알림" },
-  { id: "설정", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, label: "설정" },
-];
+const NAV_ITEM_DEFS = [
+  { id: "홈",  iconOn: "home"          as const, iconOff: "home-outline"          as const, labelKey: "tabHome"     },
+  { id: "사진", iconOn: "images"        as const, iconOff: "images-outline"        as const, labelKey: "tabPhoto"    },
+  { id: "위치", iconOn: "location"      as const, iconOff: "location-outline"      as const, labelKey: "tabMap"      },
+  { id: "알림", iconOn: "notifications" as const, iconOff: "notifications-outline" as const, labelKey: "tabAlarm"    },
+  { id: "설정", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, labelKey: "tabSettings" },
+] as const;
 
 function BottomNav({ tab, onTab, onSettings, bottomInset }: {
   tab: Tab; onTab: (t: Tab) => void; onSettings: () => void; bottomInset: number;
 }) {
+  const { t } = useLang();
   return (
     <View style={[bn.wrap, { paddingBottom: Math.max(bottomInset, 12) }]}>
-      {NAV_ITEMS.map(item => {
+      {NAV_ITEM_DEFS.map(item => {
         const active = item.id !== "설정" && tab === (item.id as Tab);
         const onPress = item.id === "설정" ? onSettings : () => onTab(item.id as Tab);
         return (
@@ -107,7 +109,7 @@ function BottomNav({ tab, onTab, onSettings, bottomInset }: {
                 color={active ? COLORS.navPill : "#94a3b8"}
               />
             </View>
-            <Text style={[bn.label, active && bn.labelActive]}>{item.label}</Text>
+            <Text style={[bn.label, active && bn.labelActive]}>{t[item.labelKey]}</Text>
           </Pressable>
         );
       })}
@@ -117,6 +119,7 @@ function BottomNav({ tab, onTab, onSettings, bottomInset }: {
 
 // ─── 지도 화면 ────────────────────────────────────────────────────────────────
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
+  const { t } = useLang();
   const [locs, setLocs]         = useState<LocationData[]>([]);
   const [loading, setLoading]   = useState(false);
   const [showBanner, setShowBanner] = useState(false);
@@ -209,7 +212,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${lat},${lon}],16);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
 ${parentLoc ? `
-var pinHtml='<div class="pin-wrap"><div class="pin-ring"></div><div class="pin-dot"></div><div class="pin-label">탭하여 정보 보기</div></div>';
+var pinHtml='<div class="pin-wrap"><div class="pin-ring"></div><div class="pin-dot"></div><div class="pin-label">${t.mapTapLabel}</div></div>';
 var marker=L.marker([${lat},${lon}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
 marker.on('click',function(){window.parent.postMessage('markerClick','*');});
 ` : ""}
@@ -237,7 +240,7 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
               onPress={openBanner}>
               <PulsingPin />
               <View style={mp.pinHint}>
-                <Text style={mp.pinHintText}>탭하여 정보 보기</Text>
+                <Text style={mp.pinHintText}>{t.mapTapLabel}</Text>
               </View>
             </Pressable>
           )}
@@ -251,12 +254,12 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
             <Ionicons name="location-outline" size={18} color={COLORS.neon} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={mp.infoName}>{!familyCode ? "가족을 연결해주세요" : "위치 기다리는 중"}</Text>
-            <Text style={mp.infoAddr}>{!familyCode ? "가족 코드로 부모님과 연결하세요" : "부모님이 앱을 실행하면 표시됩니다"}</Text>
+            <Text style={mp.infoName}>{!familyCode ? t.mapNoFamily : t.mapWaiting}</Text>
+            <Text style={mp.infoAddr}>{!familyCode ? t.mapNoFamilyDesc : t.mapWaitingDesc}</Text>
           </View>
           {!familyCode && (
             <Pressable style={mp.connectBtn} onPress={() => router.push("/setup")}>
-              <Text style={mp.connectBtnText}>연결</Text>
+              <Text style={mp.connectBtnText}>{t.mapConnect}</Text>
             </Pressable>
           )}
         </View>
@@ -273,7 +276,7 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
       {!loading && parentLoc && !showBanner && (
         <View style={[mp.hintPill, { bottom: BOTTOM_SAFE + 16 }]}>
           <Ionicons name="location" size={13} color={COLORS.neon} />
-          <Text style={mp.hintText}>{parentLoc.memberName}의 위치 아이콘을 탭하세요</Text>
+          <Text style={mp.hintText}>{parentLoc.memberName}{t.mapTapHint}</Text>
         </View>
       )}
 
@@ -289,7 +292,7 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={[mp.dot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
-              <Text style={mp.bannerStatus}>{isRecent ? "안전 · 실시간" : `${minsAgo}분 전`}</Text>
+              <Text style={mp.bannerStatus}>{isRecent ? t.mapSafe : `${minsAgo}분 전`}</Text>
             </View>
             <Text style={mp.bannerName}>{parentLoc.memberName}</Text>
             <Text style={mp.bannerAddr} numberOfLines={1}>

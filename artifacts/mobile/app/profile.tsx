@@ -19,6 +19,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { FamilyRole, useFamilyContext } from "@/context/FamilyContext";
+import { useLang } from "@/context/LanguageContext";
+import { Lang } from "@/lib/i18n";
 import { api } from "@/lib/api";
 
 const APP_VERSION = "1.0.0";
@@ -93,6 +95,7 @@ function Divider() {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, myRole, deviceId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
+  const { lang, setLang, t } = useLang();
 
   const [showNameModal, setShowNameModal] = useState(false);
   const [nameInput, setNameInput] = useState(myName ?? "");
@@ -137,10 +140,8 @@ export default function ProfileScreen() {
   const handleRemoveFamily = (code: string) => {
     const isPrimary = code === familyCode;
     setConfirmModal({
-      title: isPrimary ? "가족방 나가기" : "부모님 연결 해제",
-      message: isPrimary
-        ? "이 가족방에서 나가면 모든 연결이 해제됩니다."
-        : "이 부모님과의 연결을 해제할까요?",
+      title: isPrimary ? t.leaveFamily : t.removeParent,
+      message: isPrimary ? t.leaveFamilyMsg : t.removeParentMsg,
       onConfirm: async () => {
         if (isPrimary) {
           await disconnect();
@@ -217,7 +218,7 @@ export default function ProfileScreen() {
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const roleLabel = myRole === "parent" ? "부모님" : myRole === "child" ? "자녀" : "미설정";
+  const roleLabel = myRole === "parent" ? t.roleParentLabel : myRole === "child" ? t.roleChildLabel : "-";
   const roleColor = myRole === "parent" ? "#6c63ff" : myRole === "child" ? COLORS.neon : "#aaa";
   const roleTextColor = myRole === "parent" ? "#fff" : myRole === "child" ? COLORS.neonText : "#fff";
 
@@ -244,8 +245,8 @@ export default function ProfileScreen() {
 
   const handleDisconnect = () => {
     setConfirmModal({
-      title: "가족 연결 해제",
-      message: "연결을 해제하면 이 기기에서 로그아웃됩니다. 계속하시겠어요?",
+      title: t.disconnectTitle,
+      message: t.disconnectMsg,
       onConfirm: async () => {
         await disconnect();
         router.replace("/setup");
@@ -266,7 +267,7 @@ export default function ProfileScreen() {
         <Pressable style={s.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color={COLORS.white} />
         </Pressable>
-        <Text style={s.headerTitle}>마이페이지</Text>
+        <Text style={s.headerTitle}>{t.profileTitle}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -281,19 +282,19 @@ export default function ProfileScreen() {
             <Text style={s.avatarText}>{(myName ?? "?")[0]?.toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.profileName}>{myName ?? "이름 미설정"}</Text>
+            <Text style={s.profileName}>{myName ?? t.noName}</Text>
             <View style={[s.roleBadge, { backgroundColor: roleColor }]}>
               <Text style={[s.roleText, { color: roleTextColor }]}>{roleLabel}</Text>
             </View>
           </View>
           <Pressable style={s.editBtn} onPress={() => { setNameInput(myName ?? ""); setShowNameModal(true); }}>
             <Ionicons name="pencil" size={15} color={COLORS.navPill} />
-            <Text style={s.editBtnText}>수정</Text>
+            <Text style={s.editBtnText}>{t.edit}</Text>
           </Pressable>
         </View>
 
         {/* ── 접속 코드 ── */}
-        <SectionHeader title="가족 연결 코드" />
+        <SectionHeader title={t.sectionFamily} />
         <View style={s.card}>
           {isConnected && familyCode ? (
             myRole === "child" ? (
@@ -305,8 +306,8 @@ export default function ProfileScreen() {
                       <Text style={s.parentCodeText}>{code}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.parentRowLabel}>부모님 {idx + 1}</Text>
-                      <Text style={s.parentRowSub}>{idx === 0 ? "기본 연결" : "추가 연결"}</Text>
+                      <Text style={s.parentRowLabel}>{t.parentN} {idx + 1}</Text>
+                      <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
                     </View>
                     <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
                       <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
@@ -318,7 +319,7 @@ export default function ProfileScreen() {
                   onPress={() => { setAddParentCode(""); setAddParentError(""); setShowAddParentSheet(true); }}
                 >
                   <Ionicons name="add-circle" size={18} color={COLORS.navPill} />
-                  <Text style={s.addParentBtnText}>부모님 추가하기</Text>
+                  <Text style={s.addParentBtnText}>{t.addParent}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -331,18 +332,18 @@ export default function ProfileScreen() {
                     </View>
                   ))}
                 </View>
-                <Text style={s.codeHint}>이 코드를 가족과 공유하면 연결됩니다</Text>
+                <Text style={s.codeHint}>{t.codeShareHint}</Text>
                 <Pressable style={[s.copyBtn, codeCopied && s.copyBtnDone]} onPress={copyCode}>
                   <Ionicons name={codeCopied ? "checkmark" : "copy-outline"} size={16} color={codeCopied ? COLORS.neonText : COLORS.navPill} />
                   <Text style={[s.copyBtnText, codeCopied && { color: COLORS.neonText }]}>
-                    {codeCopied ? "복사됨!" : "코드 복사"}
+                    {codeCopied ? t.copied : t.copy}
                   </Text>
                 </Pressable>
               </>
             )
           ) : (
             <View style={s.connectSection}>
-              <Text style={s.connectSectionTitle}>가족과 연결해보세요</Text>
+              <Text style={s.connectSectionTitle}>{t.joinFamily}</Text>
 
               {/* 코드로 참가 */}
               <Pressable
@@ -353,15 +354,15 @@ export default function ProfileScreen() {
                   <Ionicons name="enter-outline" size={24} color="#3a5a8a" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.connectBigLabel}>코드로 참가하기</Text>
-                  <Text style={s.connectBigDesc}>가족이 공유한 6자리 코드 입력</Text>
+                  <Text style={s.connectBigLabel}>{t.joinByCode}</Text>
+                  <Text style={s.connectBigDesc}>{t.joinByCodeDesc}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
               </Pressable>
 
               <View style={s.connectOrRow}>
                 <View style={s.connectOrLine} />
-                <Text style={s.connectOrText}>또는</Text>
+                <Text style={s.connectOrText}>{t.or}</Text>
                 <View style={s.connectOrLine} />
               </View>
 
@@ -374,8 +375,8 @@ export default function ProfileScreen() {
                   <Ionicons name="add-circle-outline" size={24} color={COLORS.navPill} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.connectBigLabel}>새 가족방 만들기</Text>
-                  <Text style={s.connectBigDesc}>코드를 생성해서 가족과 공유</Text>
+                  <Text style={s.connectBigLabel}>{t.createFamily}</Text>
+                  <Text style={s.connectBigDesc}>{t.createFamilyDesc}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
               </Pressable>
@@ -384,33 +385,49 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── 계정 정보 ── */}
-        <SectionHeader title="계정 정보" />
+        <SectionHeader title={t.sectionAccount} />
         <View style={s.card}>
-          <InfoRow icon="person-outline" label="사용자 이름" value={myName ?? "-"} onPress={() => { setNameInput(myName ?? ""); setShowNameModal(true); }} />
+          <InfoRow icon="person-outline" label={t.labelName} value={myName ?? "-"} onPress={() => { setNameInput(myName ?? ""); setShowNameModal(true); }} />
           <Divider />
-          <InfoRow icon="finger-print-outline" label="기기 ID" value={shortId} />
+          <InfoRow icon="finger-print-outline" label={t.labelDeviceId} value={shortId} />
           <Divider />
           <InfoRow
             icon="shield-checkmark-outline"
-            label="비밀번호"
-            value="가족 코드로 인증 (앱 잠금 불필요)"
+            label={t.labelPassword}
+            value={t.labelPasswordVal}
           />
         </View>
 
+        {/* ── 언어 설정 ── */}
+        <SectionHeader title={t.langLabel} />
+        <View style={s.card}>
+          <View style={s.langRow}>
+            {([["ko", "한국어"], ["en", "English"], ["ja", "日本語"]] as [Lang, string][]).map(([id, label]) => (
+              <Pressable
+                key={id}
+                style={({ pressed }) => [s.langPill, lang === id && s.langPillActive, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => setLang(id)}
+              >
+                <Text style={[s.langPillText, lang === id && s.langPillTextActive]}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         {/* ── 고객센터 ── */}
-        <SectionHeader title="고객센터" />
+        <SectionHeader title={t.sectionSupport} />
         <View style={s.card}>
           <InfoRow
             icon="mail-outline"
-            label="이메일 문의"
+            label={t.labelEmail}
             value={SUPPORT_EMAIL}
             onPress={openEmail}
           />
           <Divider />
           <InfoRow
             icon="chatbubble-ellipses-outline"
-            label="앱 사용 가이드"
-            value="시작하기, 위치 공유, 안부 보내기"
+            label={t.labelGuide}
+            value={t.labelGuideVal}
             onPress={() => Alert.alert(
               "앱 사용 가이드",
               "1. 가족 연결 — 부모님이 코드를 만들고 자녀에게 공유\n2. 위치 공유 — 부모님 화면에서 자동으로 GPS 공유\n3. 안부 보내기 — 자녀가 사진·메시지를 부모님께 전송\n4. 하트 — 부모님이 안부에 하트를 눌러 확인 표시"
@@ -419,7 +436,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── 자주 묻는 질문 ── */}
-        <SectionHeader title="자주 묻는 질문" />
+        <SectionHeader title={t.sectionFaq} />
         <View style={s.card}>
           {FAQ_LIST.map((faq, i) => (
             <View key={i}>
@@ -443,13 +460,13 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── 앱 정보 ── */}
-        <SectionHeader title="앱 정보" />
+        <SectionHeader title={t.sectionAppInfo} />
         <View style={s.card}>
-          <InfoRow icon="information-circle-outline" label="버전" value={APP_VERSION} />
+          <InfoRow icon="information-circle-outline" label={t.labelVersion} value={APP_VERSION} />
           <Divider />
           <InfoRow
             icon="document-text-outline"
-            label="개인정보처리방침"
+            label={t.labelPrivacy}
             onPress={() => Alert.alert(
               "개인정보처리방침",
               "DUGO는 다음 정보를 수집합니다:\n\n• 위치 정보 — 가족 위치 공유 목적\n• 사진 — 안부 메시지 전송 목적\n• 기기 식별자 — 가족 코드 연결 목적\n\n수집된 정보는 서비스 제공 외 다른 목적으로 사용되지 않으며, 제3자에게 제공되지 않습니다.\n\n문의: " + SUPPORT_EMAIL
@@ -468,7 +485,7 @@ export default function ProfileScreen() {
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
-              label="가족 연결 해제"
+              label={t.disconnectTitle}
               onPress={handleDisconnect}
               danger
               rightIcon="chevron-forward"
@@ -487,12 +504,12 @@ export default function ProfileScreen() {
           </Pressable>
           <Pressable onPress={() => {}} style={s.nameSheet}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>이름 수정</Text>
+            <Text style={s.sheetTitle}>{t.nameSave}</Text>
             <TextInput
               style={s.nameInput}
               value={nameInput}
               onChangeText={setNameInput}
-              placeholder="이름을 입력하세요"
+              placeholder={t.namePlaceholder}
               placeholderTextColor={COLORS.textMuted}
               maxLength={20}
               autoFocus={false}
@@ -502,7 +519,7 @@ export default function ProfileScreen() {
               onPress={saveName}
               disabled={!nameInput.trim() || nameSaving}
             >
-              <Text style={s.saveBtnText}>{nameSaving ? "저장 중..." : "저장"}</Text>
+              <Text style={s.saveBtnText}>{nameSaving ? `${t.save}...` : t.save}</Text>
             </Pressable>
           </Pressable>
         </View>
@@ -699,7 +716,7 @@ export default function ProfileScreen() {
                   disabled={confirming}
                   onPress={() => setConfirmModal(null)}
                 >
-                  <Text style={s.confirmCancelText}>취소</Text>
+                  <Text style={s.confirmCancelText}>{t.cancel}</Text>
                 </Pressable>
                 <Pressable
                   style={[s.confirmDanger, confirming && { opacity: 0.6 }]}
@@ -710,7 +727,7 @@ export default function ProfileScreen() {
                     finally { setConfirming(false); setConfirmModal(null); }
                   }}
                 >
-                  <Text style={s.confirmDangerText}>{confirming ? "처리 중..." : "연결 해제"}</Text>
+                  <Text style={s.confirmDangerText}>{confirming ? t.processing : t.disconnect}</Text>
                 </Pressable>
               </View>
             </View>
@@ -810,6 +827,12 @@ const s = StyleSheet.create({
   nameInput:    { backgroundColor: COLORS.white, borderRadius: 16, padding: 14, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
   saveBtn:      { backgroundColor: COLORS.navPill, paddingVertical: 14, borderRadius: 50, alignItems: "center" },
   saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
+
+  langRow:           { flexDirection: "row", gap: 8, paddingVertical: 4, flexWrap: "wrap" },
+  langPill:          { paddingVertical: 9, paddingHorizontal: 18, borderRadius: 50, backgroundColor: "#f1f5f9", borderWidth: 1, borderColor: "#e2e8f0" },
+  langPillActive:    { backgroundColor: COLORS.navPill, borderColor: COLORS.navPill },
+  langPillText:      { fontFamily: "Inter_500Medium", fontSize: 13, color: "#64748b" },
+  langPillTextActive:{ color: "#fff", fontFamily: "Inter_700Bold" },
 
   confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
   confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },

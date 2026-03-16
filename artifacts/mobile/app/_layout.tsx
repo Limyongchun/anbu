@@ -15,6 +15,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FamilyProvider } from "@/context/FamilyContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -79,12 +80,14 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <FamilyProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <RootLayoutNav />
-              {showSplash && <WhiteSplash onDone={() => setShowSplash(false)} />}
-            </GestureHandlerRootView>
-          </FamilyProvider>
+          <LanguageProvider>
+            <FamilyProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <RootLayoutNav />
+                {showSplash && <WhiteSplash onDone={() => setShowSplash(false)} />}
+              </GestureHandlerRootView>
+            </FamilyProvider>
+          </LanguageProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

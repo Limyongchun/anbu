@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { FamilyRole, useFamilyContext } from "@/context/FamilyContext";
+import { useLang } from "@/context/LanguageContext";
 import { api } from "@/lib/api";
 
 type SetupStep = "role" | "name" | "action" | "create_code" | "join_code";
@@ -25,6 +26,7 @@ type SetupStep = "role" | "name" | "action" | "create_code" | "join_code";
 export default function SetupScreen() {
   const insets = useSafeAreaInsets();
   const { deviceId, connect } = useFamilyContext();
+  const { t } = useLang();
 
   const [step, setStep] = useState<SetupStep>("role");
   const [role, setRole] = useState<FamilyRole | null>(null);
@@ -48,7 +50,7 @@ export default function SetupScreen() {
       setFamilyCode(group.code);
       setStep("create_code");
     } catch (e: any) {
-      setError(e.message || "연결에 실패했습니다");
+      setError(e.message || t.errorConnect);
     } finally {
       setLoading(false);
     }
@@ -64,7 +66,7 @@ export default function SetupScreen() {
       await connect(code, name.trim(), role);
       router.replace(role === "parent" ? "/parent" : "/child");
     } catch (e: any) {
-      setError(e.message || "코드를 확인해주세요");
+      setError(e.message || t.errorCode);
     } finally {
       setLoading(false);
     }
@@ -87,8 +89,8 @@ export default function SetupScreen() {
       case "role":
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>나는 누구인가요?</Text>
-            <Text style={styles.stepSub}>역할을 선택해주세요</Text>
+            <Text style={styles.stepTitle}>{t.setupRoleTitle}</Text>
+            <Text style={styles.stepSub}>{t.setupRoleSub}</Text>
             <View style={styles.roleCards}>
               <Pressable
                 style={({ pressed }) => [
@@ -101,8 +103,8 @@ export default function SetupScreen() {
                 <View style={[styles.roleIcon, role === "parent" && styles.roleIconActive]}>
                   <Ionicons name="home" size={28} color={role === "parent" ? COLORS.white : COLORS.child.accent} />
                 </View>
-                <Text style={[styles.roleLabel, role === "parent" && styles.roleLabelActive]}>부모님</Text>
-                <Text style={[styles.roleDesc, role === "parent" && styles.roleDescActive]}>자녀의 안부를 받아요</Text>
+                <Text style={[styles.roleLabel, role === "parent" && styles.roleLabelActive]}>{t.roleParent}</Text>
+                <Text style={[styles.roleDesc, role === "parent" && styles.roleDescActive]}>{t.roleParentDesc}</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [
@@ -115,8 +117,8 @@ export default function SetupScreen() {
                 <View style={[styles.roleIcon, role === "child" && styles.roleIconActive]}>
                   <Ionicons name="people" size={28} color={role === "child" ? COLORS.white : COLORS.child.accent} />
                 </View>
-                <Text style={[styles.roleLabel, role === "child" && styles.roleLabelActive]}>자녀</Text>
-                <Text style={[styles.roleDesc, role === "child" && styles.roleDescActive]}>부모님께 안부를 보내요</Text>
+                <Text style={[styles.roleLabel, role === "child" && styles.roleLabelActive]}>{t.roleChild}</Text>
+                <Text style={[styles.roleDesc, role === "child" && styles.roleDescActive]}>{t.roleChildDesc}</Text>
               </Pressable>
             </View>
             <Pressable
@@ -124,7 +126,7 @@ export default function SetupScreen() {
               disabled={!role}
               onPress={() => setStep("name")}
             >
-              <Text style={styles.nextBtnText}>다음</Text>
+              <Text style={styles.nextBtnText}>{t.next}</Text>
               <Ionicons name="arrow-forward" size={18} color={COLORS.white} />
             </Pressable>
           </View>
@@ -134,13 +136,13 @@ export default function SetupScreen() {
         return (
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ width: "100%" }}>
             <View style={styles.stepContainer}>
-              <Text style={styles.stepTitle}>이름을 알려주세요</Text>
-              <Text style={styles.stepSub}>가족에게 표시될 이름이에요</Text>
+              <Text style={styles.stepTitle}>{t.setupNameTitle}</Text>
+              <Text style={styles.stepSub}>{t.setupNameSub}</Text>
               <TextInput
                 style={styles.nameInput}
                 value={name}
                 onChangeText={setName}
-                placeholder="예: 엄마, 민준, 아버지..."
+                placeholder={t.setupNamePlaceholder}
                 placeholderTextColor={COLORS.child.textMuted}
                 maxLength={20}
                 autoFocus
@@ -150,7 +152,7 @@ export default function SetupScreen() {
                 disabled={!name.trim()}
                 onPress={() => setStep("action")}
               >
-                <Text style={styles.nextBtnText}>다음</Text>
+                <Text style={styles.nextBtnText}>{t.next}</Text>
                 <Ionicons name="arrow-forward" size={18} color={COLORS.white} />
               </Pressable>
             </View>
@@ -160,8 +162,8 @@ export default function SetupScreen() {
       case "action":
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>가족 연결</Text>
-            <Text style={styles.stepSub}>새 가족방을 만들거나 코드로 참가하세요</Text>
+            <Text style={styles.stepTitle}>{t.setupActionTitle}</Text>
+            <Text style={styles.stepSub}>{t.setupActionSub}</Text>
             <View style={styles.actionCards}>
               <Pressable
                 style={({ pressed }) => [styles.actionCard, { opacity: pressed ? 0.9 : 1 }]}
@@ -173,8 +175,8 @@ export default function SetupScreen() {
                 <View style={[styles.actionIcon, { backgroundColor: "rgba(200,112,74,0.1)" }]}>
                   <Ionicons name="add-circle" size={32} color={COLORS.child.accent} />
                 </View>
-                <Text style={styles.actionLabel}>가족방 만들기</Text>
-                <Text style={styles.actionDesc}>새 방을 만들고 코드를 가족과 공유해요</Text>
+                <Text style={styles.actionLabel}>{t.actionCreate}</Text>
+                <Text style={styles.actionDesc}>{t.actionCreateDesc}</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [styles.actionCard, { opacity: pressed ? 0.9 : 1 }]}
@@ -183,14 +185,14 @@ export default function SetupScreen() {
                 <View style={[styles.actionIcon, { backgroundColor: "rgba(58,90,138,0.1)" }]}>
                   <Ionicons name="enter" size={32} color="#3a5a8a" />
                 </View>
-                <Text style={styles.actionLabel}>코드로 참가</Text>
-                <Text style={styles.actionDesc}>가족이 공유한 6자리 코드를 입력해요</Text>
+                <Text style={styles.actionLabel}>{t.actionJoin}</Text>
+                <Text style={styles.actionDesc}>{t.actionJoinDesc}</Text>
               </Pressable>
             </View>
             {loading && (
               <View style={styles.loadingRow}>
                 <ActivityIndicator color={COLORS.child.accent} />
-                <Text style={styles.loadingText}>연결 중...</Text>
+                <Text style={styles.loadingText}>{t.connecting}</Text>
               </View>
             )}
             {!!error && <Text style={styles.errorText}>{error}</Text>}
@@ -203,24 +205,24 @@ export default function SetupScreen() {
             <View style={styles.successIcon}>
               <Ionicons name="checkmark-circle" size={56} color="#4ade80" />
             </View>
-            <Text style={styles.stepTitle}>가족방이 만들어졌어요!</Text>
-            <Text style={styles.stepSub}>아래 코드를 가족에게 공유해주세요</Text>
+            <Text style={styles.stepTitle}>{t.setupCodeTitle}</Text>
+            <Text style={styles.stepSub}>{t.setupCodeSub}</Text>
             <View style={styles.codeBox}>
               <Text style={styles.codeText}>{familyCode}</Text>
             </View>
             <Pressable onPress={handleCopy} style={styles.copyBtn}>
               <Ionicons name={copied ? "checkmark" : "copy"} size={18} color={COLORS.child.accent} />
-              <Text style={styles.copyBtnText}>{copied ? "복사됨!" : "코드 복사"}</Text>
+              <Text style={styles.copyBtnText}>{copied ? t.copied : t.copy}</Text>
             </Pressable>
             <View style={styles.codeHint}>
               <Ionicons name="information-circle" size={16} color={COLORS.child.textSub} />
-              <Text style={styles.codeHintText}>가족이 코드로 참가하면 서로 연결돼요</Text>
+              <Text style={styles.codeHintText}>{t.codeHint}</Text>
             </View>
             <Pressable
               style={styles.nextBtn}
               onPress={handleCompleteCreate}
             >
-              <Text style={styles.nextBtnText}>시작하기</Text>
+              <Text style={styles.nextBtnText}>{t.start}</Text>
               <Ionicons name="arrow-forward" size={18} color={COLORS.white} />
             </Pressable>
           </View>
@@ -230,12 +232,12 @@ export default function SetupScreen() {
         return (
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ width: "100%" }}>
             <View style={styles.stepContainer}>
-              <Text style={styles.stepTitle}>가족 코드 입력</Text>
-              <Text style={styles.stepSub}>가족이 공유한 6자리 코드를 입력하세요</Text>
+              <Text style={styles.stepTitle}>{t.joinTitle}</Text>
+              <Text style={styles.stepSub}>{t.joinSub}</Text>
               <TextInput
                 style={[styles.nameInput, styles.codeInput]}
                 value={joinCodeInput}
-                onChangeText={(t) => setJoinCodeInput(t.toUpperCase())}
+                onChangeText={(v) => setJoinCodeInput(v.toUpperCase())}
                 placeholder="예: AB3XY7"
                 placeholderTextColor={COLORS.child.textMuted}
                 maxLength={6}
@@ -246,7 +248,7 @@ export default function SetupScreen() {
               {loading && (
                 <View style={styles.loadingRow}>
                   <ActivityIndicator color={COLORS.child.accent} />
-                  <Text style={styles.loadingText}>참가 중...</Text>
+                  <Text style={styles.loadingText}>{t.joining}</Text>
                 </View>
               )}
               <Pressable
@@ -254,12 +256,12 @@ export default function SetupScreen() {
                 disabled={!joinCodeInput.trim() || loading}
                 onPress={handleJoinFamily}
               >
-                <Text style={styles.nextBtnText}>참가하기</Text>
+                <Text style={styles.nextBtnText}>{t.joinBtn}</Text>
                 <Ionicons name="enter" size={18} color={COLORS.white} />
               </Pressable>
               <Pressable onPress={() => { setStep("action"); setError(""); }} style={styles.backLink}>
                 <Ionicons name="chevron-back" size={16} color={COLORS.child.textSub} />
-                <Text style={styles.backLinkText}>뒤로가기</Text>
+                <Text style={styles.backLinkText}>{t.back}</Text>
               </Pressable>
             </View>
           </KeyboardAvoidingView>
@@ -275,7 +277,7 @@ export default function SetupScreen() {
         <Pressable onPress={() => router.back()} style={styles.headerBack}>
           <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>가족 연결 설정</Text>
+        <Text style={styles.headerTitle}>{t.setupHeader}</Text>
         <View style={{ width: 36 }} />
       </View>
 
