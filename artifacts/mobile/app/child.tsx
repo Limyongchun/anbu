@@ -761,24 +761,31 @@ function HomeScreen({
   const [loading, setLoading]     = useState(true);
   const [showAll, setShowAll]     = useState(false);
   const [parentJoined, setParentJoined] = useState(false);
+  const [parentChecked, setParentChecked] = useState(false);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   // ── 부모 연결 감지 (5초 폴링) ──
   useEffect(() => {
-    if (!familyCode) return;
+    if (!familyCode) { setParentChecked(true); return; }
+    let cancelled = false;
     const check = async () => {
       try {
         const group = await api.getFamily(familyCode);
         const hasParent = group.members.some(m => m.role === "parent");
-        if (hasParent) {
-          setParentJoined(true);
-          Animated.timing(revealAnim, { toValue: 1, duration: 900, useNativeDriver: false }).start();
+        if (!cancelled) {
+          setParentChecked(true);
+          if (hasParent) {
+            revealAnim.setValue(1);
+            setParentJoined(true);
+          }
         }
-      } catch {}
+      } catch {
+        if (!cancelled) setParentChecked(true);
+      }
     };
     check();
     const iv = setInterval(check, 5000);
-    return () => clearInterval(iv);
+    return () => { cancelled = true; clearInterval(iv); };
   }, [familyCode]);
 
   const load = useCallback(async () => {
@@ -866,6 +873,11 @@ function HomeScreen({
         <Text style={hm.emptySub}>자녀로 가입하면{"\n"}가족과 연결할 수 있어요</Text>
       </View>
     );
+  }
+
+  // 첫 폴링 결과 도착 전 — 빈 화면 (깜빡임 방지)
+  if (!parentChecked) {
+    return <View style={{ flex: 1, backgroundColor: COLORS.child.bg }} />;
   }
 
   // 가족 코드 있지만 부모 미연결 → 대기방
