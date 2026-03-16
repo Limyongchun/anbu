@@ -63,6 +63,7 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 
 // ─── 상단 바 (로고 + 카테고리 탭) ───────────────────────────────────────────
 function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
+  const { isMasterChild } = useFamilyContext();
   const isMap = tab === "위치";
   return (
     <View style={[tb.wrap, {
@@ -73,6 +74,12 @@ function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
     }]}>
       <Text style={[tb.logo, { color: isMap ? COLORS.white : COLORS.textDark }]}>A N B U</Text>
       <View style={{ flex: 1 }} />
+      {isMasterChild && (
+        <View style={[tb.masterBadge, isMap && { backgroundColor: "rgba(212,242,0,0.18)", borderColor: "rgba(212,242,0,0.35)" }]}>
+          <Ionicons name="shield-checkmark" size={11} color={isMap ? COLORS.neon : COLORS.neonText} />
+          <Text style={[tb.masterText, isMap && { color: COLORS.neon }]}>마스터</Text>
+        </View>
+      )}
       {!isMap && (
         <Pressable style={tb.profileBtn} onPress={() => router.push("/profile")}>
           <Ionicons name="person-circle-outline" size={21} color={COLORS.navPill} />
@@ -1453,6 +1460,8 @@ const tb = StyleSheet.create({
   tabChipOnDark:  { backgroundColor: COLORS.neon },
   tabChipOnLight: { backgroundColor: COLORS.navPill },
   tabText:      { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.55)" },
+  masterBadge:  { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: COLORS.neon, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, marginRight: 6, borderWidth: 1, borderColor: "rgba(212,242,0,0.4)" },
+  masterText:   { fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.neonText, letterSpacing: 0.5 },
 });
 
 // 지도
