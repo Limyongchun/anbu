@@ -305,8 +305,8 @@ export default function ChildSignupScreen() {
               onPress={handleSendOtp}
             >
               {sendingOtp
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={s.otpRequestBtnText}>{otpSent ? "재전송" : "인증번호 받기"}</Text>
+                ? <ActivityIndicator size="small" color="#9ca3af" />
+                : <Text style={[s.otpRequestBtnText, (!phone.trim() || sendingOtp) && s.otpRequestBtnTextDisabled]}>{otpSent ? "재전송" : "인증번호 받기"}</Text>
               }
             </Pressable>
           </View>
@@ -336,19 +336,19 @@ export default function ChildSignupScreen() {
                   style={[
                     s.otpRequestBtn,
                     otpVerified && s.otpVerifiedBtn,
-                    (otp.length !== 6 || verifyingOtp || otpVerified) && s.otpRequestBtnDisabled,
+                    (otp.length !== 6 || verifyingOtp || otpVerified) && !otpVerified && s.otpRequestBtnDisabled,
                   ]}
                   disabled={otp.length !== 6 || verifyingOtp || otpVerified}
                   onPress={handleVerifyOtp}
                 >
                   {verifyingOtp
-                    ? <ActivityIndicator size="small" color="#fff" />
+                    ? <ActivityIndicator size="small" color="#9ca3af" />
                     : otpVerified
                     ? <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <Ionicons name="checkmark" size={16} color="#fff" />
                         <Text style={s.otpRequestBtnText}>인증 완료</Text>
                       </View>
-                    : <Text style={s.otpRequestBtnText}>확인</Text>
+                    : <Text style={[s.otpRequestBtnText, otp.length !== 6 && s.otpRequestBtnTextDisabled]}>확인</Text>
                   }
                 </Pressable>
               </View>
@@ -377,8 +377,8 @@ export default function ChildSignupScreen() {
             onPress={handleJoin}
           >
             {joining
-              ? <ActivityIndicator color={COLORS.neonText} />
-              : <Text style={s.joinBtnText}>{mode === "create" ? "가족 만들기" : "가족방 참여"}</Text>
+              ? <ActivityIndicator color={canJoin ? COLORS.neonText : "#9ca3af"} />
+              : <Text style={[s.joinBtnText, !canJoin && s.joinBtnTextDisabled]}>{mode === "create" ? "가족 만들기" : "가족방 참여"}</Text>
             }
           </Pressable>
         </ScrollView>
@@ -419,8 +419,9 @@ const s = StyleSheet.create({
   otpInput:    { letterSpacing: 6, textAlign: "center" },
 
   otpRequestBtn:         { backgroundColor: COLORS.child.accent, borderRadius: 14, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", minWidth: 110, marginBottom: 16 },
-  otpRequestBtnDisabled: { opacity: 0.45 },
+  otpRequestBtnDisabled: { backgroundColor: "#d1d5db" },
   otpRequestBtnText:     { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.neonText },
+  otpRequestBtnTextDisabled: { color: "#9ca3af" },
   otpVerifiedBtn:        { backgroundColor: "#22c55e" },
 
   devCodeBox:  { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(245,158,11,0.1)", borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
@@ -436,8 +437,9 @@ const s = StyleSheet.create({
   checkLabel:  { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, flex: 1, lineHeight: 20 },
 
   joinBtn:         { backgroundColor: COLORS.child.accent, borderRadius: 18, paddingVertical: 18, alignItems: "center", marginTop: 8 },
-  joinBtnDisabled: { opacity: 0.35 },
+  joinBtnDisabled: { backgroundColor: "#d1d5db" },
   joinBtnText:     { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.neonText },
+  joinBtnTextDisabled: { color: "#9ca3af" },
 
   completeWrap:  { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
   completeIcon:  { marginBottom: 24 },
