@@ -663,6 +663,97 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   );
 }
 
+// ─── 자녀 대기방 (부모 미연결) ────────────────────────────────────────────────
+function WaitingRoom({ familyCode, topBarH, bottomInset }: {
+  familyCode: string; topBarH: number; bottomInset: number;
+}) {
+  const pulse = useRef(new Animated.Value(1)).current;
+  const QR_SIZE = 200;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1.06, duration: 900, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 1,    duration: 900, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const qrHtml = `<!DOCTYPE html><html><head>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>body{margin:0;background:transparent;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw}</style>
+</head><body><canvas id="q"></canvas>
+<script>QRCode.toCanvas(document.getElementById('q'),'${familyCode}',{width:${QR_SIZE},color:{dark:'#1a2535',light:'#f5f8ff'}},function(){})</script>
+</body></html>`;
+
+  const segments = familyCode.match(/.{1,3}/g) ?? [familyCode];
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: COLORS.child.bg }}
+      contentContainerStyle={{ paddingTop: topBarH + 24, paddingBottom: bottomInset + 40, alignItems: "center", paddingHorizontal: 24 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* 안내 헤더 */}
+      <View style={wr.badge}>
+        <View style={wr.badgeDot} />
+        <Text style={wr.badgeText}>연결 대기 중</Text>
+      </View>
+      <Text style={wr.title}>부모님을{"\n"}초대해보세요</Text>
+      <Text style={wr.sub}>아래 QR코드 또는 코드번호를{"\n"}부모님 기기에서 입력하면 연결됩니다</Text>
+
+      {/* QR 코드 */}
+      <Animated.View style={[wr.qrWrap, { transform: [{ scale: pulse }] }]}>
+        {Platform.OS === "web" ? (
+          <View style={{ width: QR_SIZE + 32, height: QR_SIZE + 32, overflow: "hidden", borderRadius: 24 }}>
+            {/* @ts-ignore */}
+            <iframe srcDoc={qrHtml} style={{ width: "100%", height: "100%", border: "none" }} title="QR Code" />
+          </View>
+        ) : (
+          <View style={wr.qrNative}>
+            <Text style={wr.qrNativeText}>{familyCode}</Text>
+          </View>
+        )}
+      </Animated.View>
+
+      {/* 코드 번호 */}
+      <Text style={wr.codeLabel}>코드 번호</Text>
+      <View style={wr.codeRow}>
+        {segments.map((seg, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <Text style={wr.codeSep}>·</Text>}
+            <View style={wr.codePill}>
+              <Text style={wr.codeDigits}>{seg}</Text>
+            </View>
+          </React.Fragment>
+        ))}
+      </View>
+
+      {/* 안내 카드 */}
+      <View style={wr.infoCard}>
+        <View style={wr.infoRow}>
+          <View style={[wr.infoIcon, { backgroundColor: "#eff6ff" }]}>
+            <Ionicons name="qr-code-outline" size={18} color="#3b82f6" />
+          </View>
+          <Text style={wr.infoText}>부모님 앱에서 QR을 스캔하거나</Text>
+        </View>
+        <View style={wr.infoRow}>
+          <View style={[wr.infoIcon, { backgroundColor: "#f0fdf4" }]}>
+            <Ionicons name="keypad-outline" size={18} color="#22c55e" />
+          </View>
+          <Text style={wr.infoText}>코드번호를 직접 입력하면 연결됩니다</Text>
+        </View>
+        <View style={wr.infoRow}>
+          <View style={[wr.infoIcon, { backgroundColor: "rgba(212,242,0,0.18)" }]}>
+            <Ionicons name="radio-outline" size={18} color="#84a800" />
+          </View>
+          <Text style={wr.infoText}>연결되는 순간 홈이 자동으로 열려요</Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
 // ─── 홈 대시보드 ──────────────────────────────────────────────────────────────
 type ActivityItem = {
   id: string;
@@ -688,6 +779,26 @@ function HomeScreen({
   const [messages, setMessages]   = useState<FamilyMessage[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showAll, setShowAll]     = useState(false);
+  const [parentJoined, setParentJoined] = useState(false);
+  const revealAnim = useRef(new Animated.Value(0)).current;
+
+  // ── 부모 연결 감지 (5초 폴링) ──
+  useEffect(() => {
+    if (!familyCode) return;
+    const check = async () => {
+      try {
+        const group = await api.getFamily(familyCode);
+        const hasParent = group.members.some(m => m.role === "parent");
+        if (hasParent) {
+          setParentJoined(true);
+          Animated.timing(revealAnim, { toValue: 1, duration: 900, useNativeDriver: false }).start();
+        }
+      } catch {}
+    };
+    check();
+    const iv = setInterval(check, 5000);
+    return () => clearInterval(iv);
+  }, [familyCode]);
 
   const load = useCallback(async () => {
     if (!allFamilyCodes.length) { setLoading(false); return; }
@@ -765,17 +876,25 @@ function HomeScreen({
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "좋은 아침이에요" : hour < 18 ? "안녕하세요" : "좋은 저녁이에요";
 
-  if (!allFamilyCodes.length) {
+  // 가족 코드 없음 (회원가입 전 직접 접근)
+  if (!familyCode) {
     return (
       <View style={[{ flex: 1, backgroundColor: "#f4f6fb", paddingTop: topBarH }, hm.centerEmpty]}>
         <View style={hm.emptyIcon}><Ionicons name="wifi-outline" size={28} color="#94a3b8" /></View>
         <Text style={hm.emptyTitle}>아직 연결되지 않았어요</Text>
-        <Text style={hm.emptySub}>마이페이지에서 가족 코드로{"\n"}부모님과 연결하세요</Text>
+        <Text style={hm.emptySub}>자녀로 가입하면{"\n"}가족과 연결할 수 있어요</Text>
       </View>
     );
   }
 
+  // 가족 코드 있지만 부모 미연결 → 대기방
+  if (!parentJoined) {
+    return <WaitingRoom familyCode={familyCode} topBarH={topBarH} bottomInset={bottomInset} />;
+  }
+
+  // 부모 연결 완료 → 대시보드 (페이드인)
   return (
+    <Animated.View style={{ flex: 1, opacity: revealAnim }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: "#f4f6fb" }}
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
@@ -869,6 +988,7 @@ function HomeScreen({
         </Pressable>
       </View>
     </ScrollView>
+    </Animated.View>
   );
 }
 
@@ -1071,6 +1191,27 @@ const bn = StyleSheet.create({
   iconWrapActive:{ backgroundColor: "rgba(26,34,48,0.08)" },
   label:         { fontFamily: "Inter_500Medium", fontSize: 10, color: "#94a3b8" },
   labelActive:   { color: COLORS.navPill, fontFamily: "Inter_600SemiBold" },
+});
+
+// 대기방
+const wr = StyleSheet.create({
+  badge:       { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(212,242,0,0.15)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50, marginBottom: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
+  badgeDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
+  badgeText:   { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#84a800" },
+  title:       { fontFamily: "Inter_700Bold", fontSize: 30, color: COLORS.child.text, textAlign: "center", lineHeight: 38, marginBottom: 10 },
+  sub:         { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.child.textSub, textAlign: "center", lineHeight: 22, marginBottom: 32 },
+  qrWrap:      { width: 232, height: 232, backgroundColor: "#fff", borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", overflow: "hidden" },
+  qrNative:    { width: 200, height: 200, alignItems: "center", justifyContent: "center", backgroundColor: "#f5f8ff", borderRadius: 18 },
+  qrNativeText:{ fontFamily: "Inter_700Bold", fontSize: 28, color: COLORS.child.text, letterSpacing: 8 },
+  codeLabel:   { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textMuted, letterSpacing: 1, marginBottom: 10 },
+  codeRow:     { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 },
+  codePill:    { backgroundColor: COLORS.child.bgCard, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.child.bgCardBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  codeDigits:  { fontFamily: "Inter_700Bold", fontSize: 26, color: COLORS.child.text, letterSpacing: 4 },
+  codeSep:     { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.child.textMuted },
+  infoCard:    { width: "100%", backgroundColor: COLORS.child.bgCard, borderRadius: 20, padding: 20, gap: 14, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
+  infoRow:     { flexDirection: "row", alignItems: "center", gap: 12 },
+  infoIcon:    { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  infoText:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, flex: 1 },
 });
 
 // 홈 대시보드

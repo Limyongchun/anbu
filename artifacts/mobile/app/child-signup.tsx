@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
+import { useFamilyContext } from "@/context/FamilyContext";
 
 const BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -48,6 +49,7 @@ export default function ChildSignupScreen() {
   const insets = useSafeAreaInsets();
   const topInset    = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+  const familyCtx   = useFamilyContext();
 
   const [step, setStep] = useState<Step>("form");
 
@@ -65,6 +67,7 @@ export default function ChildSignupScreen() {
   const [sendingOtp,  setSendingOtp]  = useState(false);
   const [verifyingOtp,setVerifyingOtp]= useState(false);
   const [joining,     setJoining]     = useState(false);
+  const [joinError,   setJoinError]   = useState("");
   const [otpError,    setOtpError]    = useState("");
   const [sendError,   setSendError]   = useState("");
 
@@ -109,13 +112,26 @@ export default function ChildSignupScreen() {
   const handleJoin = async () => {
     if (!canJoin) return;
     setJoining(true);
-    await new Promise(r => setTimeout(r, 600)); // 자연스러운 딜레이
-    setJoining(false);
-    setStep("complete");
-    Animated.parallel([
-      Animated.timing(fadeIn,  { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.spring(scaleUp, { toValue: 1, useNativeDriver: false, tension: 70, friction: 8 }),
-    ]).start();
+    setJoinError("");
+    try {
+      // 가족 그룹 생성 → 고유 코드 발급
+      const group = await post<{ code: string }>("/family/create", {
+        deviceId:   familyCtx.deviceId,
+        memberName: name.trim(),
+        role:       "child",
+      });
+      // FamilyContext에 저장 (AsyncStorage 포함)
+      await familyCtx.connect(group.code, name.trim(), "child");
+      setStep("complete");
+      Animated.parallel([
+        Animated.timing(fadeIn,  { toValue: 1, duration: 600, useNativeDriver: false }),
+        Animated.spring(scaleUp, { toValue: 1, useNativeDriver: false, tension: 70, friction: 8 }),
+      ]).start();
+    } catch (e: any) {
+      setJoinError(e.message || "가입 처리 중 오류가 발생했습니다");
+    } finally {
+      setJoining(false);
+    }
   };
 
   // ── 가입 완료 화면 ──
@@ -267,6 +283,7 @@ export default function ChildSignupScreen() {
           />
 
           {/* 가입하기 버튼 */}
+          {!!joinError && <Text style={s.errorText}>{joinError}</Text>}
           <Pressable
             style={[s.joinBtn, !canJoin && s.joinBtnDisabled, { opacity: joining ? 0.8 : 1 }]}
             disabled={!canJoin || joining}
