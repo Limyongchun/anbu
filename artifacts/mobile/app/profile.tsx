@@ -103,6 +103,38 @@ function Divider() {
   return <View style={s.divider} />;
 }
 
+const LANG_OPTIONS_PROFILE: [Lang, string][] = [["ko", "한국어"], ["en", "English"], ["ja", "日本語"]];
+
+function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
+  const [open, setOpen] = useState(false);
+  const currentLabel = LANG_OPTIONS_PROFILE.find(([id]) => id === lang)?.[1] || "한국어";
+  const others = LANG_OPTIONS_PROFILE.filter(([id]) => id !== lang);
+
+  return (
+    <View style={s.langDropdownWrap}>
+      <Pressable
+        style={({ pressed }) => [s.langPill, s.langPillActive, { opacity: pressed ? 0.8 : 1 }]}
+        onPress={() => setOpen(!open)}
+      >
+        <Text style={[s.langPillText, s.langPillTextActive]}>{currentLabel} {open ? "\u25B2" : "\u25BC"}</Text>
+      </Pressable>
+      {open && (
+        <View style={s.langRow}>
+          {others.map(([id, label]) => (
+            <Pressable
+              key={id}
+              style={({ pressed }) => [s.langPill, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => { setLang(id); setOpen(false); }}
+            >
+              <Text style={s.langPillText}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, myRole, childRole, isMasterChild, deviceId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
@@ -577,17 +609,7 @@ export default function ProfileScreen() {
         {/* ── 언어 설정 ── */}
         <SectionHeader title={t.langLabel} />
         <View style={s.card}>
-          <View style={s.langRow}>
-            {([["ko", "한국어"], ["en", "English"], ["ja", "日本語"]] as [Lang, string][]).map(([id, label]) => (
-              <Pressable
-                key={id}
-                style={({ pressed }) => [s.langPill, lang === id && s.langPillActive, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={() => setLang(id)}
-              >
-                <Text style={[s.langPillText, lang === id && s.langPillTextActive]}>{label}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <ProfileLangDropdown lang={lang} setLang={setLang} />
         </View>
 
         {/* ── 고객센터 ── */}
@@ -1008,6 +1030,7 @@ const s = StyleSheet.create({
   saveBtn:      { backgroundColor: COLORS.navPill, paddingVertical: 14, borderRadius: 50, alignItems: "center" },
   saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
 
+  langDropdownWrap:  { alignItems: "center", gap: 8, paddingVertical: 4 },
   langRow:           { flexDirection: "row", gap: 8, paddingVertical: 4, flexWrap: "wrap" },
   langPill:          { paddingVertical: 9, paddingHorizontal: 18, borderRadius: 50, backgroundColor: "#f1f5f9", borderWidth: 1, borderColor: "#e2e8f0" },
   langPillActive:    { backgroundColor: COLORS.navPill, borderColor: COLORS.navPill },
