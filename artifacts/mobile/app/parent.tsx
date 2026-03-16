@@ -113,7 +113,7 @@ function SlideCard({ slide }: { slide: Slide }) {
 // ── 부모님 메인 (디지털 액자) ─────────────────────────────────────────────────
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, myName, deviceId, isConnected } = useFamilyContext();
+  const { familyCode, allFamilyCodes, myName, deviceId, isConnected } = useFamilyContext();
 
   const topInset    = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -176,17 +176,21 @@ export default function ParentScreen() {
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
   const loadMsgs = useCallback(async () => {
-    if (!familyCode) return;
-    try { setMsgs(await api.getMessages(familyCode)); } catch {}
-  }, [familyCode]);
+    if (allFamilyCodes.length === 0) return;
+    try {
+      const results = await Promise.all(allFamilyCodes.map(code => api.getMessages(code).catch(() => [] as FamilyMessage[])));
+      const merged = results.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setMsgs(merged);
+    } catch {}
+  }, [allFamilyCodes]);
 
   useEffect(() => {
-    if (!familyCode) return;
+    if (allFamilyCodes.length === 0) return;
     setLoadingMsgs(true);
     loadMsgs().finally(() => setLoadingMsgs(false));
     const iv = setInterval(loadMsgs, 10000);
     return () => clearInterval(iv);
-  }, [familyCode, loadMsgs]);
+  }, [allFamilyCodes, loadMsgs]);
 
   const uploadLoc = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
     if (!familyCode || !myName || !deviceId) return;

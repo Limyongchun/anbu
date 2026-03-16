@@ -93,16 +93,26 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 
 ### `artifacts/mobile` (`@workspace/mobile`)
 
-Expo React Native app called 마음잇기 (Heart Connection). Korean family connection app.
+Expo React Native app called A N B U. Korean family safety app.
 
-- **Two modes**: Parent (dark navy, coral accent) and Child (warm off-white, terracotta accent)
+- **Two modes**: Parent (digital photo frame) and Child (home dashboard + 5-tab nav)
+- **Multi-child architecture**:
+  - **Master child**: First child who creates the family group via `POST /api/family/create` → `childRole = "master"`
+  - **Sub children**: Additional children who join via `POST /api/family/join` using master's family code → `childRole = "sub"`
+  - **Parent limit**: Max 2 parents per family (`MAX_PARENTS = 2`)
+  - **Child limit**: Max 10 children per family (`MAX_CHILDREN = 10`); 2nd+ child incurs extra charge (UI indicator)
+  - **Master-only features**: disconnect from parent, child management section in profile
+  - Sub children see all other features but cannot disconnect or manage children
 - **Screens**:
-  - `app/index.tsx` — Splash with floating orbs + pulsing hearts; auto-redirects to parent/child if already connected
-  - `app/setup.tsx` — Step-by-step family connection wizard: role → name → create code / enter code
-  - `app/parent.tsx` — Photo slideshow, real-time messages from DB, child GPS location display, floating hearts
-  - `app/child.tsx` — 3 tabs: 안부 (message sending), 위치 (real GPS with expo-location), 선물샵 (gift shop)
-- **Context**: `context/FamilyContext.tsx` — AsyncStorage-backed family state (code, deviceId, name, role)
+  - `app/index.tsx` — Splash "당신은 누구십니까?" → routes to child-signup or parent setup
+  - `app/child-signup.tsx` — Mode selection ("새 가족 만들기" = master / "코드로 참여" = sub) → OTP verify → join
+  - `app/child.tsx` — 5-tab home: 홈/안부/위치/선물/알림; WaitingRoom (QR code) until parent joins
+  - `app/parent.tsx` — Photo slideshow; fetches messages from ALL family codes (multi-child support)
+  - `app/profile.tsx` — Settings; "자녀 관리" section (master only: shows code + children list); disconnect button hidden for sub-children
+- **Context**: `context/FamilyContext.tsx` — AsyncStorage-backed: familyCode, allFamilyCodes, deviceId, myName, myRole, childRole ("master"|"sub"|null), isMasterChild
 - **API client**: `lib/api.ts` — typed fetch client using `EXPO_PUBLIC_DOMAIN` env var
+- **Auth**: OTP via `POST /api/auth/send-otp` + `POST /api/auth/verify-otp`; devCode returned in non-production
+- **DB schema** `familyMembersTable`: includes `childRole text` column (null for parents, "master"/"sub" for children)
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
 - **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
 

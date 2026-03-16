@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type FamilyRole = "parent" | "child";
+export type ChildRole = "master" | "sub" | null;
 
 export interface FamilyState {
   familyCode: string | null;
@@ -9,11 +10,13 @@ export interface FamilyState {
   deviceId: string;
   myName: string | null;
   myRole: FamilyRole | null;
+  childRole: ChildRole;
+  isMasterChild: boolean;
   isConnected: boolean;
 }
 
 interface FamilyContextValue extends FamilyState {
-  connect: (code: string, name: string, role: FamilyRole) => Promise<void>;
+  connect: (code: string, name: string, role: FamilyRole, childRole?: ChildRole) => Promise<void>;
   disconnect: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
   addExtraFamily: (code: string) => Promise<void>;
@@ -27,6 +30,7 @@ const STORAGE_KEYS = {
   deviceId:    "device_id",
   myName:      "my_name",
   myRole:      "my_role",
+  childRole:   "child_role",
 };
 
 function generateDeviceId(): string {
@@ -52,6 +56,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     deviceId:       "",
     myName:         null,
     myRole:         null,
+    childRole:      null,
+    isMasterChild:  false,
     isConnected:    false,
   });
   const [loading, setLoading] = useState(true);
@@ -59,12 +65,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load() {
       try {
-        const [code, extrasRaw, deviceId, name, role] = await Promise.all([
+        const [code, extrasRaw, deviceId, name, role, cr] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.familyCode),
           AsyncStorage.getItem(STORAGE_KEYS.extraCodes),
           AsyncStorage.getItem(STORAGE_KEYS.deviceId),
           AsyncStorage.getItem(STORAGE_KEYS.myName),
           AsyncStorage.getItem(STORAGE_KEYS.myRole),
+          AsyncStorage.getItem(STORAGE_KEYS.childRole),
         ]);
 
         let effectiveDeviceId = deviceId;
@@ -76,12 +83,16 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         let extras: string[] = [];
         try { extras = extrasRaw ? JSON.parse(extrasRaw) : []; } catch {}
 
+        const childRole = (cr as ChildRole) || null;
+
         setState({
           familyCode:     code,
           allFamilyCodes: buildAllCodes(code, extras),
           deviceId:       effectiveDeviceId,
           myName:         name,
           myRole:         (role as FamilyRole) || null,
+          childRole,
+          isMasterChild:  childRole === "master",
           isConnected:    !!(code && name && role),
         });
       } catch (e) {
@@ -93,18 +104,26 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     load();
   }, []);
 
-  const connect = async (code: string, name: string, role: FamilyRole) => {
-    await Promise.all([
+  const connect = async (code: string, name: string, role: FamilyRole, childRole: ChildRole = null) => {
+    const tasks: Promise<void>[] = [
       AsyncStorage.setItem(STORAGE_KEYS.familyCode, code),
       AsyncStorage.setItem(STORAGE_KEYS.myName, name),
       AsyncStorage.setItem(STORAGE_KEYS.myRole, role),
-    ]);
+    ];
+    if (childRole) {
+      tasks.push(AsyncStorage.setItem(STORAGE_KEYS.childRole, childRole));
+    } else {
+      tasks.push(AsyncStorage.removeItem(STORAGE_KEYS.childRole));
+    }
+    await Promise.all(tasks);
     setState((prev) => ({
       ...prev,
       familyCode:     code,
       allFamilyCodes: buildAllCodes(code, []),
       myName:         name,
       myRole:         role,
+      childRole,
+      isMasterChild:  childRole === "master",
       isConnected:    true,
     }));
   };
@@ -146,6 +165,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.removeItem(STORAGE_KEYS.extraCodes),
       AsyncStorage.removeItem(STORAGE_KEYS.myName),
       AsyncStorage.removeItem(STORAGE_KEYS.myRole),
+      AsyncStorage.removeItem(STORAGE_KEYS.childRole),
     ]);
     setState((prev) => ({
       ...prev,
@@ -153,6 +173,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       allFamilyCodes: [],
       myName:         null,
       myRole:         null,
+      childRole:      null,
+      isMasterChild:  false,
       isConnected:    false,
     }));
   };

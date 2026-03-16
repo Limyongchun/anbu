@@ -12,6 +12,7 @@ export const familyMembersTable = pgTable("family_members", {
   deviceId: text("device_id").notNull(),
   memberName: text("member_name").notNull(),
   role: text("role").notNull(),
+  childRole: text("child_role"),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 

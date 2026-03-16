@@ -10,6 +10,9 @@ import { eq, and, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+const MAX_PARENTS = 2;
+const MAX_CHILDREN = 10;
+
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -33,6 +36,10 @@ function serializeMsg(m: typeof familyMessagesTable.$inferSelect) {
   };
 }
 
+function serializeMember(m: typeof familyMembersTable.$inferSelect) {
+  return { ...m, joinedAt: m.joinedAt.toISOString() };
+}
+
 // POST /api/family/create
 router.post("/family/create", async (req, res) => {
   try {
@@ -49,12 +56,14 @@ router.post("/family/create", async (req, res) => {
       attempts++;
     }
     await db.insert(familyGroupsTable).values({ code });
-    await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role });
+    const childRole = role === "child" ? "master" : null;
+    await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role, childRole });
     const members = await db.select().from(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
     const [group] = await db.select().from(familyGroupsTable).where(eq(familyGroupsTable.code, code));
     return res.json({
       code: group.code,
-      members: members.map(m => ({ ...m, joinedAt: m.joinedAt.toISOString() })),
+      childRole,
+      members: members.map(serializeMember),
       createdAt: group.createdAt.toISOString(),
     });
   } catch (e) {
@@ -72,18 +81,39 @@ router.post("/family/join", async (req, res) => {
     }
     const [group] = await db.select().from(familyGroupsTable).where(eq(familyGroupsTable.code, code));
     if (!group) return res.status(404).json({ error: "Family group not found" });
-    const existing = await db.select().from(familyMembersTable)
-      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)));
+
+    const allMembers = await db.select().from(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
+
+    const selfExisting = allMembers.filter(m => m.deviceId === deviceId);
+
+    if (selfExisting.length === 0) {
+      if (role === "parent") {
+        const parentCount = allMembers.filter(m => m.role === "parent").length;
+        if (parentCount >= MAX_PARENTS) {
+          return res.status(409).json({ error: `부모님은 최대 ${MAX_PARENTS}명까지 연결할 수 있습니다` });
+        }
+      }
+      if (role === "child") {
+        const childCount = allMembers.filter(m => m.role === "child").length;
+        if (childCount >= MAX_CHILDREN) {
+          return res.status(409).json({ error: `자녀는 최대 ${MAX_CHILDREN}명까지 연결할 수 있습니다` });
+        }
+      }
+    }
+
+    const hasMasterChild = allMembers.some(m => m.role === "child" && m.childRole === "master");
+    const childRole = role === "child" ? (hasMasterChild ? "sub" : "master") : null;
+
     let member;
-    if (existing.length > 0) {
+    if (selfExisting.length > 0) {
       [member] = await db.update(familyMembersTable)
-        .set({ memberName, role })
+        .set({ memberName, role, childRole })
         .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)))
         .returning();
     } else {
-      [member] = await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role }).returning();
+      [member] = await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role, childRole }).returning();
     }
-    return res.json({ ...member, joinedAt: member.joinedAt.toISOString() });
+    return res.json({ ...serializeMember(member), childRole });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to join family" });
@@ -97,9 +127,15 @@ router.get("/family/:code", async (req, res) => {
     const [group] = await db.select().from(familyGroupsTable).where(eq(familyGroupsTable.code, code));
     if (!group) return res.status(404).json({ error: "Family not found" });
     const members = await db.select().from(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
+    const parentCount = members.filter(m => m.role === "parent").length;
+    const childCount = members.filter(m => m.role === "child").length;
     return res.json({
       code: group.code,
-      members: members.map(m => ({ ...m, joinedAt: m.joinedAt.toISOString() })),
+      members: members.map(serializeMember),
+      parentCount,
+      childCount,
+      maxParents: MAX_PARENTS,
+      maxChildren: MAX_CHILDREN,
       createdAt: group.createdAt.toISOString(),
     });
   } catch (e) {
@@ -242,7 +278,6 @@ router.delete("/family/:code/messages/:messageId", async (req, res) => {
     const { code, messageId } = req.params;
     const { deviceId } = req.query;
     const id = parseInt(messageId);
-    // Only the sender can delete (match deviceId)
     if (deviceId) {
       await db.delete(familyMessagesTable).where(
         and(

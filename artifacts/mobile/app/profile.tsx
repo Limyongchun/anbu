@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +22,14 @@ import { FamilyRole, useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
 import { Lang } from "@/lib/i18n";
 import { api } from "@/lib/api";
+
+type ChildMember = {
+  deviceId: string;
+  memberName: string;
+  role: string;
+  childRole: string | null;
+  joinedAt: string;
+};
 
 const APP_VERSION = "1.0.0";
 const SUPPORT_EMAIL = "support@dugo.app";
@@ -94,8 +102,25 @@ function Divider() {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, allFamilyCodes, myName, myRole, deviceId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
+  const { familyCode, allFamilyCodes, myName, myRole, childRole, isMasterChild, deviceId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
   const { lang, setLang, t } = useLang();
+
+  const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
+  const [childCodeCopied, setChildCodeCopied] = useState(false);
+
+  useEffect(() => {
+    if (myRole !== "child" || !familyCode) return;
+    api.getFamily(familyCode).then(data => {
+      setFamilyChildren((data.members as ChildMember[]).filter(m => m.role === "child"));
+    }).catch(() => {});
+  }, [myRole, familyCode]);
+
+  const copyChildCode = async () => {
+    if (!familyCode) return;
+    await Clipboard.setStringAsync(familyCode);
+    setChildCodeCopied(true);
+    setTimeout(() => setChildCodeCopied(false), 2500);
+  };
 
   const [showNameModal, setShowNameModal] = useState(false);
   const [nameInput, setNameInput] = useState(myName ?? "");
@@ -384,6 +409,73 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* ── 자녀 관리 (마스터 자녀만) ── */}
+        {myRole === "child" && isConnected && (
+          <>
+            <SectionHeader title="자녀 관리" />
+            <View style={s.card}>
+              {isMasterChild ? (
+                <>
+                  {/* 코드 공유 */}
+                  <View style={s.childMgmtShareBlock}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
+                      <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
+                      <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
+                    </View>
+                    <Text style={s.childMgmtHint}>아래 코드를 추가 자녀에게 공유하세요{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
+                    <View style={s.childCodeDisplay}>
+                      {(familyCode ?? "").split("").map((ch, i) => (
+                        <View key={i} style={s.childCodeCell}>
+                          <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
+                      <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                      <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
+                        {childCodeCopied ? "복사됨!" : "코드 복사"}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* 자녀 목록 */}
+                  {familyChildren.length > 0 && (
+                    <View style={{ borderTopWidth: 1, borderTopColor: COLORS.border }}>
+                      {familyChildren.map((child, idx) => (
+                        <View key={child.deviceId} style={[s.childRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                          <View style={[s.childAvatar, { backgroundColor: child.childRole === "master" ? COLORS.navPill : "#6366f1" }]}>
+                            <Text style={s.childAvatarText}>{child.memberName[0]?.toUpperCase()}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={s.childRowName}>{child.memberName}</Text>
+                            <Text style={s.childRowSub}>{child.childRole === "master" ? "마스터 자녀" : "추가 자녀 · 요금 발생"}</Text>
+                          </View>
+                          {child.childRole === "master" && (
+                            <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
+                          )}
+                          {child.childRole === "sub" && (
+                            <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              ) : (
+                /* 서브 자녀: 읽기 전용 안내 */
+                <View style={s.subChildNotice}>
+                  <Ionicons name="information-circle-outline" size={20} color="#6366f1" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.subChildNoticeTitle}>추가 자녀 계정</Text>
+                    <Text style={s.subChildNoticeText}>마스터 자녀만 자녀 관리 기능을 사용할 수 있습니다</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
         {/* ── 계정 정보 ── */}
         <SectionHeader title={t.sectionAccount} />
         <View style={s.card}>
@@ -480,8 +572,8 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 연결 해제 ── */}
-        {isConnected && (
+        {/* ── 연결 해제 (부모 전체 / 마스터 자녀만) ── */}
+        {isConnected && (myRole === "parent" || isMasterChild) && (
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
@@ -490,6 +582,19 @@ export default function ProfileScreen() {
               danger
               rightIcon="chevron-forward"
             />
+          </View>
+        )}
+
+        {/* ── 서브 자녀: 연결 해제 불가 안내 ── */}
+        {isConnected && myRole === "child" && !isMasterChild && (
+          <View style={[s.card, { marginTop: 8 }]}>
+            <View style={s.subChildNotice}>
+              <Ionicons name="lock-closed-outline" size={18} color="#94a3b8" />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.subChildNoticeTitle, { color: "#94a3b8" }]}>연결 해제 불가</Text>
+                <Text style={s.subChildNoticeText}>마스터 자녀만 가족 연결을 해제할 수 있습니다</Text>
+              </View>
+            </View>
           </View>
         )}
 
@@ -843,4 +948,27 @@ const s = StyleSheet.create({
   confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#64748b" },
   confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#ff5050", alignItems: "center" },
   confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+
+  // ── 자녀 관리 섹션 ──
+  childMgmtShareBlock: { padding: 16, paddingBottom: 8 },
+  childMgmtTitle:  { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark },
+  childMgmtHint:   { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, lineHeight: 18, marginBottom: 14 },
+  childCodeDisplay:{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 12 },
+  childCodeCell:   { width: 38, height: 44, borderRadius: 10, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
+  childCodeCellText:{ fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.neon, letterSpacing: 1 },
+
+  childRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  childAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  childAvatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
+  childRowName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark, marginBottom: 2 },
+  childRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted },
+
+  masterBadge:     { backgroundColor: "rgba(212,242,0,0.4)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  masterBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.navPill },
+  subBadge:        { backgroundColor: "rgba(99,102,241,0.12)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  subBadgeText:    { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#6366f1" },
+
+  subChildNotice:      { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
+  subChildNoticeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#6366f1", marginBottom: 2 },
+  subChildNoticeText:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
 });

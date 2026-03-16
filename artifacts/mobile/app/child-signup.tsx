@@ -32,7 +32,8 @@ async function post<T>(path: string, body: object): Promise<T> {
   return data as T;
 }
 
-type Step = "form" | "complete";
+type Mode = null | "create" | "join";
+type Step = "mode" | "form" | "complete";
 
 function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
   return (
@@ -51,9 +52,9 @@ export default function ChildSignupScreen() {
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const familyCtx   = useFamilyContext();
 
-  const [step, setStep] = useState<Step>("form");
+  const [mode, setMode] = useState<Mode>(null);
+  const [step, setStep] = useState<Step>("mode");
 
-  // ── 폼 상태 ──
   const [name,        setName]        = useState("");
   const [phone,       setPhone]       = useState("");
   const [otp,         setOtp]         = useState("");
@@ -61,21 +62,23 @@ export default function ChildSignupScreen() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [devCode,     setDevCode]     = useState<string | null>(null);
 
+  const [joinCode,    setJoinCode]    = useState("");
+
   const [allowNotif,  setAllowNotif]  = useState(false);
   const [agreeTerms,  setAgreeTerms]  = useState(false);
 
-  const [sendingOtp,  setSendingOtp]  = useState(false);
-  const [verifyingOtp,setVerifyingOtp]= useState(false);
-  const [joining,     setJoining]     = useState(false);
-  const [joinError,   setJoinError]   = useState("");
-  const [otpError,    setOtpError]    = useState("");
-  const [sendError,   setSendError]   = useState("");
+  const [sendingOtp,   setSendingOtp]   = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [joining,      setJoining]      = useState(false);
+  const [joinError,    setJoinError]    = useState("");
+  const [otpError,     setOtpError]     = useState("");
+  const [sendError,    setSendError]    = useState("");
 
-  // ── 완료 화면 페이드인 ──
-  const fadeIn = useRef(new Animated.Value(0)).current;
+  const fadeIn  = useRef(new Animated.Value(0)).current;
   const scaleUp = useRef(new Animated.Value(0.8)).current;
 
-  const canJoin = otpVerified && allowNotif && agreeTerms && name.trim().length > 0;
+  const canJoin = otpVerified && allowNotif && agreeTerms && name.trim().length > 0
+    && (mode === "create" || (mode === "join" && joinCode.trim().length === 6));
 
   const handleSendOtp = async () => {
     if (!phone.trim()) return;
@@ -87,7 +90,7 @@ export default function ChildSignupScreen() {
     try {
       const res = await post<{ success: boolean; devCode?: string }>("/auth/send-otp", { phone: phone.trim() });
       setOtpSent(true);
-      if (res.devCode) setDevCode(res.devCode); // 개발용: 실제 배포시 제거
+      if (res.devCode) setDevCode(res.devCode);
     } catch (e: any) {
       setSendError(e.message);
     } finally {
@@ -114,14 +117,23 @@ export default function ChildSignupScreen() {
     setJoining(true);
     setJoinError("");
     try {
-      // 가족 그룹 생성 → 고유 코드 발급
-      const group = await post<{ code: string }>("/family/create", {
-        deviceId:   familyCtx.deviceId,
-        memberName: name.trim(),
-        role:       "child",
-      });
-      // FamilyContext에 저장 (AsyncStorage 포함)
-      await familyCtx.connect(group.code, name.trim(), "child");
+      if (mode === "create") {
+        const group = await post<{ code: string; childRole: string }>("/family/create", {
+          deviceId:   familyCtx.deviceId,
+          memberName: name.trim(),
+          role:       "child",
+        });
+        await familyCtx.connect(group.code, name.trim(), "child", "master");
+      } else {
+        const code = joinCode.trim().toUpperCase();
+        const member = await post<{ childRole: string }>("/family/join", {
+          code,
+          deviceId:   familyCtx.deviceId,
+          memberName: name.trim(),
+          role:       "child",
+        });
+        await familyCtx.connect(code, name.trim(), "child", (member.childRole as "master" | "sub") || "sub");
+      }
       setStep("complete");
       Animated.parallel([
         Animated.timing(fadeIn,  { toValue: 1, duration: 600, useNativeDriver: false }),
@@ -134,7 +146,25 @@ export default function ChildSignupScreen() {
     }
   };
 
-  // ── 가입 완료 화면 ──
+  const handleSelectMode = (m: Mode) => {
+    setMode(m);
+    setStep("form");
+  };
+
+  const handleBack = () => {
+    if (step === "form") {
+      setStep("mode");
+      setMode(null);
+      setName(""); setPhone(""); setOtp(""); setJoinCode("");
+      setOtpSent(false); setOtpVerified(false); setDevCode(null);
+      setAllowNotif(false); setAgreeTerms(false);
+      setJoinError(""); setOtpError(""); setSendError("");
+    } else {
+      router.back();
+    }
+  };
+
+  // ── 완료 화면 ──
   if (step === "complete") {
     return (
       <View style={[s.container, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}>
@@ -156,30 +186,93 @@ export default function ChildSignupScreen() {
     );
   }
 
+  // ── 모드 선택 화면 ──
+  if (step === "mode") {
+    return (
+      <View style={[s.container, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}>
+        <View style={s.header}>
+          <Pressable style={s.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
+          </Pressable>
+          <Text style={s.headerTitle}>자녀 가입</Text>
+          <View style={{ width: 36 }} />
+        </View>
+
+        <View style={s.modeWrap}>
+          <Text style={s.modeHeading}>어떻게 시작하시겠어요?</Text>
+          <Text style={s.modeSub}>처음 가족방을 만드는 경우 "새 가족 만들기"를{"\n"}선택하세요. 이미 있는 경우 코드로 참여하세요.</Text>
+
+          <Pressable style={s.modeCard} onPress={() => handleSelectMode("create")}>
+            <View style={[s.modeIconBg, { backgroundColor: "rgba(212,242,0,0.15)" }]}>
+              <Ionicons name="home-outline" size={28} color={COLORS.navPill} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.modeCardTitle}>새 가족 만들기</Text>
+              <Text style={s.modeCardDesc}>처음 가입하는 자녀{" "}
+                <Text style={s.modeMasterBadge}>마스터</Text>
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
+          </Pressable>
+
+          <Pressable style={s.modeCard} onPress={() => handleSelectMode("join")}>
+            <View style={[s.modeIconBg, { backgroundColor: "rgba(99,102,241,0.12)" }]}>
+              <Ionicons name="enter-outline" size={28} color="#6366f1" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.modeCardTitle}>코드로 참여하기</Text>
+              <Text style={s.modeCardDesc}>이미 있는 가족방에 추가 자녀로 참여</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
+          </Pressable>
+
+          <View style={s.modeNotice}>
+            <Ionicons name="information-circle-outline" size={15} color="#6366f1" />
+            <Text style={s.modeNoticeText}>2번째 자녀부터는 추가 요금이 발생합니다</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   // ── 회원가입 폼 ──
   return (
     <View style={[s.container, { paddingTop: topInset }]}>
-      {/* 헤더 */}
       <View style={s.header}>
-        <Pressable style={s.backBtn} onPress={() => router.back()}>
+        <Pressable style={s.backBtn} onPress={handleBack}>
           <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
         </Pressable>
-        <Text style={s.headerTitle}>자녀 회원가입</Text>
+        <Text style={s.headerTitle}>
+          {mode === "create" ? "새 가족 만들기" : "가족방 참여하기"}
+        </Text>
         <View style={{ width: 36 }} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <ScrollView
           contentContainerStyle={[s.scroll, { paddingBottom: bottomInset + 32 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {mode === "join" && (
+            <>
+              <Text style={s.sectionTitle}>가족 코드 입력</Text>
+              <Text style={s.fieldLabel}>마스터 자녀의 가족 코드</Text>
+              <TextInput
+                style={[s.input, s.codeInput]}
+                value={joinCode}
+                onChangeText={(v) => setJoinCode(v.toUpperCase())}
+                placeholder="AB1234"
+                placeholderTextColor={COLORS.child.textMuted}
+                maxLength={6}
+                autoCapitalize="characters"
+              />
+              <View style={s.divider} />
+            </>
+          )}
+
           <Text style={s.sectionTitle}>기본 정보</Text>
 
-          {/* 성함 */}
           <Text style={s.fieldLabel}>성함</Text>
           <TextInput
             style={s.input}
@@ -190,7 +283,6 @@ export default function ChildSignupScreen() {
             maxLength={20}
           />
 
-          {/* 휴대폰 번호 */}
           <Text style={s.fieldLabel}>휴대폰 번호</Text>
           <View style={s.phoneRow}>
             <TextInput
@@ -220,7 +312,6 @@ export default function ChildSignupScreen() {
           </View>
           {!!sendError && <Text style={s.errorText}>{sendError}</Text>}
 
-          {/* 개발용: OTP 코드 표시 */}
           {devCode && (
             <View style={s.devCodeBox}>
               <Ionicons name="information-circle-outline" size={15} color="#f59e0b" />
@@ -228,7 +319,6 @@ export default function ChildSignupScreen() {
             </View>
           )}
 
-          {/* OTP 입력 */}
           {otpSent && (
             <View>
               <Text style={s.fieldLabel}>인증번호</Text>
@@ -266,10 +356,8 @@ export default function ChildSignupScreen() {
             </View>
           )}
 
-          {/* 구분선 */}
           <View style={s.divider} />
 
-          {/* 약관 / 알림 */}
           <Text style={s.sectionTitle}>동의 항목</Text>
           <Checkbox
             checked={allowNotif}
@@ -282,7 +370,6 @@ export default function ChildSignupScreen() {
             label="서비스 이용약관 및 개인정보처리방침에 동의합니다 (필수)"
           />
 
-          {/* 가입하기 버튼 */}
           {!!joinError && <Text style={s.errorText}>{joinError}</Text>}
           <Pressable
             style={[s.joinBtn, !canJoin && s.joinBtnDisabled, { opacity: joining ? 0.8 : 1 }]}
@@ -291,7 +378,7 @@ export default function ChildSignupScreen() {
           >
             {joining
               ? <ActivityIndicator color={COLORS.neonText} />
-              : <Text style={s.joinBtnText}>가입하기</Text>
+              : <Text style={s.joinBtnText}>{mode === "create" ? "가족 만들기" : "가족방 참여"}</Text>
             }
           </Pressable>
         </ScrollView>
@@ -307,11 +394,25 @@ const s = StyleSheet.create({
   backBtn:     { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.child.text },
 
+  // ── 모드 선택 ──
+  modeWrap:      { flex: 1, paddingHorizontal: 24, paddingTop: 40 },
+  modeHeading:   { fontFamily: "Inter_700Bold", fontSize: 24, color: COLORS.child.text, marginBottom: 10 },
+  modeSub:       { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, lineHeight: 22, marginBottom: 36 },
+  modeCard:      { flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: COLORS.child.bgCard, borderRadius: 18, padding: 18, marginBottom: 14, borderWidth: 1.5, borderColor: COLORS.child.bgCardBorder },
+  modeIconBg:    { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  modeCardTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 4 },
+  modeCardDesc:  { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub },
+  modeMasterBadge: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.navPill, backgroundColor: "rgba(212,242,0,0.5)", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  modeNotice:    { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8, backgroundColor: "rgba(99,102,241,0.08)", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "rgba(99,102,241,0.18)" },
+  modeNoticeText:{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#6366f1", flex: 1 },
+
+  // ── 폼 ──
   scroll:      { padding: 24 },
   sectionTitle:{ fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 16, marginTop: 8 },
   fieldLabel:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.child.textSub, marginBottom: 6 },
 
   input:       { backgroundColor: COLORS.child.bgCard, borderRadius: 14, padding: 16, fontSize: 16, fontFamily: "Inter_500Medium", color: COLORS.child.text, borderWidth: 1.5, borderColor: COLORS.child.bgCardBorder, marginBottom: 16 },
+  codeInput:   { letterSpacing: 8, textAlign: "center", fontSize: 22, fontFamily: "Inter_700Bold" },
 
   phoneRow:    { flexDirection: "row", gap: 10, marginBottom: 0 },
   phoneInput:  { flex: 1, marginBottom: 0 },
@@ -338,7 +439,6 @@ const s = StyleSheet.create({
   joinBtnDisabled: { opacity: 0.35 },
   joinBtnText:     { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.neonText },
 
-  // ── 완료 화면 ──
   completeWrap:  { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
   completeIcon:  { marginBottom: 24 },
   completeTitle: { fontFamily: "Inter_700Bold", fontSize: 32, color: COLORS.child.text, marginBottom: 12 },
