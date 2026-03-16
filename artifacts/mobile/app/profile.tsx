@@ -355,6 +355,28 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
+        {/* ── 마스터 코드 (마스터 자녀만) ── */}
+        {myRole === "child" && isMasterChild && isConnected && familyCode && (
+          <>
+            <SectionHeader title="마스터 코드" />
+            <View style={s.card}>
+              <View style={s.childCodeDisplay}>
+                {familyCode.split("").map((ch, i) => (
+                  <View key={i} style={s.childCodeCell}>
+                    <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
+                  </View>
+                ))}
+              </View>
+              <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
+                <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
+                  {childCodeCopied ? "복사됨!" : "코드 복사"}
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+
         {/* ── 접속 코드 ── */}
         <SectionHeader title={t.sectionFamily} />
         <View style={s.card}>
@@ -364,9 +386,6 @@ export default function ProfileScreen() {
               <View>
                 {allFamilyCodes.map((code, idx) => (
                   <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
-                    <View style={s.parentCodeBadge}>
-                      <Text style={s.parentCodeText}>{code}</Text>
-                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={s.parentRowLabel}>{parentNamesByCode[code] ?? `${t.parentN} ${idx + 1}`}</Text>
                       <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
@@ -457,20 +476,7 @@ export default function ProfileScreen() {
                   <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
                   <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
                 </View>
-                <Text style={s.childMgmtHint}>아래 코드를 추가 자녀에게 공유하세요{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
-                <View style={s.childCodeDisplay}>
-                  {(familyCode ?? "").split("").map((ch, i) => (
-                    <View key={i} style={s.childCodeCell}>
-                      <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
-                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
-                  <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
-                    {childCodeCopied ? "복사됨!" : "코드 복사"}
-                  </Text>
-                </Pressable>
+                <Text style={s.childMgmtHint}>위 마스터 코드를 추가 자녀에게 공유하세요{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
               </View>
 
               {/* 자녀 목록 — 마스터/서브 모두 동일하게 표시 */}
