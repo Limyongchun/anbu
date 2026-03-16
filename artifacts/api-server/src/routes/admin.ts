@@ -25,7 +25,8 @@ function adminAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   try {
-    jwt.verify(authHeader.slice(7), JWT_SECRET);
+    const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET) as { role?: string };
+    if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
     next();
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });

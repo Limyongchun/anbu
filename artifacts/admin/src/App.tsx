@@ -1,7 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import "./index.css";
 
 const API = "/api";
+
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch { return null; }
+}
 
 type Tab = "dashboard" | "families" | "members" | "subscriptions";
 
@@ -366,8 +373,20 @@ function App() {
   const [token, setToken] = useState<string | null>(sessionStorage.getItem("admin_token"));
   const [tab, setTab] = useState<Tab>("dashboard");
   const api = useApi(token || "");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const logout = () => { sessionStorage.removeItem("admin_token"); setToken(null); };
+  const logout = useCallback(() => { sessionStorage.removeItem("admin_token"); setToken(null); }, []);
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!token) return;
+    const exp = decodeJwtExp(token);
+    if (!exp) return;
+    const ms = exp - Date.now();
+    if (ms <= 0) { logout(); return; }
+    timerRef.current = setTimeout(logout, ms);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [token, logout]);
 
   if (!token) return <LoginPage onLogin={setToken} />;
 
