@@ -7,7 +7,6 @@ import {
   Animated,
   Dimensions,
   Image,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -21,15 +20,14 @@ import { useFamilyContext } from "@/context/FamilyContext";
 import { api, FamilyMessage } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
+const INTERVAL_MS = 6000;
 
-// ── 데모 슬라이드 (메시지 없을 때 표시) ────────────────────────────────────────
+// ── 데모 슬라이드 ─────────────────────────────────────────────────────────────
 const DEMO_SLIDES = [
   { id: -1, emoji: "☀️", text: "오늘 날씨가 너무 좋아요!\n건강하게 지내세요 엄마 아빠 💛", name: "예진", bg: "#1a3a2a" },
   { id: -2, emoji: "🏠", text: "학교 잘 다녀왔어요~\n저녁 맛있게 드세요!", name: "민준", bg: "#1a2a3a" },
   { id: -3, emoji: "💌", text: "빨리 보고싶어요!\n사랑해요 ❤️", name: "예진", bg: "#2a1a3a" },
 ];
-
-const INTERVAL_MS = 5000;
 
 // ── 하트 파티클 ──────────────────────────────────────────────────────────────
 interface FloatHeart { id: number; x: number; delay: number; anim: Animated.Value }
@@ -38,12 +36,12 @@ function HeartParticle({ h }: { h: FloatHeart }) {
   useEffect(() => {
     Animated.timing(h.anim, { toValue: 1, duration: 1400, delay: h.delay, useNativeDriver: false }).start();
   }, []);
-  const ty = h.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -180] });
+  const ty = h.anim.interpolate({ inputRange: [0, 1], outputRange: [0, -200] });
   const op = h.anim.interpolate({ inputRange: [0, 0.55, 1], outputRange: [1, 0.85, 0] });
   const sc = h.anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.4, 1.5, 1.1] });
   return (
-    <Animated.View style={{ position: "absolute", left: `${h.x}%` as any, bottom: "38%", transform: [{ translateY: ty }, { scale: sc }], opacity: op, zIndex: 999 }}>
-      <Ionicons name="heart" size={30} color={COLORS.coral} />
+    <Animated.View style={{ position: "absolute", left: `${h.x}%` as any, bottom: "35%", transform: [{ translateY: ty }, { scale: sc }], opacity: op, zIndex: 999 }}>
+      <Ionicons name="heart" size={32} color={COLORS.coral} />
     </Animated.View>
   );
 }
@@ -65,118 +63,118 @@ function buildSlides(msgs: FamilyMessage[]): Slide[] {
   return DEMO_SLIDES.map(d => ({ kind: "demo", ...d }));
 }
 
-// ── 슬라이드 카드 내용 ────────────────────────────────────────────────────────
-function SlideCard({ slide, onHeart }: { slide: Slide; onHeart: () => void }) {
+// ── 슬라이드 카드 (터치 없음 — 디지털 액자) ──────────────────────────────────
+function SlideCard({ slide }: { slide: Slide }) {
   if (slide.kind === "demo") {
     return (
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: slide.bg }]}>
-        <View style={sl.filmTop} />
-        <View style={sl.filmBottom} />
         <View style={sl.decoCircle1} />
         <View style={sl.decoCircle2} />
         <View style={sl.textCenter}>
-          <Text style={{ fontSize: 80, marginBottom: 36, textAlign: "center" }}>{slide.emoji}</Text>
+          <Text style={{ fontSize: 72, marginBottom: 28, textAlign: "center" }}>{slide.emoji}</Text>
           <Text style={sl.bigQuote}>"</Text>
           <Text style={sl.bigText}>{slide.text}</Text>
           <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
         </View>
-        <Pressable style={sl.heartBtn} onPress={onHeart}>
-          <Ionicons name="heart" size={26} color={COLORS.coral} />
-        </Pressable>
       </View>
     );
   }
 
   const { msg } = slide;
-  const hasPhoto = !!msg.photoData;
-
-  if (hasPhoto) {
+  if (msg.photoData) {
     return (
       <View style={StyleSheet.absoluteFillObject}>
-        {/* 사진 — 오버레이 없이 밝게 표시 */}
-        <Image source={{ uri: msg.photoData! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-        <View style={sl.filmTop} />
-        <View style={sl.filmBottom} />
-        {/* 텍스트가 있을 때만 하단 반투명 바 */}
+        <Image source={{ uri: msg.photoData }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+        {/* 하단 자연스러운 그라디언트 효과 */}
         {!!msg.text && (
-          <View style={sl.photoBottomBar}>
-            <Text style={sl.photoText} numberOfLines={3}>{msg.text}</Text>
-            <Text style={sl.timeSmall}>{formatTime(msg.createdAt)}</Text>
+          <View style={sl.photoCaption}>
+            <Text style={sl.captionText} numberOfLines={3}>{msg.text}</Text>
+            <Text style={sl.captionTime}>{formatTime(msg.createdAt)}</Text>
           </View>
         )}
-        <Pressable style={sl.heartBtn} onPress={onHeart}>
-          <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.55)"} />
-          {msg.hearts > 0 && <Text style={sl.heartN}>{msg.hearts}</Text>}
-        </Pressable>
       </View>
     );
   }
 
-  // 텍스트 전용 슬라이드 (이름·아바타 없음)
   return (
     <View style={[StyleSheet.absoluteFillObject, sl.textSlideBg]}>
-      <View style={sl.filmTop} />
-      <View style={sl.filmBottom} />
       <View style={sl.decoCircle1} />
       <View style={sl.decoCircle2} />
       <View style={sl.textCenter}>
         <Text style={sl.bigQuote}>"</Text>
         <Text style={sl.bigText}>{msg.text}</Text>
         <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
-        <Text style={sl.timeSmall2}>{formatTime(msg.createdAt)}</Text>
+        <Text style={sl.captionTime2}>{formatTime(msg.createdAt)}</Text>
       </View>
-      <Pressable style={sl.heartBtn} onPress={onHeart}>
-        <Ionicons name="heart" size={26} color={msg.hearts > 0 ? COLORS.coral : "rgba(255,255,255,0.3)"} />
-        {msg.hearts > 0 && <Text style={sl.heartN}>{msg.hearts}</Text>}
-      </Pressable>
     </View>
   );
 }
 
-// ── 부모님 메인 화면 ──────────────────────────────────────────────────────────
+// ── 부모님 메인 (디지털 액자) ─────────────────────────────────────────────────
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, myName, deviceId, isConnected } = useFamilyContext();
 
-  // ── 슬라이드쇼 상태 ──
-  const [msgs,       setMsgs]       = useState<FamilyMessage[]>([]);
+  const topInset    = Platform.OS === "web" ? 0 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+
+  // ── 슬라이드쇼 ──
+  const [msgs, setMsgs]             = useState<FamilyMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [curIdx,     setCurIdx]     = useState(0);
-  const [nextIdx,    setNextIdx]    = useState<number | null>(null);
-  const [isPaused,      setIsPaused]      = useState(false); // finger-hold pause
+  const [curIdx, setCurIdx]         = useState(0);
+  const [nextIdx, setNextIdx]       = useState<number | null>(null);
+  const [isPaused, setIsPaused]     = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
-  // ── 애니메이션 ──
-  const curY  = useRef(new Animated.Value(0)).current;
-  const nxtY  = useRef(new Animated.Value(height)).current;
+  const curY         = useRef(new Animated.Value(0)).current;
+  const nxtY         = useRef(new Animated.Value(height)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const progressRef = useRef<Animated.CompositeAnimation | null>(null);
-  const touchStartY = useRef(0);
+  const progressRef  = useRef<Animated.CompositeAnimation | null>(null);
+  const touchStartY  = useRef(0);
+  const touchStartT  = useRef(0);
 
-  // ── 하트 파티클 ──
+  // ── 하트 ──
   const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
   const spawnHearts = useCallback(() => {
     const hs: FloatHeart[] = Array.from({ length: 7 }, (_, i) => ({
       id: Date.now() + i, x: Math.random() * 70 + 10, delay: i * 80, anim: new Animated.Value(0),
     }));
     setFloatHearts(p => [...p, ...hs]);
-    setTimeout(() => setFloatHearts(p => p.filter(h => !hs.some(n => n.id === h.id))), 1700);
+    setTimeout(() => setFloatHearts(p => p.filter(h => !hs.some(n => n.id === h.id))), 1800);
   }, []);
+
+  // ── UI 오버레이 토글 ──
+  const [uiVisible, setUiVisible] = useState(false);
+  const topBarAnim    = useRef(new Animated.Value(-160)).current;
+  const bottomBarAnim = useRef(new Animated.Value(160)).current;
+  const uiHideTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hideUI = useCallback(() => {
+    if (uiHideTimer.current) { clearTimeout(uiHideTimer.current); uiHideTimer.current = null; }
+    Animated.parallel([
+      Animated.timing(topBarAnim,    { toValue: -160, duration: 300, useNativeDriver: false }),
+      Animated.timing(bottomBarAnim, { toValue: 160,  duration: 300, useNativeDriver: false }),
+    ]).start(() => setUiVisible(false));
+  }, [topBarAnim, bottomBarAnim]);
+
+  const showUI = useCallback(() => {
+    setUiVisible(true);
+    Animated.parallel([
+      Animated.spring(topBarAnim,    { toValue: 0, useNativeDriver: false, tension: 90, friction: 14 }),
+      Animated.spring(bottomBarAnim, { toValue: 0, useNativeDriver: false, tension: 90, friction: 14 }),
+    ]).start();
+    if (uiHideTimer.current) clearTimeout(uiHideTimer.current);
+    uiHideTimer.current = setTimeout(() => hideUI(), 5000);
+  }, [topBarAnim, bottomBarAnim, hideUI]);
 
   // ── GPS ──
   const [permission, requestPermission] = Location.useForegroundPermissions();
-  const [isSharing,  setIsSharing]   = useState(true);
-  const [currentLoc, setCurrentLoc]  = useState<Location.LocationObject | null>(null);
-  const [address,    setAddress]     = useState("");
+  const [isSharing, setIsSharing]   = useState(true);
+  const [currentLoc, setCurrentLoc] = useState<Location.LocationObject | null>(null);
+  const [address, setAddress]       = useState("");
   const [locUploading, setLocUploading] = useState(false);
-  const [lastSynced, setLastSynced]  = useState<Date | null>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
-  const topInset    = Platform.OS === "web" ? 0 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-
-  // ── 메시지 로드 ──
   const loadMsgs = useCallback(async () => {
     if (!familyCode) return;
     try { setMsgs(await api.getMessages(familyCode)); } catch {}
@@ -190,7 +188,6 @@ export default function ParentScreen() {
     return () => clearInterval(iv);
   }, [familyCode, loadMsgs]);
 
-  // ── GPS 업로드 ──
   const uploadLoc = useCallback(async (loc: Location.LocationObject, sharing: boolean) => {
     if (!familyCode || !myName || !deviceId) return;
     setLocUploading(true);
@@ -202,7 +199,6 @@ export default function ParentScreen() {
       } catch {}
       setAddress(addr);
       await api.updateLocation(familyCode, { deviceId, memberName: myName, latitude: loc.coords.latitude, longitude: loc.coords.longitude, address: addr, accuracy: loc.coords.accuracy ?? undefined, isSharing: sharing });
-      setLastSynced(new Date());
     } catch {} finally { setLocUploading(false); }
   }, [familyCode, myName, deviceId]);
 
@@ -236,25 +232,20 @@ export default function ParentScreen() {
   const slides = buildSlides(msgs);
   const total  = slides.length;
 
-  // ── 슬라이드 이동 (방향: 'up'=다음, 'down'=이전) ──
+  // ── 슬라이드 이동 ──
   const goTo = useCallback((targetIdx: number, dir: "up" | "down" = "up") => {
     if (transitioning || total === 0) return;
     const safeIdx = ((targetIdx % total) + total) % total;
     setNextIdx(safeIdx);
     setTransitioning(true);
-
-    // 진입 슬라이드 초기 위치
     nxtY.setValue(dir === "up" ? height : -height);
     progressAnim.stopAnimation();
-
     Animated.parallel([
-      Animated.timing(curY, { toValue: dir === "up" ? -height : height, duration: 420, useNativeDriver: false }),
-      Animated.timing(nxtY, { toValue: 0, duration: 420, useNativeDriver: false }),
+      Animated.timing(curY, { toValue: dir === "up" ? -height : height, duration: 480, useNativeDriver: false }),
+      Animated.timing(nxtY, { toValue: 0, duration: 480, useNativeDriver: false }),
     ]).start(() => {
-      setCurIdx(safeIdx);
-      setNextIdx(null);
-      curY.setValue(0);
-      nxtY.setValue(height);
+      setCurIdx(safeIdx); setNextIdx(null);
+      curY.setValue(0); nxtY.setValue(height);
       setTransitioning(false);
     });
   }, [transitioning, total, curY, nxtY, progressAnim]);
@@ -262,48 +253,50 @@ export default function ParentScreen() {
   const goNext = useCallback(() => goTo(curIdx + 1, "up"),   [curIdx, goTo]);
   const goPrev = useCallback(() => goTo(curIdx - 1, "down"), [curIdx, goTo]);
 
-  // ── 프로그레스 바 애니메이션 ──
   const startProgress = useCallback(() => {
     progressAnim.setValue(0);
-    progressRef.current = Animated.timing(progressAnim, {
-      toValue: 1, duration: INTERVAL_MS, useNativeDriver: false,
-    });
-    progressRef.current.start(({ finished }) => {
-      if (finished) goNext();
-    });
+    progressRef.current = Animated.timing(progressAnim, { toValue: 1, duration: INTERVAL_MS, useNativeDriver: false });
+    progressRef.current.start(({ finished }) => { if (finished) goNext(); });
   }, [progressAnim, goNext]);
 
-  const stopProgress = useCallback(() => {
-    progressRef.current?.stop();
-  }, []);
+  const stopProgress = useCallback(() => { progressRef.current?.stop(); }, []);
 
-  // ── 자동 재생 (항상 켜짐, 손가락 홀드 or 전환 중에만 일시정지) ──
   useEffect(() => {
-    if (!isPaused && !transitioning && total > 0) {
-      startProgress();
-    } else {
-      stopProgress();
-    }
+    if (!isPaused && !transitioning && total > 0) startProgress();
+    else stopProgress();
     return stopProgress;
   }, [isPaused, transitioning, curIdx, total]);
 
-  // ── 터치 핸들러 ──
+  // ── 터치: 탭 → UI 토글 | 스와이프 → 슬라이드 이동 | 홀드 → 일시정지 ──
   const onTouchStart = (e: any) => {
     touchStartY.current = e.nativeEvent?.pageY ?? e.touches?.[0]?.pageY ?? 0;
+    touchStartT.current = Date.now();
     setIsPaused(true);
     stopProgress();
   };
 
   const onTouchEnd = (e: any) => {
-    const endY = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
-    const delta = endY - touchStartY.current;
+    const endY    = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
+    const deltaY  = endY - touchStartY.current;
+    const elapsed = Date.now() - touchStartT.current;
     setIsPaused(false);
-    if (delta < -60)     goNext();   // 위로 스와이프 → 다음
-    else if (delta > 60) goPrev();   // 아래로 스와이프 → 이전
-    else if (!transitioning) startProgress();
+
+    if (Math.abs(deltaY) < 50 && elapsed < 280) {
+      // 빠른 탭 → UI 토글
+      if (uiVisible) hideUI();
+      else showUI();
+      startProgress();
+    } else if (deltaY < -60) {
+      hideUI();
+      goNext();
+    } else if (deltaY > 60) {
+      hideUI();
+      goPrev();
+    } else {
+      startProgress();
+    }
   };
 
-  // ── 하트 ──
   const heartSlide = async (slide: Slide) => {
     spawnHearts();
     if (slide.kind !== "msg" || !familyCode) return;
@@ -315,117 +308,131 @@ export default function ParentScreen() {
     }
   };
 
-  const currentSlide = slides[curIdx] ?? null;
+  const currentSlide  = slides[curIdx] ?? null;
   const pendingSlide  = nextIdx !== null ? slides[nextIdx] : null;
-
   const progressWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+  const currentHearts = currentSlide?.kind === "msg" ? currentSlide.msg.hearts : 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.mapBg }}>
-      {/* 하트 파티클 */}
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+
+      {/* ── 하트 파티클 ── */}
       {floatHearts.map(h => <HeartParticle key={h.id} h={h} />)}
 
-      {/* ── 상단 헤더 ── */}
-      <View style={[p.header, { paddingTop: topInset + 10 }]}>
-        <Text style={p.logo}>A N B U</Text>
-        <View style={{ flex: 1 }} />
-
-        {/* GPS 상태 칩 */}
-        {isSharing && permission?.granted && (
-          <Pressable onPress={toggleShare} style={p.gpsChip}>
-            {locUploading
-              ? <ActivityIndicator size="small" color={COLORS.neon} style={{ width: 12, height: 12 }} />
-              : <View style={p.gpsDot} />}
-            <Text style={p.gpsChipText} numberOfLines={1}>
-              {address || "위치 공유 중"}
-            </Text>
-          </Pressable>
-        )}
-        {(!isSharing || !permission?.granted) && (
-          <Pressable onPress={permission?.granted ? toggleShare : requestPermission} style={[p.gpsChip, p.gpsChipOff]}>
-            <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.45)" />
-            <Text style={[p.gpsChipText, { color: "rgba(255,255,255,0.4)" }]}>
-              {permission?.granted ? "공유 중지됨" : "위치 권한 필요"}
-            </Text>
-          </Pressable>
-        )}
-
-        <Pressable onPress={() => router.push("/profile")} style={p.backBtn}>
-          <Ionicons name="person-circle-outline" size={20} color="rgba(255,255,255,0.7)" />
-        </Pressable>
-        <Pressable onPress={() => router.replace("/")} style={p.backBtn}>
-          <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.6)" />
-        </Pressable>
-      </View>
-
-      {/* ── 슬라이드쇼 영역 ── */}
+      {/* ══ 전체화면 슬라이드쇼 ══ */}
       <View
-        style={p.slideWrap}
+        style={StyleSheet.absoluteFillObject}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
         {loadingMsgs && msgs.length === 0 ? (
-          <View style={p.loadingWrap}>
+          <View style={ps.loadingWrap}>
             <ActivityIndicator color={COLORS.neon} size="large" />
-            <Text style={p.loadingText}>메시지 불러오는 중...</Text>
+            <Text style={ps.loadingText}>사진 불러오는 중...</Text>
           </View>
         ) : currentSlide ? (
           <>
-            {/* 현재 슬라이드 */}
             <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: curY }] }]}>
-              <SlideCard slide={currentSlide} onHeart={() => heartSlide(currentSlide)} />
+              <SlideCard slide={currentSlide} />
             </Animated.View>
-
-            {/* 다음 슬라이드 (트랜지션 중) */}
             {pendingSlide && (
               <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: nxtY }] }]}>
-                <SlideCard slide={pendingSlide} onHeart={() => heartSlide(pendingSlide)} />
+                <SlideCard slide={pendingSlide} />
               </Animated.View>
-            )}
-
-            {/* Stories 스타일 상단 진행 바 */}
-            {total > 1 && (
-              <View style={p.storyBars} pointerEvents="none">
-                {slides.map((_, i) => (
-                  <View key={i} style={p.storyBar}>
-                    <Animated.View style={[
-                      p.storyBarFill,
-                      {
-                        width: i < curIdx
-                          ? "100%"
-                          : i === curIdx
-                          ? progressWidth
-                          : "0%",
-                      },
-                    ]} />
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* 일시정지 배지 */}
-            {isPaused && !transitioning && (
-              <View style={p.pauseOverlay} pointerEvents="none">
-                <View style={p.pauseBadge}>
-                  <Ionicons name="pause" size={14} color="rgba(255,255,255,0.9)" />
-                  <Text style={p.pauseText}>일시정지</Text>
-                </View>
-              </View>
             )}
           </>
         ) : (
-          <View style={p.emptyWrap}>
-            <Ionicons name="chatbubble-ellipses-outline" size={48} color="rgba(255,255,255,0.2)" />
-            <Text style={p.emptyTitle}>아직 메시지가 없어요</Text>
-            <Text style={p.emptySubTitle}>{isConnected ? "자녀가 안부를 보내면 여기 표시됩니다" : "가족 코드로 연결해보세요"}</Text>
+          <View style={ps.emptyWrap}>
+            <Ionicons name="images-outline" size={56} color="rgba(255,255,255,0.15)" />
+            <Text style={ps.emptyTitle}>아직 사진이 없어요</Text>
+            <Text style={ps.emptySub}>자녀가 사진을 보내면{"\n"}여기 표시됩니다</Text>
             {!isConnected && (
-              <Pressable style={p.connectBtn} onPress={() => router.push("/setup")}>
-                <Text style={p.connectBtnText}>가족 연결하기</Text>
+              <Pressable style={ps.connectBtn} onPress={() => router.push("/profile")}>
+                <Text style={ps.connectBtnText}>가족 연결하기</Text>
               </Pressable>
             )}
           </View>
         )}
       </View>
+
+      {/* ── 프로그레스 바 (항상 표시 — 최상단) ── */}
+      {total > 1 && (
+        <View style={[ps.storyBars, { top: topInset + 10 }]} pointerEvents="none">
+          {slides.map((_, i) => (
+            <View key={i} style={ps.storyBar}>
+              <Animated.View style={[ps.storyBarFill, {
+                width: i < curIdx ? "100%" : i === curIdx ? progressWidth : "0%",
+              }]} />
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* ══ 상단 오버레이 (탭 시 내려옴) ══ */}
+      <Animated.View
+        style={[ps.topOverlay, { paddingTop: topInset + 14, transform: [{ translateY: topBarAnim }] }]}
+        pointerEvents={uiVisible ? "box-none" : "none"}
+      >
+        {/* 배경 그라디언트 효과 */}
+        <View style={ps.topGradient} pointerEvents="none" />
+        <View style={ps.topRow}>
+          <Text style={ps.logo}>A N B U</Text>
+          <View style={{ flex: 1 }} />
+          {/* GPS 칩 */}
+          <Pressable
+            onPress={permission?.granted ? toggleShare : requestPermission}
+            style={[ps.gpsChip, !isSharing && ps.gpsChipOff]}
+          >
+            {locUploading
+              ? <ActivityIndicator size="small" color={COLORS.neon} style={{ width: 10, height: 10 }} />
+              : <View style={[ps.gpsDot, !isSharing && { backgroundColor: "rgba(255,255,255,0.3)" }]} />}
+            <Text style={[ps.gpsText, !isSharing && { color: "rgba(255,255,255,0.35)" }]} numberOfLines={1}>
+              {isSharing ? (address || "위치 공유 중") : "공유 중지됨"}
+            </Text>
+          </Pressable>
+        </View>
+      </Animated.View>
+
+      {/* ══ 하단 오버레이 (탭 시 올라옴) ══ */}
+      <Animated.View
+        style={[ps.bottomOverlay, { paddingBottom: Math.max(bottomInset, 22), transform: [{ translateY: bottomBarAnim }] }]}
+        pointerEvents={uiVisible ? "box-none" : "none"}
+      >
+        <View style={ps.bottomGradient} pointerEvents="none" />
+        <View style={ps.bottomRow}>
+
+          {/* ❤️ 하트 버튼 */}
+          <Pressable style={ps.heartPill} onPress={() => currentSlide && heartSlide(currentSlide)}>
+            <Ionicons name="heart" size={19} color={COLORS.coral} />
+            {currentHearts > 0 && <Text style={ps.heartCount}>{currentHearts}</Text>}
+          </Pressable>
+
+          {/* 슬라이드 카운터 */}
+          {total > 0 && (
+            <Text style={ps.slideCounter}>{curIdx + 1} / {total}</Text>
+          )}
+
+          {/* 우측 아이콘 버튼 */}
+          <View style={ps.iconGroup}>
+            <Pressable style={ps.iconBtn} onPress={() => router.push("/profile")}>
+              <Ionicons name="person-circle-outline" size={23} color="rgba(255,255,255,0.88)" />
+            </Pressable>
+            <Pressable style={ps.iconBtn} onPress={() => router.replace("/")}>
+              <Ionicons name="home-outline" size={21} color="rgba(255,255,255,0.88)" />
+            </Pressable>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* ── 일시정지 표시 ── */}
+      {isPaused && !transitioning && (
+        <View style={ps.pauseOverlay} pointerEvents="none">
+          <View style={ps.pauseBadge}>
+            <Ionicons name="pause" size={12} color="rgba(255,255,255,0.9)" />
+            <Text style={ps.pauseText}>일시정지</Text>
+          </View>
+        </View>
+      )}
 
       {/* ── 개발 스위처 ── */}
       <View style={dev.bar}>
@@ -446,68 +453,68 @@ export default function ParentScreen() {
 
 // ── 슬라이드 스타일 ───────────────────────────────────────────────────────────
 const sl = StyleSheet.create({
-  // 필름 프레임 효과 — 상/하단 얇은 검정 바
-  filmTop:        { position: "absolute", top: 0, left: 0, right: 0, height: 4, backgroundColor: "#000", zIndex: 10 },
-  filmBottom:     { position: "absolute", bottom: 0, left: 0, right: 0, height: 4, backgroundColor: "#000", zIndex: 10 },
-
-  // 사진 슬라이드
-  photoBottomBar: { position: "absolute", bottom: 4, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.52)", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16 },
-  photoText:      { fontFamily: "Inter_400Regular", fontSize: 16, color: COLORS.white, lineHeight: 23, marginBottom: 4 },
-  timeSmall:      { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)" },
-
-  // 공통
-  heartBtn:       { position: "absolute", right: 20, bottom: 32, alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.38)", borderRadius: 30, paddingHorizontal: 14, paddingVertical: 10 },
-  heartN:         { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.white },
-
-  // 텍스트 전용 슬라이드 (이름·아바타 없음)
+  photoCaption:   { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 22, paddingTop: 18, paddingBottom: 24 },
+  captionText:    { fontFamily: "Inter_400Regular", fontSize: 16, color: "#fff", lineHeight: 24, marginBottom: 4 },
+  captionTime:    { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)" },
   textSlideBg:    { backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
   decoCircle1:    { position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, borderWidth: 30, borderColor: "rgba(212,242,0,0.07)" },
   decoCircle2:    { position: "absolute", left: -80, bottom: -80, width: 300, height: 300, borderRadius: 150, borderWidth: 30, borderColor: "rgba(212,242,0,0.05)" },
   textCenter:     { paddingHorizontal: 36, paddingVertical: 24, maxWidth: 360 },
   bigQuote:       { fontFamily: "Inter_700Bold", fontSize: 56, color: COLORS.neon, lineHeight: 56 },
   bigText:        { fontFamily: "Inter_700Bold", fontSize: 24, color: COLORS.white, lineHeight: 34, marginTop: -10 },
-  timeSmall2:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 18, alignSelf: "flex-end" },
+  captionTime2:   { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 18, alignSelf: "flex-end" },
 });
 
-// ── 부모님 화면 스타일 ────────────────────────────────────────────────────────
-const p = StyleSheet.create({
-  header:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 10, gap: 8, zIndex: 10 },
-  logo:         { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.white, letterSpacing: 3 },
+// ── 화면 스타일 ───────────────────────────────────────────────────────────────
+const ps = StyleSheet.create({
+  // 로딩 / 빈 화면
+  loadingWrap:    { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: "#111" },
+  loadingText:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)" },
+  emptyWrap:      { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40, backgroundColor: "#111" },
+  emptyTitle:     { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff", textAlign: "center" },
+  emptySub:       { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", lineHeight: 20 },
+  connectBtn:     { backgroundColor: COLORS.neon, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 50, marginTop: 8 },
+  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.neonText },
 
-  gpsChip:      { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)", maxWidth: 130 },
-  gpsChipOff:   { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" },
-  gpsDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.neon },
-  gpsChipText:  { fontFamily: "Inter_500Medium", fontSize: 11, color: COLORS.neon, flex: 1 },
+  // 프로그레스 바
+  storyBars:      { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 4, zIndex: 50 },
+  storyBar:       { flex: 1, height: 2.5, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.22)", overflow: "hidden" },
+  storyBarFill:   { height: "100%", backgroundColor: "rgba(255,255,255,0.88)", borderRadius: 2 },
 
-  codeChip:     { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.07)", paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20 },
-  codeDot:      { width: 5, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.4)" },
-  codeText:     { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: 1 },
-  backBtn:      { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
+  // 상단 오버레이
+  topOverlay:     { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200 },
+  topGradient:    { position: "absolute", top: 0, left: 0, right: 0, height: 130, backgroundColor: "rgba(0,0,0,0.62)" },
+  topRow:         { flexDirection: "row", alignItems: "center", paddingHorizontal: 18, paddingBottom: 20, gap: 10 },
+  logo:           { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff", letterSpacing: 3 },
+  gpsChip:        { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(212,242,0,0.14)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.22)", maxWidth: 140 },
+  gpsChipOff:     { backgroundColor: "rgba(255,255,255,0.07)", borderColor: "rgba(255,255,255,0.1)" },
+  gpsDot:         { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.neon },
+  gpsText:        { fontFamily: "Inter_500Medium", fontSize: 11, color: COLORS.neon, flex: 1 },
 
-  slideWrap:    { flex: 1, overflow: "hidden", position: "relative", backgroundColor: "#111" },
+  // 하단 오버레이
+  bottomOverlay:  { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 200 },
+  bottomGradient: { position: "absolute", bottom: 0, left: 0, right: 0, height: 160, backgroundColor: "rgba(0,0,0,0.58)" },
+  bottomRow:      { flexDirection: "row", alignItems: "center", paddingHorizontal: 18, paddingTop: 20, gap: 12 },
 
-  // Stories 스타일 상단 진행 바
-  storyBars:    { position: "absolute", top: 12, left: 12, right: 12, flexDirection: "row", gap: 4, zIndex: 50 },
-  storyBar:     { flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", overflow: "hidden" },
-  storyBarFill: { height: "100%", backgroundColor: COLORS.white, borderRadius: 2 },
+  // 하트 버튼
+  heartPill:      { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 30, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  heartCount:     { fontFamily: "Inter_700Bold", fontSize: 14, color: "#fff" },
 
-  // 일시정지 오버레이
-  pauseOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "flex-start", paddingTop: 18 },
-  pauseBadge:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50 },
-  pauseText:    { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.9)" },
+  // 카운터
+  slideCounter:   { flex: 1, textAlign: "center", fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.45)" },
 
-  // 로딩 / 빈 상태
-  loadingWrap:  { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
-  loadingText:  { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)" },
-  emptyWrap:    { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
-  emptyTitle:   { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.white, textAlign: "center" },
-  emptySubTitle:{ fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)", textAlign: "center", lineHeight: 20 },
-  connectBtn:   { backgroundColor: COLORS.neon, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 50, marginTop: 8 },
-  connectBtnText:{ fontFamily: "Inter_700Bold", fontSize: 14, color: COLORS.neonText },
+  // 아이콘 버튼
+  iconGroup:      { flexDirection: "row", gap: 8 },
+  iconBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+
+  // 일시정지
+  pauseOverlay:   { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "flex-start", paddingTop: 70, zIndex: 300 },
+  pauseBadge:     { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50 },
+  pauseText:      { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.9)" },
 });
 
 const dev = StyleSheet.create({
-  bar:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
+  bar:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
   label:  { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)", marginRight: 4 },
   btn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
   btnAlt: { backgroundColor: "rgba(212,242,0,0.15)", borderColor: "rgba(212,242,0,0.25)" },
