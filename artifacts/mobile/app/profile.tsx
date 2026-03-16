@@ -409,67 +409,57 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* ── 자녀 관리 (마스터 자녀만) ── */}
+        {/* ── 자녀 관리 (자녀 전체 표시, 마스터/서브 공통) ── */}
         {myRole === "child" && isConnected && (
           <>
             <SectionHeader title="자녀 관리" />
             <View style={s.card}>
-              {isMasterChild ? (
-                <>
-                  {/* 코드 공유 */}
-                  <View style={s.childMgmtShareBlock}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
-                      <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
-                      <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
+              {/* 코드 공유 — 마스터/서브 모두 동일하게 표시 */}
+              <View style={s.childMgmtShareBlock}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
+                  <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
+                  {isMasterChild
+                    ? <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
+                    : <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
+                  }
+                </View>
+                <Text style={s.childMgmtHint}>아래 코드를 추가 자녀에게 공유하세요{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
+                <View style={s.childCodeDisplay}>
+                  {(familyCode ?? "").split("").map((ch, i) => (
+                    <View key={i} style={s.childCodeCell}>
+                      <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
                     </View>
-                    <Text style={s.childMgmtHint}>아래 코드를 추가 자녀에게 공유하세요{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
-                    <View style={s.childCodeDisplay}>
-                      {(familyCode ?? "").split("").map((ch, i) => (
-                        <View key={i} style={s.childCodeCell}>
-                          <Text style={s.childCodeCellText}>{ch.toUpperCase()}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
-                      <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
-                      <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
-                        {childCodeCopied ? "복사됨!" : "코드 복사"}
-                      </Text>
-                    </Pressable>
-                  </View>
+                  ))}
+                </View>
+                <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
+                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
+                    {childCodeCopied ? "복사됨!" : "코드 복사"}
+                  </Text>
+                </Pressable>
+              </View>
 
-                  {/* 자녀 목록 */}
-                  {familyChildren.length > 0 && (
-                    <View style={{ borderTopWidth: 1, borderTopColor: COLORS.border }}>
-                      {familyChildren.map((child, idx) => (
-                        <View key={child.deviceId} style={[s.childRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
-                          <View style={[s.childAvatar, { backgroundColor: child.childRole === "master" ? COLORS.navPill : "#6366f1" }]}>
-                            <Text style={s.childAvatarText}>{child.memberName[0]?.toUpperCase()}</Text>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.childRowName}>{child.memberName}</Text>
-                            <Text style={s.childRowSub}>{child.childRole === "master" ? "마스터 자녀" : "추가 자녀 · 요금 발생"}</Text>
-                          </View>
-                          {child.childRole === "master" && (
-                            <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
-                          )}
-                          {child.childRole === "sub" && (
-                            <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
-                          )}
-                        </View>
-                      ))}
+              {/* 자녀 목록 — 마스터/서브 모두 동일하게 표시 */}
+              {familyChildren.length > 0 && (
+                <View style={{ borderTopWidth: 1, borderTopColor: COLORS.border }}>
+                  {familyChildren.map((child, idx) => (
+                    <View key={child.deviceId} style={[s.childRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                      <View style={[s.childAvatar, { backgroundColor: child.childRole === "master" ? COLORS.navPill : "#6366f1" }]}>
+                        <Text style={s.childAvatarText}>{child.memberName[0]?.toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.childRowName}>{child.memberName}</Text>
+                        <Text style={s.childRowSub}>{child.childRole === "master" ? "마스터 자녀" : "추가 자녀 · 요금 발생"}</Text>
+                      </View>
+                      {child.childRole === "master" && (
+                        <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
+                      )}
+                      {child.childRole === "sub" && (
+                        <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
+                      )}
                     </View>
-                  )}
-                </>
-              ) : (
-                /* 서브 자녀: 읽기 전용 안내 */
-                <View style={s.subChildNotice}>
-                  <Ionicons name="information-circle-outline" size={20} color="#6366f1" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.subChildNoticeTitle}>추가 자녀 계정</Text>
-                    <Text style={s.subChildNoticeText}>마스터 자녀만 자녀 관리 기능을 사용할 수 있습니다</Text>
-                  </View>
+                  ))}
                 </View>
               )}
             </View>
@@ -585,18 +575,6 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* ── 서브 자녀: 연결 해제 불가 안내 ── */}
-        {isConnected && myRole === "child" && !isMasterChild && (
-          <View style={[s.card, { marginTop: 8 }]}>
-            <View style={s.subChildNotice}>
-              <Ionicons name="lock-closed-outline" size={18} color="#94a3b8" />
-              <View style={{ flex: 1 }}>
-                <Text style={[s.subChildNoticeTitle, { color: "#94a3b8" }]}>연결 해제 불가</Text>
-                <Text style={s.subChildNoticeText}>마스터 자녀만 가족 연결을 해제할 수 있습니다</Text>
-              </View>
-            </View>
-          </View>
-        )}
 
         <Text style={s.bottomNote}>DUGO — 부모님과 자녀를 잇는 안전 연결</Text>
       </ScrollView>
