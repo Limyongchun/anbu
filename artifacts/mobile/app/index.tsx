@@ -56,7 +56,7 @@ export default function SplashScreen() {
         {/* ── 미리보기 ── */}
         <Text style={st.previewLabel}>{t.preview}</Text>
         <View style={st.previewRow}>
-          <Pressable style={({ pressed }) => [st.previewBtn, { opacity: pressed ? 0.8 : 1 }]} onPress={() => router.push("/child")}>
+          <Pressable style={({ pressed }) => [st.previewBtn, { opacity: pressed ? 0.8 : 1 }]} onPress={() => router.push("/child-signup")}>
             <Text style={st.previewText}>{t.childScreen}</Text>
           </Pressable>
           <View style={st.previewDivider} />
