@@ -664,28 +664,14 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 }
 
 // ─── 자녀 대기방 (부모 미연결) ────────────────────────────────────────────────
+const QR_API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
 function WaitingRoom({ familyCode, topBarH, bottomInset }: {
   familyCode: string; topBarH: number; bottomInset: number;
 }) {
-  const pulse = useRef(new Animated.Value(1)).current;
-  const QR_SIZE = 200;
-
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.06, duration: 900, useNativeDriver: false }),
-      Animated.timing(pulse, { toValue: 1,    duration: 900, useNativeDriver: false }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  const qrHtml = `<!DOCTYPE html><html><head>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<style>body{margin:0;background:transparent;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw}</style>
-</head><body><canvas id="q"></canvas>
-<script>QRCode.toCanvas(document.getElementById('q'),'${familyCode}',{width:${QR_SIZE},color:{dark:'#1a2535',light:'#f5f8ff'}},function(){})</script>
-</body></html>`;
-
+  const qrUri = `${QR_API_BASE}/qr/${familyCode}`;
   const segments = familyCode.match(/.{1,3}/g) ?? [familyCode];
 
   return (
@@ -703,18 +689,13 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
       <Text style={wr.sub}>아래 QR코드 또는 코드번호를{"\n"}부모님 기기에서 입력하면 연결됩니다</Text>
 
       {/* QR 코드 */}
-      <Animated.View style={[wr.qrWrap, { transform: [{ scale: pulse }] }]}>
-        {Platform.OS === "web" ? (
-          <View style={{ width: QR_SIZE + 32, height: QR_SIZE + 32, overflow: "hidden", borderRadius: 24 }}>
-            {/* @ts-ignore */}
-            <iframe srcDoc={qrHtml} style={{ width: "100%", height: "100%", border: "none" }} title="QR Code" />
-          </View>
-        ) : (
-          <View style={wr.qrNative}>
-            <Text style={wr.qrNativeText}>{familyCode}</Text>
-          </View>
-        )}
-      </Animated.View>
+      <View style={wr.qrWrap}>
+        <Image
+          source={{ uri: qrUri }}
+          style={{ width: 220, height: 220 }}
+          resizeMode="contain"
+        />
+      </View>
 
       {/* 코드 번호 */}
       <Text style={wr.codeLabel}>코드 번호</Text>
