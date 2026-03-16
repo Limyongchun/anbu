@@ -208,9 +208,7 @@ export default function ChildSignupScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.modeCardTitle}>새 가족 만들기</Text>
-              <Text style={s.modeCardDesc}>처음 가입하는 자녀{" "}
-                <Text style={s.modeMasterBadge}>마스터</Text>
-              </Text>
+              <Text style={s.modeCardDesc}>처음 가입하는 자녀</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
           </Pressable>
@@ -398,7 +396,6 @@ const s = StyleSheet.create({
   modeIconBg:    { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   modeCardTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 4 },
   modeCardDesc:  { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub },
-  modeMasterBadge: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.navPill, backgroundColor: "rgba(212,242,0,0.5)", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
 
   // ── 폼 ──
   scroll:      { padding: 24 },
