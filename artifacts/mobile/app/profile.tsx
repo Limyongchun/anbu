@@ -107,6 +107,7 @@ export default function ProfileScreen() {
 
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
   const [childCodeCopied, setChildCodeCopied] = useState(false);
+  const [parentNamesByCode, setParentNamesByCode] = useState<Record<string, string>>({});
 
   const reloadChildren = () => {
     if (myRole !== "child" || !familyCode) return;
@@ -115,7 +116,25 @@ export default function ProfileScreen() {
     }).catch(() => {});
   };
 
-  useEffect(() => { reloadChildren(); }, [myRole, familyCode]);
+  const loadParentNames = () => {
+    if (myRole !== "child" || allFamilyCodes.length === 0) return;
+    Promise.all(
+      allFamilyCodes.map(code =>
+        api.getFamily(code)
+          .then(data => {
+            const parent = (data.members ?? []).find((m: { role: string }) => m.role === "parent");
+            return [code, parent?.memberName ?? null] as [string, string | null];
+          })
+          .catch(() => [code, null] as [string, null])
+      )
+    ).then(results => {
+      const map: Record<string, string> = {};
+      results.forEach(([code, name]) => { if (name) map[code] = name; });
+      setParentNamesByCode(map);
+    });
+  };
+
+  useEffect(() => { reloadChildren(); loadParentNames(); }, [myRole, familyCode, allFamilyCodes.length]);
 
   const handleRemoveChild = (child: ChildMember) => {
     if (!familyCode || !deviceId) return;
@@ -349,7 +368,7 @@ export default function ProfileScreen() {
                       <Text style={s.parentCodeText}>{code}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.parentRowLabel}>{t.parentN} {idx + 1}</Text>
+                      <Text style={s.parentRowLabel}>{parentNamesByCode[code] ?? `${t.parentN} ${idx + 1}`}</Text>
                       <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
                     </View>
                     <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
