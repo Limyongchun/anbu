@@ -476,7 +476,7 @@ export default function ProfileScreen() {
                   <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
                   <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
                 </View>
-                <Text style={s.childMgmtHint}>추가 자녀도 마스터 코드를 활용해 접속 하시면 됩니다.{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
+                <Text style={s.childMgmtHint}>추가 자녀도 마스터 코드를 활용해 접속 하시면 됩니다.{"\n"}마스터 아이디당 10명의 자녀까지 가능합니다.</Text>
               </View>
 
               {/* 자녀 목록 — 마스터/서브 모두 동일하게 표시 */}
