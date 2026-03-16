@@ -41,9 +41,9 @@ function WhiteSplash({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     Animated.sequence([
-      Animated.timing(letterSpread, { toValue: 1, duration: 500, useNativeDriver: false }),
-      Animated.delay(700),
-      Animated.timing(opacity, { toValue: 0, duration: 550, useNativeDriver: false }),
+      Animated.timing(letterSpread, { toValue: 1, duration: 700, useNativeDriver: false }),
+      Animated.delay(2000),
+      Animated.timing(opacity, { toValue: 0, duration: 800, useNativeDriver: false }),
     ]).start(() => onDone());
   }, []);
 
