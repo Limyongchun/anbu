@@ -26,7 +26,7 @@ import { useFamilyContext } from "@/context/FamilyContext";
 import { api, FamilyMessage, LocationData } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
-type Tab = "홈" | "안부" | "선물샵";
+type Tab = "홈" | "활동" | "위치" | "알림";
 
 const GIFTS = [
   { id: 1, name: "제철 과일 선물세트", price: "39,000원", icon: "nutrition"   as const, category: "식품", popular: true  },
@@ -61,40 +61,56 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 }
 
 // ─── 상단 바 (로고 + 카테고리 탭) ───────────────────────────────────────────
-function TopBar({ tab, onTab, topInset }: {
-  tab: Tab; onTab: (t: Tab) => void; topInset: number;
-}) {
-  const tabs: Tab[] = ["홈", "안부", "선물샵"];
+function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
+  const isMap = tab === "위치";
   return (
     <View style={[tb.wrap, {
       paddingTop: topInset + 10,
-      backgroundColor: COLORS.bg,
-      borderBottomWidth: 1,
+      backgroundColor: isMap ? "rgba(26,34,48,0.82)" : COLORS.bg,
+      borderBottomWidth: isMap ? 0 : 1,
       borderBottomColor: COLORS.border,
     }]}>
-      <Text style={[tb.logo, { color: COLORS.textDark }]}>A N B U</Text>
-
+      <Text style={[tb.logo, { color: isMap ? COLORS.white : COLORS.textDark }]}>A N B U</Text>
       <View style={{ flex: 1 }} />
-
-      {/* 탭 + 프로필 — 우측 그룹 */}
-      <View style={tb.rightGroup}>
-        <View style={[tb.tabRow, tb.tabRowLight]}>
-          {tabs.map(t => {
-            const active = tab === t;
-            return (
-              <Pressable key={t} onPress={() => onTab(t)}
-                style={[tb.tabChip, active && tb.tabChipOnLight]}>
-                <Text style={[tb.tabText, { color: active ? COLORS.white : COLORS.textMid }]}>
-                  {t}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      {!isMap && (
         <Pressable style={tb.profileBtn} onPress={() => router.push("/profile")}>
           <Ionicons name="person-circle-outline" size={21} color={COLORS.navPill} />
         </Pressable>
-      </View>
+      )}
+    </View>
+  );
+}
+
+// ─── 하단 탭 바 ───────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id: "홈",  iconOn: "home"          as const, iconOff: "home-outline"          as const, label: "홈"  },
+  { id: "활동", iconOn: "pulse"         as const, iconOff: "pulse-outline"         as const, label: "활동" },
+  { id: "위치", iconOn: "location"      as const, iconOff: "location-outline"      as const, label: "위치" },
+  { id: "알림", iconOn: "notifications" as const, iconOff: "notifications-outline" as const, label: "알림" },
+  { id: "설정", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, label: "설정" },
+];
+
+function BottomNav({ tab, onTab, onSettings, bottomInset }: {
+  tab: Tab; onTab: (t: Tab) => void; onSettings: () => void; bottomInset: number;
+}) {
+  return (
+    <View style={[bn.wrap, { paddingBottom: Math.max(bottomInset, 12) }]}>
+      {NAV_ITEMS.map(item => {
+        const active = item.id !== "설정" && tab === (item.id as Tab);
+        const onPress = item.id === "설정" ? onSettings : () => onTab(item.id as Tab);
+        return (
+          <Pressable key={item.id} style={({ pressed }) => [bn.item, { opacity: pressed ? 0.65 : 1 }]} onPress={onPress}>
+            <View style={[bn.iconWrap, active && bn.iconWrapActive]}>
+              <Ionicons
+                name={active ? item.iconOn : item.iconOff}
+                size={22}
+                color={active ? COLORS.navPill : "#94a3b8"}
+              />
+            </View>
+            <Text style={[bn.label, active && bn.labelActive]}>{item.label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -854,6 +870,67 @@ function HomeScreen({
   );
 }
 
+// ─── 알림 화면 ────────────────────────────────────────────────────────────────
+function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
+  allFamilyCodes: string[]; topBarH: number; bottomInset: number;
+}) {
+  const [messages, setMessages] = useState<FamilyMessage[]>([]);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    if (!allFamilyCodes.length) { setLoading(false); return; }
+    Promise.all(allFamilyCodes.map(c => api.getMessages(c)))
+      .then(arr => setMessages(
+        arr.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      ))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [allFamilyCodes]);
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: "#f4f6fb" }}
+      contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={hm.sectionTitle}>알림</Text>
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color="#3b82f6" />
+      ) : messages.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 56 }}>
+          <View style={hm.emptyIcon}><Ionicons name="notifications-outline" size={28} color="#94a3b8" /></View>
+          <Text style={hm.emptyTitle}>새로운 알림이 없어요</Text>
+          <Text style={hm.emptySub}>가족에게 안부를 보내보세요</Text>
+        </View>
+      ) : (
+        <View style={hm.activityCard}>
+          {messages.slice(0, 30).map((m, i) => (
+            <React.Fragment key={m.id}>
+              {i > 0 && <View style={hm.activityDivider} />}
+              <View style={hm.activityRow}>
+                <View style={[hm.activityIconBg, { backgroundColor: m.fromRole === "parent" ? "#eff6ff" : "#f0fdf4" }]}>
+                  <Ionicons
+                    name={m.photoData ? "image" : m.fromRole === "parent" ? "chatbubble" : "paper-plane"}
+                    size={17}
+                    color={m.fromRole === "parent" ? "#3b82f6" : "#22c55e"}
+                  />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={hm.activityLabel}>{m.fromName}</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: "#64748b" }} numberOfLines={1}>
+                    {m.text || "사진을 보냈어요"}
+                  </Text>
+                </View>
+                <Text style={hm.activityTime}>{formatTime(m.createdAt)}</Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
 // ─── 선물샵 화면 ──────────────────────────────────────────────────────────────
 function GiftScreen({ topBarH }: { topBarH: number }) {
   const [sel, setSel]     = useState<typeof GIFTS[0] | null>(null);
@@ -933,30 +1010,53 @@ export default function ChildScreen() {
   const topInset    = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
   const TOP_H       = topInset + 60;
+  const isMap       = tab === "위치";
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <View style={{ flex: 1, backgroundColor: isMap ? COLORS.mapBg : COLORS.bg }}>
 
-      {tab === "홈"    && (
+      {/* ── 홈 ── */}
+      {tab === "홈" && (
         <HomeScreen
           familyCode={familyCode}
           allFamilyCodes={allFamilyCodes}
           deviceId={deviceId}
           topBarH={TOP_H}
           bottomInset={bottomInset}
-          onGoToAnbu={() => setTab("안부")}
+          onGoToAnbu={() => setTab("활동")}
         />
       )}
-      {tab === "안부"  && (
+
+      {/* ── 활동 (안부) ── */}
+      {tab === "활동" && (
         <AnbuScreen familyCode={familyCode} allFamilyCodes={allFamilyCodes} myName={myName} myRole={myRole} deviceId={deviceId} topBarH={TOP_H} />
       )}
-      {tab === "선물샵" && <GiftScreen topBarH={TOP_H} />}
 
-      {/* ══ 상단 바 — 항상 위에 떠 있음 ══ */}
-      <TopBar tab={tab} onTab={setTab} topInset={topInset} />
+      {/* ── 위치 (지도) ── */}
+      {isMap && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <MapScreen familyCode={familyCode} bottomInset={bottomInset} />
+        </View>
+      )}
+
+      {/* ── 알림 ── */}
+      {tab === "알림" && (
+        <NotificationScreen allFamilyCodes={allFamilyCodes} topBarH={TOP_H} bottomInset={bottomInset} />
+      )}
+
+      {/* ══ 상단 바 — 항상 위에 ══ */}
+      <TopBar tab={tab} topInset={topInset} />
+
+      {/* ══ 하단 탭 바 ══ */}
+      <BottomNav
+        tab={tab}
+        onTab={setTab}
+        onSettings={() => router.push("/profile")}
+        bottomInset={bottomInset}
+      />
 
       {/* ══ 개발 스위처 ══ */}
-      <View style={dv.bar}>
+      <View style={[dv.bar, { bottom: Math.max(bottomInset, 12) + 62 }]}>
         <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
         <Text style={dv.label}>개발 모드</Text>
         <Pressable onPress={() => router.replace("/parent")} style={dv.btn}>
@@ -971,6 +1071,16 @@ export default function ChildScreen() {
 }
 
 // ─── 스타일 ───────────────────────────────────────────────────────────────────
+
+// 하단 탭 바
+const bn = StyleSheet.create({
+  wrap:          { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e2e8f0", paddingTop: 8 },
+  item:          { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
+  iconWrap:      { width: 36, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 10 },
+  iconWrapActive:{ backgroundColor: "rgba(26,34,48,0.08)" },
+  label:         { fontFamily: "Inter_500Medium", fontSize: 10, color: "#94a3b8" },
+  labelActive:   { color: COLORS.navPill, fontFamily: "Inter_600SemiBold" },
+});
 
 // 홈 대시보드
 const hm = StyleSheet.create({
