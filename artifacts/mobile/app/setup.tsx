@@ -62,8 +62,19 @@ export default function SetupScreen() {
     setError("");
     try {
       const code = joinCodeInput.trim().toUpperCase();
-      await api.joinFamily(code, deviceId, name.trim(), role);
-      await connect(code, name.trim(), role);
+      let finalName = name.trim();
+      if (role === "parent") {
+        try {
+          const family = await api.getFamily(code);
+          const existingParents = (family.members ?? []).filter((m: { role: string }) => m.role === "parent");
+          if (existingParents.length >= 1 && finalName === "부모님") {
+            finalName = "부모님 2";
+            setName("부모님 2");
+          }
+        } catch {}
+      }
+      await api.joinFamily(code, deviceId, finalName, role);
+      await connect(code, finalName, role);
       router.replace(role === "parent" ? "/parent" : "/child");
     } catch (e: any) {
       setError(e.message || t.errorCode);
@@ -124,7 +135,10 @@ export default function SetupScreen() {
             <Pressable
               style={[styles.nextBtn, !role && styles.nextBtnDisabled]}
               disabled={!role}
-              onPress={() => setStep("name")}
+              onPress={() => {
+                if (role === "parent") setName(prev => prev.trim() || "부모님");
+                setStep("name");
+              }}
             >
               <Text style={styles.nextBtnText}>{t.next}</Text>
               <Ionicons name="arrow-forward" size={18} color={COLORS.white} />
