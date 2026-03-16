@@ -108,12 +108,26 @@ export default function ProfileScreen() {
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
   const [childCodeCopied, setChildCodeCopied] = useState(false);
 
-  useEffect(() => {
+  const reloadChildren = () => {
     if (myRole !== "child" || !familyCode) return;
     api.getFamily(familyCode).then(data => {
       setFamilyChildren((data.members as ChildMember[]).filter(m => m.role === "child"));
     }).catch(() => {});
-  }, [myRole, familyCode]);
+  };
+
+  useEffect(() => { reloadChildren(); }, [myRole, familyCode]);
+
+  const handleRemoveChild = (child: ChildMember) => {
+    if (!familyCode || !deviceId) return;
+    setConfirmModal({
+      title: "추가 자녀 삭제",
+      message: `${child.memberName}을(를) 가족에서 삭제하시겠습니까?\n\n삭제된 자녀는 더 이상 가족에 접근할 수 없습니다.`,
+      onConfirm: async () => {
+        await api.removeFamilyMember(familyCode, child.deviceId, deviceId);
+        reloadChildren();
+      },
+    });
+  };
 
   const copyChildCode = async () => {
     if (!familyCode) return;
@@ -462,6 +476,15 @@ export default function ProfileScreen() {
                       {child.childRole === "sub" && (
                         <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
                       )}
+                      {isMasterChild && child.childRole === "sub" && (
+                        <Pressable
+                          onPress={() => handleRemoveChild(child)}
+                          style={s.removeChildBtn}
+                          hitSlop={8}
+                        >
+                          <Ionicons name="trash-outline" size={17} color="#ef4444" />
+                        </Pressable>
+                      )}
                     </View>
                   ))}
                 </View>
@@ -566,8 +589,8 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 연결 해제 (부모 전체 / 마스터 자녀만) ── */}
-        {isConnected && (myRole === "parent" || isMasterChild) && (
+        {/* ── 연결 해제 (부모 전체 / 자녀 전체) ── */}
+        {isConnected && (
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
@@ -939,7 +962,8 @@ const s = StyleSheet.create({
   childCodeCell:   { width: 38, height: 44, borderRadius: 10, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
   childCodeCellText:{ fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.neon, letterSpacing: 1 },
 
-  childRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  childRow:        { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  removeChildBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fee2e2", alignItems: "center", justifyContent: "center" },
   childAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   childAvatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
   childRowName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark, marginBottom: 2 },

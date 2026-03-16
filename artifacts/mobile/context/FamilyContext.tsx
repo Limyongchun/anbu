@@ -87,8 +87,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
         if (!childRole && code && role === "child" && effectiveDeviceId) {
           try {
-            const BASE = process.env.EXPO_PUBLIC_DOMAIN ?? "";
-            const res = await fetch(`${BASE}/api/family/${code}`);
+            const BASE = process.env.EXPO_PUBLIC_DOMAIN
+              ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+              : "/api";
+            const res = await fetch(`${BASE}/family/${code}`);
             if (res.ok) {
               const data = await res.json();
               const me = (data.members ?? []).find((m: { deviceId: string; childRole: string | null }) => m.deviceId === effectiveDeviceId);

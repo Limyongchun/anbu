@@ -135,6 +135,34 @@ router.post("/family/join", async (req, res) => {
   }
 });
 
+// DELETE /api/family/:code/member/:memberDeviceId — 마스터 자녀가 서브 자녀 삭제
+router.delete("/family/:code/member/:memberDeviceId", async (req, res) => {
+  try {
+    const { code, memberDeviceId } = req.params;
+    const { requestorDeviceId } = req.body;
+
+    const members = await db.select().from(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
+    const requestor = members.find(m => m.deviceId === requestorDeviceId);
+    if (!requestor || requestor.childRole !== "master") {
+      return res.status(403).json({ error: "마스터 자녀만 삭제할 수 있습니다" });
+    }
+    const target = members.find(m => m.deviceId === memberDeviceId);
+    if (!target) return res.status(404).json({ error: "대상 자녀를 찾을 수 없습니다" });
+    if (target.childRole === "master") return res.status(400).json({ error: "마스터 자녀는 삭제할 수 없습니다" });
+
+    await db.delete(familyMembersTable)
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, memberDeviceId)));
+
+    await db.delete(familySubscriptionsTable)
+      .where(and(eq(familySubscriptionsTable.familyCode, code), eq(familySubscriptionsTable.subDeviceId, memberDeviceId)));
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Failed to remove member" });
+  }
+});
+
 // GET /api/family/:code/subscription — 가족 결제 상태 조회
 router.get("/family/:code/subscription", async (req, res) => {
   try {
