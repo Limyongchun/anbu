@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -108,6 +111,32 @@ export default function ProfileScreen() {
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
   const [childCodeCopied, setChildCodeCopied] = useState(false);
   const [parentNamesByCode, setParentNamesByCode] = useState<Record<string, string>>({});
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+
+  const PHOTO_KEY = `profile_photo_${deviceId}`;
+
+  useEffect(() => {
+    AsyncStorage.getItem(PHOTO_KEY).then(uri => { if (uri) setProfilePhoto(uri); }).catch(() => {});
+  }, [deviceId]);
+
+  const pickProfilePhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("권한 필요", "사진 라이브러리 접근 권한이 필요합니다.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      const uri = result.assets[0].uri;
+      setProfilePhoto(uri);
+      await AsyncStorage.setItem(PHOTO_KEY, uri);
+    }
+  };
 
   const reloadChildren = () => {
     if (myRole !== "child" || !familyCode) return;
@@ -340,9 +369,13 @@ export default function ProfileScreen() {
       >
         {/* ── 프로필 카드 ── */}
         <View style={s.profileCard}>
-          <View style={s.avatarCircle}>
-            <Text style={s.avatarText}>{(myName ?? "?")[0]?.toUpperCase()}</Text>
-          </View>
+          <Pressable style={s.avatarCircle} onPress={pickProfilePhoto}>
+            {profilePhoto ? (
+              <Image source={{ uri: profilePhoto }} style={s.avatarPhoto} />
+            ) : (
+              <Ionicons name="camera" size={26} color={COLORS.neon} />
+            )}
+          </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={s.profileName}>{myName ?? t.noName}</Text>
             <View style={[s.roleBadge, { backgroundColor: roleColor }]}>
@@ -878,8 +911,9 @@ const s = StyleSheet.create({
   backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
 
   profileCard:  { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: COLORS.white, borderRadius: 20, padding: 18, marginTop: 20, marginBottom: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-  avatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
+  avatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   avatarText:   { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white },
+  avatarPhoto:  { width: 56, height: 56, borderRadius: 28 },
   profileName:  { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textDark, marginBottom: 6 },
   roleBadge:    { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   roleText:     { fontFamily: "Inter_600SemiBold", fontSize: 11 },
