@@ -101,6 +101,13 @@ export default function ProfileScreen() {
   const [showFaq, setShowFaq] = useState<number | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
   // ── 이미 연결된 자녀가 부모님 추가 ──
   const [showAddParentSheet, setShowAddParentSheet] = useState(false);
   const [addParentCode, setAddParentCode] = useState("");
@@ -129,27 +136,20 @@ export default function ProfileScreen() {
 
   const handleRemoveFamily = (code: string) => {
     const isPrimary = code === familyCode;
-    Alert.alert(
-      isPrimary ? "가족방 나가기" : "부모님 연결 해제",
-      isPrimary
+    setConfirmModal({
+      title: isPrimary ? "가족방 나가기" : "부모님 연결 해제",
+      message: isPrimary
         ? "이 가족방에서 나가면 모든 연결이 해제됩니다."
         : "이 부모님과의 연결을 해제할까요?",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "연결 해제",
-          style: "destructive",
-          onPress: async () => {
-            if (isPrimary) {
-              await disconnect();
-              router.replace("/setup");
-            } else {
-              await removeExtraFamily(code);
-            }
-          },
-        },
-      ]
-    );
+      onConfirm: async () => {
+        if (isPrimary) {
+          await disconnect();
+          router.replace("/setup");
+        } else {
+          await removeExtraFamily(code);
+        }
+      },
+    });
   };
 
   // ── 코드 연결 (참가) ──
@@ -243,21 +243,14 @@ export default function ProfileScreen() {
   };
 
   const handleDisconnect = () => {
-    Alert.alert(
-      "가족 연결 해제",
-      "연결을 해제하면 이 기기에서 로그아웃됩니다. 계속하시겠어요?",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "연결 해제",
-          style: "destructive",
-          onPress: async () => {
-            await disconnect();
-            router.replace("/setup");
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      title: "가족 연결 해제",
+      message: "연결을 해제하면 이 기기에서 로그아웃됩니다. 계속하시겠어요?",
+      onConfirm: async () => {
+        await disconnect();
+        router.replace("/setup");
+      },
+    });
   };
 
   const openEmail = () => {
@@ -693,6 +686,37 @@ export default function ProfileScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+      {/* ── 연결 해제 확인 모달 ── */}
+      {confirmModal && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => !confirming && setConfirmModal(null)}>
+          <View style={s.confirmOverlay}>
+            <View style={s.confirmBox}>
+              <Text style={s.confirmTitle}>{confirmModal.title}</Text>
+              <Text style={s.confirmMessage}>{confirmModal.message}</Text>
+              <View style={s.confirmBtns}>
+                <Pressable
+                  style={[s.confirmCancel, confirming && { opacity: 0.4 }]}
+                  disabled={confirming}
+                  onPress={() => setConfirmModal(null)}
+                >
+                  <Text style={s.confirmCancelText}>취소</Text>
+                </Pressable>
+                <Pressable
+                  style={[s.confirmDanger, confirming && { opacity: 0.6 }]}
+                  disabled={confirming}
+                  onPress={async () => {
+                    setConfirming(true);
+                    try { await confirmModal.onConfirm(); }
+                    finally { setConfirming(false); setConfirmModal(null); }
+                  }}
+                >
+                  <Text style={s.confirmDangerText}>{confirming ? "처리 중..." : "연결 해제"}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -786,4 +810,14 @@ const s = StyleSheet.create({
   nameInput:    { backgroundColor: COLORS.white, borderRadius: 16, padding: 14, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
   saveBtn:      { backgroundColor: COLORS.navPill, paddingVertical: 14, borderRadius: 50, alignItems: "center" },
   saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
+
+  confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
+  confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },
+  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1a2535", textAlign: "center" },
+  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "#64748b", textAlign: "center", lineHeight: 20 },
+  confirmBtns:       { flexDirection: "row", gap: 10, marginTop: 6 },
+  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#f1f5f9", alignItems: "center" },
+  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#64748b" },
+  confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#ff5050", alignItems: "center" },
+  confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 });
