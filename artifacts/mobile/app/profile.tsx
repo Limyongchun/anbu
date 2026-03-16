@@ -243,7 +243,11 @@ export default function ProfileScreen() {
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const roleLabel = myRole === "parent" ? t.roleParentLabel : myRole === "child" ? t.roleChildLabel : "-";
+  const roleLabel = myRole === "parent"
+    ? t.roleParentLabel
+    : myRole === "child"
+      ? (isMasterChild ? "마스터 자녀" : "추가 자녀")
+      : "-";
   const roleColor = myRole === "parent" ? "#6c63ff" : myRole === "child" ? COLORS.neon : "#aaa";
   const roleTextColor = myRole === "parent" ? "#fff" : myRole === "child" ? COLORS.neonText : "#fff";
 
