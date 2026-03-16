@@ -20,34 +20,33 @@ const LANG_OPTIONS: { id: Lang; label: string }[] = [
   { id: "ja", label: "日本語" },
 ];
 
+const LANG_EMOJI: Record<Lang, string> = { ko: "\uD83C\uDDF0\uD83C\uDDF7", en: "\uD83C\uDDFA\uD83C\uDDF8", ja: "\uD83C\uDDEF\uD83C\uDDF5" };
+
 function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
   const [open, setOpen] = useState(false);
-  const currentLabel = LANG_OPTIONS.find((o) => o.id === lang)?.label || "한국어";
-  const otherOptions = LANG_OPTIONS.filter((o) => o.id !== lang);
+  const current = LANG_OPTIONS.find((o) => o.id === lang)!;
+  const others = LANG_OPTIONS.filter((o) => o.id !== lang);
 
   return (
     <View style={st.langSection}>
       <Pressable
-        style={({ pressed }) => [st.langPill, st.langPillActive, { opacity: pressed ? 0.8 : 1 }]}
+        style={({ pressed }) => [st.langBtn, { opacity: pressed ? 0.8 : 1 }]}
         onPress={() => setOpen(!open)}
       >
-        <Text style={[st.langPillText, st.langPillTextActive]}>
-          {currentLabel} {open ? "▲" : "▼"}
-        </Text>
+        <Text style={{ fontSize: 16 }}>{LANG_EMOJI[lang]}</Text>
+        <Text style={st.langBtnText}>{current.label}</Text>
+        <Text style={st.langArrow}>{open ? "\u25B2" : "\u25BC"}</Text>
       </Pressable>
-      {open && (
-        <View style={st.langDropdown}>
-          {otherOptions.map((opt) => (
-            <Pressable
-              key={opt.id}
-              style={({ pressed }) => [st.langDropdownItem, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => { setLang(opt.id); setOpen(false); }}
-            >
-              <Text style={st.langDropdownText}>{opt.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      {open && others.map((opt) => (
+        <Pressable
+          key={opt.id}
+          style={({ pressed }) => [st.langBtn, st.langBtnOther, { opacity: pressed ? 0.7 : 1 }]}
+          onPress={() => { setLang(opt.id); setOpen(false); }}
+        >
+          <Text style={{ fontSize: 16 }}>{LANG_EMOJI[opt.id]}</Text>
+          <Text style={st.langBtnOtherText}>{opt.label}</Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -120,12 +119,10 @@ const st = StyleSheet.create({
   previewDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.09)" },
   footer:       { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.22)", letterSpacing: 0.5, marginBottom: 36 },
 
-  langSection:       { width: "100%", alignItems: "center", gap: 8 },
-  langPill:          { paddingVertical: 9, paddingHorizontal: 20, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  langPillActive:    { backgroundColor: COLORS.neon, borderColor: COLORS.neon },
-  langPillText:      { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.55)" },
-  langPillTextActive:{ color: COLORS.neonText, fontFamily: "Inter_700Bold" },
-  langDropdown:      { flexDirection: "row", gap: 8 },
-  langDropdownItem:  { paddingVertical: 9, paddingHorizontal: 20, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  langDropdownText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.55)" },
+  langSection:       { width: "100%", alignItems: "center", gap: 6 },
+  langBtn:           { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.1)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  langBtnText:       { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "rgba(255,255,255,0.85)" },
+  langArrow:         { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.4)", marginLeft: 2 },
+  langBtnOther:      { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" },
+  langBtnOtherText:  { fontFamily: "Inter_500Medium", fontSize: 14, color: "rgba(255,255,255,0.55)" },
 });

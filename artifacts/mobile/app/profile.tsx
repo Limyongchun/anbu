@@ -103,34 +103,50 @@ function Divider() {
   return <View style={s.divider} />;
 }
 
-const LANG_OPTIONS_PROFILE: [Lang, string][] = [["ko", "한국어"], ["en", "English"], ["ja", "日本語"]];
+const LANG_MAP: Record<Lang, { emoji: string; label: string }> = {
+  ko: { emoji: "\uD83C\uDDF0\uD83C\uDDF7", label: "\uD55C\uAD6D\uC5B4" },
+  en: { emoji: "\uD83C\uDDFA\uD83C\uDDF8", label: "English" },
+  ja: { emoji: "\uD83C\uDDEF\uD83C\uDDF5", label: "\u65E5\u672C\u8A9E" },
+};
 
 function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
   const [open, setOpen] = useState(false);
-  const currentLabel = LANG_OPTIONS_PROFILE.find(([id]) => id === lang)?.[1] || "한국어";
-  const others = LANG_OPTIONS_PROFILE.filter(([id]) => id !== lang);
+  const current = LANG_MAP[lang];
+  const others = (Object.keys(LANG_MAP) as Lang[]).filter((id) => id !== lang);
 
   return (
-    <View style={s.langDropdownWrap}>
+    <View>
       <Pressable
-        style={({ pressed }) => [s.langPill, s.langPillActive, { opacity: pressed ? 0.8 : 1 }]}
+        style={({ pressed }) => [s.row, { opacity: pressed ? 0.7 : 1 }]}
         onPress={() => setOpen(!open)}
       >
-        <Text style={[s.langPillText, s.langPillTextActive]}>{currentLabel} {open ? "\u25B2" : "\u25BC"}</Text>
+        <View style={s.rowIcon}>
+          <Text style={{ fontSize: 18 }}>{current.emoji}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.rowLabel}>{current.label}</Text>
+        </View>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color="rgba(0,0,0,0.2)" />
       </Pressable>
-      {open && (
-        <View style={s.langRow}>
-          {others.map(([id, label]) => (
+      {open && others.map((id) => {
+        const opt = LANG_MAP[id];
+        return (
+          <React.Fragment key={id}>
+            <Divider />
             <Pressable
-              key={id}
-              style={({ pressed }) => [s.langPill, { opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [s.row, { opacity: pressed ? 0.7 : 1 }]}
               onPress={() => { setLang(id); setOpen(false); }}
             >
-              <Text style={s.langPillText}>{label}</Text>
+              <View style={s.rowIcon}>
+                <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.rowLabel}>{opt.label}</Text>
+              </View>
             </Pressable>
-          ))}
-        </View>
-      )}
+          </React.Fragment>
+        );
+      })}
     </View>
   );
 }
@@ -1030,12 +1046,6 @@ const s = StyleSheet.create({
   saveBtn:      { backgroundColor: COLORS.navPill, paddingVertical: 14, borderRadius: 50, alignItems: "center" },
   saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
 
-  langDropdownWrap:  { alignItems: "center", gap: 8, paddingVertical: 4 },
-  langRow:           { flexDirection: "row", gap: 8, paddingVertical: 4, flexWrap: "wrap" },
-  langPill:          { paddingVertical: 9, paddingHorizontal: 18, borderRadius: 50, backgroundColor: "#f1f5f9", borderWidth: 1, borderColor: "#e2e8f0" },
-  langPillActive:    { backgroundColor: COLORS.navPill, borderColor: COLORS.navPill },
-  langPillText:      { fontFamily: "Inter_500Medium", fontSize: 13, color: "#64748b" },
-  langPillTextActive:{ color: "#fff", fontFamily: "Inter_700Bold" },
 
   confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
   confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },
