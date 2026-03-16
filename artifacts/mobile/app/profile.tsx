@@ -386,24 +386,23 @@ export default function ProfileScreen() {
             myRole === "child" ? (
               /* ── 자녀: 연결된 부모님 코드 목록 ── */
               <View>
-                {allFamilyCodes.map((code, idx) => (
-                  <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.parentRowLabel}>{parentNamesByCode[code] ?? `${t.parentN} ${idx + 1}`}</Text>
-                      <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
+                {allFamilyCodes.map((code, idx) => {
+                  const pName = parentNamesByCode[code] ?? `${t.parentN} ${idx + 1}`;
+                  return (
+                    <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                      <View style={s.parentAvatar}>
+                        <Text style={s.parentAvatarText}>{pName[0]?.toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.parentRowLabel}>{pName}</Text>
+                        <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
+                      </View>
+                      <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
+                        <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
+                      </Pressable>
                     </View>
-                    <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
-                      <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
-                    </Pressable>
-                  </View>
-                ))}
-                <Pressable
-                  style={s.addParentBtn}
-                  onPress={() => { setAddParentCode(""); setAddParentError(""); setShowAddParentSheet(true); }}
-                >
-                  <Ionicons name="add-circle" size={18} color={COLORS.navPill} />
-                  <Text style={s.addParentBtnText}>{t.addParent}</Text>
-                </Pressable>
+                  );
+                })}
               </View>
             ) : (
               /* ── 부모님: 단일 코드 표시 + 복사 ── */
@@ -912,6 +911,8 @@ const s = StyleSheet.create({
   // ── 자녀 다중 부모님 섹션 ──
   parentRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
   parentCodeBadge:  { backgroundColor: COLORS.navPill, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, minWidth: 72, alignItems: "center" },
+  parentAvatar:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
+  parentAvatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.neon },
   parentCodeText:   { fontFamily: "Inter_700Bold", fontSize: 13, color: COLORS.neon, letterSpacing: 2 },
   parentRowLabel:   { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark },
   parentRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
