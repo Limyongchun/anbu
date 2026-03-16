@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
@@ -58,12 +57,10 @@ export default function SplashScreen() {
         <Text style={st.previewLabel}>{t.preview}</Text>
         <View style={st.previewRow}>
           <Pressable style={({ pressed }) => [st.previewBtn, { opacity: pressed ? 0.8 : 1 }]} onPress={() => router.push("/child")}>
-            <Ionicons name="people" size={18} color="rgba(255,255,255,0.7)" />
             <Text style={st.previewText}>{t.childScreen}</Text>
           </Pressable>
           <View style={st.previewDivider} />
           <Pressable style={({ pressed }) => [st.previewBtn, { opacity: pressed ? 0.8 : 1 }]} onPress={() => router.push("/parent")}>
-            <Ionicons name="home" size={18} color="rgba(255,255,255,0.7)" />
             <Text style={st.previewText}>{t.parentScreen}</Text>
           </Pressable>
         </View>
@@ -108,8 +105,8 @@ const st = StyleSheet.create({
   divider:      { width: 36, height: 1, backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 36 },
   previewLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1, marginBottom: 10 },
   previewRow:   { width: "100%", flexDirection: "row", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", marginBottom: 28 },
-  previewBtn:   { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 14 },
-  previewText:  { fontFamily: "Inter_500Medium", fontSize: 14, color: "rgba(255,255,255,0.7)" },
+  previewBtn:   { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 42 },
+  previewText:  { fontFamily: "Inter_700Bold", fontSize: 42, color: "rgba(255,255,255,0.7)" },
   previewDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.09)" },
   footer:       { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.22)", letterSpacing: 0.5, marginBottom: 36 },
 
