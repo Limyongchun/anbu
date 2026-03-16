@@ -226,10 +226,6 @@ export default function ChildSignupScreen() {
             <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
           </Pressable>
 
-          <View style={s.modeNotice}>
-            <Ionicons name="information-circle-outline" size={15} color="#6366f1" />
-            <Text style={s.modeNoticeText}>2번째 자녀부터는 추가 요금이 발생합니다</Text>
-          </View>
         </View>
       </View>
     );
@@ -403,8 +399,6 @@ const s = StyleSheet.create({
   modeCardTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 4 },
   modeCardDesc:  { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub },
   modeMasterBadge: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.navPill, backgroundColor: "rgba(212,242,0,0.5)", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
-  modeNotice:    { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8, backgroundColor: "rgba(99,102,241,0.08)", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "rgba(99,102,241,0.18)" },
-  modeNoticeText:{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#6366f1", flex: 1 },
 
   // ── 폼 ──
   scroll:      { padding: 24 },
