@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Platform,
@@ -19,6 +19,38 @@ const LANG_OPTIONS: { id: Lang; label: string }[] = [
   { id: "en", label: "English" },
   { id: "ja", label: "日本語" },
 ];
+
+function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
+  const [open, setOpen] = useState(false);
+  const currentLabel = LANG_OPTIONS.find((o) => o.id === lang)?.label || "한국어";
+  const otherOptions = LANG_OPTIONS.filter((o) => o.id !== lang);
+
+  return (
+    <View style={st.langSection}>
+      <Pressable
+        style={({ pressed }) => [st.langPill, st.langPillActive, { opacity: pressed ? 0.8 : 1 }]}
+        onPress={() => setOpen(!open)}
+      >
+        <Text style={[st.langPillText, st.langPillTextActive]}>
+          {currentLabel} {open ? "▲" : "▼"}
+        </Text>
+      </Pressable>
+      {open && (
+        <View style={st.langDropdown}>
+          {otherOptions.map((opt) => (
+            <Pressable
+              key={opt.id}
+              style={({ pressed }) => [st.langDropdownItem, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => { setLang(opt.id); setOpen(false); }}
+            >
+              <Text style={st.langDropdownText}>{opt.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function SplashScreen() {
   const insets = useSafeAreaInsets();
@@ -67,30 +99,8 @@ export default function SplashScreen() {
 
         <Text style={st.footer}>{t.footer}</Text>
 
-        {/* ── 언어 선택 ── */}
-        <View style={st.langSection}>
-          <Text style={st.langLabel}>{t.langLabel}</Text>
-          <View style={st.langRow}>
-            {LANG_OPTIONS.map((opt) => {
-              const active = lang === opt.id;
-              return (
-                <Pressable
-                  key={opt.id}
-                  style={({ pressed }) => [
-                    st.langPill,
-                    active && st.langPillActive,
-                    { opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  onPress={() => setLang(opt.id)}
-                >
-                  <Text style={[st.langPillText, active && st.langPillTextActive]}>
-                    {opt.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        {/* ── 언어 선택 (드롭다운) ── */}
+        <LangDropdown lang={lang} setLang={setLang} />
 
       </Animated.View>
     </View>
@@ -110,11 +120,12 @@ const st = StyleSheet.create({
   previewDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.09)" },
   footer:       { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.22)", letterSpacing: 0.5, marginBottom: 36 },
 
-  langSection:       { width: "100%", alignItems: "center", gap: 12 },
-  langLabel:         { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1 },
-  langRow:           { flexDirection: "row", gap: 8 },
+  langSection:       { width: "100%", alignItems: "center", gap: 8 },
   langPill:          { paddingVertical: 9, paddingHorizontal: 20, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
   langPillActive:    { backgroundColor: COLORS.neon, borderColor: COLORS.neon },
   langPillText:      { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.55)" },
   langPillTextActive:{ color: COLORS.neonText, fontFamily: "Inter_700Bold" },
+  langDropdown:      { flexDirection: "row", gap: 8 },
+  langDropdownItem:  { paddingVertical: 9, paddingHorizontal: 20, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  langDropdownText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.55)" },
 });
