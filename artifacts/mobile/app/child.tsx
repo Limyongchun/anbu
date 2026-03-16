@@ -762,6 +762,7 @@ function HomeScreen({
   const [showAll, setShowAll]     = useState(false);
   const [parentJoined, setParentJoined] = useState(false);
   const [parentChecked, setParentChecked] = useState(false);
+  const [parentMemberName, setParentMemberName] = useState<string | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   // ── 부모 연결 감지 (5초 폴링) ──
@@ -771,10 +772,11 @@ function HomeScreen({
     const check = async () => {
       try {
         const group = await api.getFamily(familyCode);
-        const hasParent = group.members.some(m => m.role === "parent");
+        const parentMember = group.members.find(m => m.role === "parent");
         if (!cancelled) {
           setParentChecked(true);
-          if (hasParent) {
+          if (parentMember) {
+            setParentMemberName(parentMember.memberName);
             revealAnim.setValue(1);
             setParentJoined(true);
           }
@@ -860,7 +862,7 @@ function HomeScreen({
     return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, showAll ? 20 : 4);
   }, [parentLoc, messages, showAll, deviceId]);
 
-  const parentName = parentLoc?.memberName ?? "부모님";
+  const parentName = parentLoc?.memberName ?? parentMemberName ?? "부모님";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "좋은 아침이에요" : hour < 18 ? "안녕하세요" : "좋은 저녁이에요";
 
