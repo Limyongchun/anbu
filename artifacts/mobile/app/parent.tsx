@@ -412,9 +412,6 @@ export default function ParentScreen() {
               <Pressable style={ps.iconBtn} onPress={() => router.push("/profile")}>
                 <Ionicons name="person-circle-outline" size={23} color="rgba(255,255,255,0.88)" />
               </Pressable>
-              <Pressable style={ps.iconBtn} onPress={() => router.replace("/")}>
-                <Ionicons name="home-outline" size={21} color="rgba(255,255,255,0.88)" />
-              </Pressable>
             </View>
           </View>
         </Animated.View>
@@ -430,19 +427,6 @@ export default function ParentScreen() {
         )}
       </View>
 
-      {/* ── 개발 스위처 (하단 고정) ── */}
-      <View style={dev.bar}>
-        <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
-        <Text style={dev.label}>개발 모드</Text>
-        <Pressable onPress={() => router.replace("/child")} style={dev.btn}>
-          <Ionicons name="people" size={12} color="rgba(255,255,255,0.7)" />
-          <Text style={dev.btnText}>자녀 화면</Text>
-        </Pressable>
-        <Pressable onPress={() => router.replace("/")} style={[dev.btn, dev.btnAlt]}>
-          <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" />
-          <Text style={dev.btnText}>홈</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -512,10 +496,3 @@ const ps = StyleSheet.create({
   pauseText:      { fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.9)" },
 });
 
-const dev = StyleSheet.create({
-  bar:    { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
-  label:  { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.35)", marginRight: 4 },
-  btn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  btnAlt: { backgroundColor: "rgba(212,242,0,0.15)", borderColor: "rgba(212,242,0,0.25)" },
-  btnText:{ fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.75)" },
-});

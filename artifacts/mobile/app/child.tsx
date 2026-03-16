@@ -187,8 +187,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     : 0;
   const isRecent = minsAgo < 5;
 
-  // 개발바 높이 확보
-  const BOTTOM_SAFE = bottomInset + 44;
+  const BOTTOM_SAFE = bottomInset;
 
   // Leaflet + CartoDB Voyager — 마커 클릭 시 postMessage 전송
   const mapHtml = `<!DOCTYPE html><html><head>
@@ -1055,17 +1054,6 @@ export default function ChildScreen() {
         bottomInset={bottomInset}
       />
 
-      {/* ══ 개발 스위처 ══ */}
-      <View style={[dv.bar, { bottom: Math.max(bottomInset, 12) + 62 }]}>
-        <Ionicons name="code-slash" size={11} color="rgba(255,255,255,0.3)" />
-        <Text style={dv.label}>개발 모드</Text>
-        <Pressable onPress={() => router.replace("/parent")} style={dv.btn}>
-          <Ionicons name="home" size={12} color="rgba(255,255,255,0.7)" /><Text style={dv.btnText}>부모님</Text>
-        </Pressable>
-        <Pressable onPress={() => router.replace("/")} style={[dv.btn, dv.btnAlt]}>
-          <Ionicons name="apps" size={12} color="rgba(255,255,255,0.7)" /><Text style={dv.btnText}>홈</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -1243,11 +1231,3 @@ const gf = StyleSheet.create({
   sheetDesc:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.textMid, textAlign: "center", marginBottom: 24 },
 });
 
-// 개발바
-const dv = StyleSheet.create({
-  bar:    { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "rgba(26,34,48,0.92)", paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", zIndex: 500 },
-  label:  { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.3)", marginRight: 4 },
-  btn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  btnAlt: { backgroundColor: "rgba(212,242,0,0.15)", borderColor: "rgba(212,242,0,0.25)" },
-  btnText:{ fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.75)" },
-});
