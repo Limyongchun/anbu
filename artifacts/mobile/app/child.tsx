@@ -26,7 +26,7 @@ import { useFamilyContext } from "@/context/FamilyContext";
 import { api, FamilyMessage, LocationData } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
-type Tab = "홈" | "활동" | "위치" | "알림";
+type Tab = "홈" | "사진" | "위치" | "알림";
 
 const GIFTS = [
   { id: 1, name: "제철 과일 선물세트", price: "39,000원", icon: "nutrition"   as const, category: "식품", popular: true  },
@@ -84,7 +84,7 @@ function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
 // ─── 하단 탭 바 ───────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: "홈",  iconOn: "home"          as const, iconOff: "home-outline"          as const, label: "홈"  },
-  { id: "활동", iconOn: "pulse"         as const, iconOff: "pulse-outline"         as const, label: "활동" },
+  { id: "사진", iconOn: "images"        as const, iconOff: "images-outline"        as const, label: "사진" },
   { id: "위치", iconOn: "location"      as const, iconOff: "location-outline"      as const, label: "위치" },
   { id: "알림", iconOn: "notifications" as const, iconOff: "notifications-outline" as const, label: "알림" },
   { id: "설정", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, label: "설정" },
@@ -1023,12 +1023,12 @@ export default function ChildScreen() {
           deviceId={deviceId}
           topBarH={TOP_H}
           bottomInset={bottomInset}
-          onGoToAnbu={() => setTab("활동")}
+          onGoToAnbu={() => setTab("사진")}
         />
       )}
 
-      {/* ── 활동 (안부) ── */}
-      {tab === "활동" && (
+      {/* ── 사진 (안부) ── */}
+      {tab === "사진" && (
         <AnbuScreen familyCode={familyCode} allFamilyCodes={allFamilyCodes} myName={myName} myRole={myRole} deviceId={deviceId} topBarH={TOP_H} />
       )}
 
