@@ -114,4 +114,32 @@ export const api = {
 
   deleteMessage: (code: string, messageId: number, deviceId: string): Promise<{ success: boolean }> =>
     request(`/family/${code}/messages/${messageId}?deviceId=${encodeURIComponent(deviceId)}`, { method: "DELETE" }),
+
+  getSubscriptions: (code: string): Promise<{ subscriptions: SubscriptionInfo[] }> =>
+    request(`/family/${code}/subscription`),
+
+  getMySubscription: (code: string, deviceId: string): Promise<MySubscriptionStatus> =>
+    request(`/family/${code}/subscription/device/${encodeURIComponent(deviceId)}`),
+
+  confirmPayment: (code: string, subDeviceId: string): Promise<{ success: boolean; paymentStatus: string }> =>
+    request(`/family/${code}/subscription/${encodeURIComponent(subDeviceId)}/confirm`, { method: "POST" }),
 };
+
+export interface SubscriptionInfo {
+  id: number;
+  familyCode: string;
+  subDeviceId: string;
+  subMemberName: string;
+  paymentStatus: string;
+  amountKrw: number;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+export interface MySubscriptionStatus {
+  status: "none" | "pending" | "paid";
+  amountKrw?: number;
+  subMemberName?: string;
+  createdAt?: string;
+  paidAt?: string | null;
+}
