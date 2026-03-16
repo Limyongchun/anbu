@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-neon: #d4f200;
+  --color-neon-text: #1a2535;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+}
+
+:root {
+  --background: #0f1923;
+  --foreground: #e2e8f0;
+  --border: #1e2d3d;
+  --input: #1a2535;
+  --card: #152030;
+  --card-foreground: #e2e8f0;
+  --muted: #1a2535;
+  --muted-foreground: #8899aa;
+  --primary: #d4f200;
+  --primary-foreground: #1a2535;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}

@@ -116,6 +116,19 @@ Expo React Native app called A N B U. Korean family safety app.
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
 - **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
 
+### `artifacts/admin` (`@workspace/admin`)
+
+React + Vite admin dashboard for A N B U. Dark-themed management UI at `/admin/`.
+
+- **Login**: Password-based auth via `POST /api/admin/login` → JWT token stored in `sessionStorage`
+- **Dashboard tab**: Stats overview (families, members, parents, children, pending/paid subscriptions)
+- **Families tab**: List all family codes with member counts, delete families
+- **Members tab**: List all members with search, delete members
+- **Subscriptions tab**: List subscriptions, confirm pending payments
+- **API routes**: `artifacts/api-server/src/routes/admin.ts` — JWT-protected admin endpoints
+- **Env vars**: `ADMIN_PASSWORD` (required), `JWT_SECRET` (required) — admin is disabled if either is missing
+- **Packages**: `jsonwebtoken` + `@types/jsonwebtoken` in api-server
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
