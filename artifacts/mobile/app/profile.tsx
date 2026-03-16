@@ -456,10 +456,6 @@ export default function ProfileScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
                   <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
-                  {isMasterChild
-                    ? <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
-                    : <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
-                  }
                 </View>
                 <Text style={s.childMgmtHint}>아래 코드를 추가 자녀에게 공유하세요{"\n"}2번째 자녀부터 추가 요금이 발생합니다</Text>
                 <View style={s.childCodeDisplay}>
