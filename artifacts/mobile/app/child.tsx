@@ -192,7 +192,8 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     : 0;
   const isRecent = minsAgo < 5;
 
-  const BOTTOM_SAFE = bottomInset;
+  const TAB_BAR_H = 58 + Math.max(bottomInset, 12);
+  const BOTTOM_SAFE = TAB_BAR_H;
 
   // Leaflet + CartoDB Voyager — 마커 클릭 시 postMessage 전송
   const mapHtml = `<!DOCTYPE html><html><head>
