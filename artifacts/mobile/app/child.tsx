@@ -556,8 +556,8 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
               <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
                 style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
                 {sending
-                  ? <ActivityIndicator size="small" color="#c97c79" />
-                  : <Ionicons name="send" size={17} color="#c97c79" />}
+                  ? <ActivityIndicator size="small" color="#0B1926" />
+                  : <Ionicons name="send" size={17} color="#0B1926" />}
               </Pressable>
             </View>
           </Pressable>
@@ -654,7 +654,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
       {subView === "messages" && familyCode && (
         <Pressable style={ab.fab} onPress={() => setShowCompose(true)}>
-          <Ionicons name="add" size={26} color="#c97c79" />
+          <Ionicons name="add" size={26} color="#0B1926" />
         </Pressable>
       )}
     </>
@@ -1232,7 +1232,7 @@ const mp = StyleSheet.create({
   panelName: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary, marginBottom: 2 },
   panelAddr: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary, lineHeight: 16 },
   panelBtn: { backgroundColor: DS.brand, paddingHorizontal: 18, paddingVertical: 10, borderRadius: DS.radius.pill },
-  panelBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#c97c79" },
+  panelBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#0B1926" },
   hintPill: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   hintText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textPrimary, backgroundColor: DS.surface, paddingHorizontal: 14, paddingVertical: 8, borderRadius: DS.radius.pill, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   banner: { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, paddingVertical: 16, paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8, borderWidth: 1, borderColor: DS.border },
@@ -1277,22 +1277,22 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: "#fadea6", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
+  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#000000" },
+  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: DS.textPrimary },
   summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
   summaryStatRow: { flexDirection: "row", gap: 16, marginBottom: 12 },
   summaryStat: { flexDirection: "row", alignItems: "center", gap: 6 },
   summaryStatDot: { width: 8, height: 8, borderRadius: 4 },
   summaryStatName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
-  summaryStatLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: "#000000" },
+  summaryStatLabel: { fontFamily: "Inter_500Medium", fontSize: 12 },
   summaryDivider: { height: 1, backgroundColor: DS.surfaceSoft, marginBottom: 12 },
   summaryRow: { flexDirection: "row", gap: 24 },
   summaryItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
-  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#000000", borderColor: "#000000" },
+  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
 
-  parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: "#99c1bb", overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
+  parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
   parentContent: { flex: 1, padding: 18 },
   parentHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
@@ -1344,7 +1344,7 @@ const ab = StyleSheet.create({
   connectCard: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 24, marginBottom: 16, borderWidth: 1, borderColor: DS.border, alignItems: "center", gap: 14 },
   connectTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: DS.textSecondary, textAlign: "center", lineHeight: 22 },
   connectBtn: { backgroundColor: DS.brand, paddingHorizontal: 22, paddingVertical: 11, borderRadius: DS.radius.pill },
-  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#c97c79" },
+  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#0B1926" },
   empty: { alignItems: "center", paddingVertical: 40, gap: 10 },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary },
   card: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: DS.border, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 1 },

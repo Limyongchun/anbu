@@ -76,7 +76,7 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: "#c97c79" }} />;
+  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: "#ffffff" }} />;
 
   return (
     <SafeAreaProvider>
@@ -99,7 +99,7 @@ export default function RootLayout() {
 const sp = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#c97c79",
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 9999,
@@ -107,13 +107,13 @@ const sp = StyleSheet.create({
   logo: {
     fontFamily: "Inter_700Bold",
     fontSize: 32,
-    color: "#E2ECF5",
+    color: "#1a2230",
     marginBottom: 10,
   },
   sub: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: "rgba(226,236,245,0.5)",
+    color: "rgba(26,34,48,0.35)",
     letterSpacing: 0.5,
   },
 });

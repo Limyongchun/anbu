@@ -1,6 +1,6 @@
 const COLORS = {
-  // ── Base ──
-  background: "#c97c79",
+  // ── Base (Hatch-inspired deep navy) ──
+  background: "#0B1926",
   surface: "#112940",
   surfaceSoft: "#0F2235",
 
@@ -11,7 +11,7 @@ const COLORS = {
 
   // ── Brand ──
   brandPrimary: "#2DD4BF",
-  brandDeep: "#c97c79",
+  brandDeep: "#0B1926",
 
   // ── Status ──
   success: "#34D399",
@@ -26,11 +26,11 @@ const COLORS = {
   purpleSoft: "rgba(167,139,250,0.12)",
 
   // ── Backward compat aliases ──
-  mapBg:    "#c97c79",
+  mapBg:    "#0B1926",
   mapCard:  "#112940",
   navPill:  "#112940",
 
-  bg:       "#c97c79",
+  bg:       "#0B1926",
   cardBg:   "#112940",
   border:   "rgba(255,255,255,0.08)",
 
@@ -47,7 +47,7 @@ const COLORS = {
   coral: "#e8856a",
 
   parent: {
-    bg:           "#c97c79",
+    bg:           "#0B1926",
     bgCard:       "rgba(255,255,255,0.06)",
     bgCardBorder: "rgba(255,255,255,0.09)",
     text:         "#E2ECF5",
@@ -58,7 +58,7 @@ const COLORS = {
     heart:        "#e8856a",
   },
   child: {
-    bg:           "#c97c79",
+    bg:           "#0B1926",
     bgCard:       "#112940",
     bgCardBorder: "rgba(255,255,255,0.08)",
     text:         "#E2ECF5",
@@ -70,7 +70,7 @@ const COLORS = {
     tabInactive:  "#4A6478",
   },
   splash: {
-    bg1: "#c97c79",
+    bg1: "#0B1926",
     bg2: "#112940",
     bg3: "#0F2235",
   },
