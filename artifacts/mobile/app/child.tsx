@@ -1277,7 +1277,7 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
+  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: "#fadea6", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: DS.textPrimary },
   summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
