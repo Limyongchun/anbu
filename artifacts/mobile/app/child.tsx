@@ -899,6 +899,21 @@ function HomeScreen({
     ];
   }, [parentActivities, t]);
 
+  const parentActivityStats = useMemo(() => {
+    return parentInfos.map(p => {
+      const myActs = parentActivities.filter(
+        a => a.parentName === p.name || a.deviceId === p.deviceId
+      );
+      const locCount = myActs.filter(a => a.activityType === "location").length;
+      const touchCount = myActs.filter(a =>
+        a.activityType === "app_open" || a.activityType === "view_slide" || a.activityType === "heart"
+      ).length;
+      const lastAct = myActs.length > 0 ? myActs[0] : null;
+      const lastTime = lastAct ? formatTimeI18n(lastAct.createdAt, t) : null;
+      return { name: p.name, deviceId: p.deviceId, locCount, touchCount, lastTime, loc: p.loc };
+    });
+  }, [parentInfos, parentActivities, t]);
+
   if (!familyCode) {
     return (
       <View style={[{ flex: 1, backgroundColor: DS.bg, paddingTop: topBarH }, hm.centerEmpty]}>
@@ -916,21 +931,6 @@ function HomeScreen({
   if (!parentJoined) {
     return <WaitingRoom familyCode={familyCode} topBarH={topBarH} bottomInset={bottomInset} />;
   }
-
-  const parentActivityStats = useMemo(() => {
-    return parentInfos.map(p => {
-      const myActs = parentActivities.filter(
-        a => a.parentName === p.name || a.deviceId === p.deviceId
-      );
-      const locCount = myActs.filter(a => a.activityType === "location").length;
-      const touchCount = myActs.filter(a =>
-        a.activityType === "app_open" || a.activityType === "view_slide" || a.activityType === "heart"
-      ).length;
-      const lastAct = myActs.length > 0 ? myActs[0] : null;
-      const lastTime = lastAct ? formatTimeI18n(lastAct.createdAt, t) : null;
-      return { name: p.name, deviceId: p.deviceId, locCount, touchCount, lastTime, loc: p.loc };
-    });
-  }, [parentInfos, parentActivities, t]);
 
   return (
     <Animated.View style={{ flex: 1, opacity: revealAnim }}>
