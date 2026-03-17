@@ -910,7 +910,8 @@ function HomeScreen({
       ).length;
       const lastAct = myActs.length > 0 ? myActs[0] : null;
       const lastTime = lastAct ? formatTimeI18n(lastAct.createdAt, t) : null;
-      return { name: p.name, deviceId: p.deviceId, locCount, touchCount, lastTime, loc: p.loc };
+      const lastMinsAgo = lastAct ? Math.floor((Date.now() - new Date(lastAct.createdAt).getTime()) / 60000) : null;
+      return { name: p.name, deviceId: p.deviceId, locCount, touchCount, lastTime, lastMinsAgo, loc: p.loc };
     });
   }, [parentInfos, parentActivities, t]);
 
@@ -939,55 +940,41 @@ function HomeScreen({
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={hm.greeting}>{t.homeParentActivity}</Text>
+      <View style={hm.summaryTitleRow}>
+        <Ionicons name="calendar-outline" size={22} color={DS.textPrimary} />
+        <Text style={hm.summaryTitleText}>{t.todayAnbu}</Text>
+      </View>
 
       {/* Today Summary Card */}
       <View style={hm.summaryCard}>
-        <View style={hm.summaryHeader}>
-          <Ionicons name="sunny-outline" size={13} color={DS.warning} />
-          <Text style={hm.summaryTitle}>{t.todayAnbu || "Today's Status"}</Text>
-        </View>
         <View style={hm.summaryBody}>
-          <View style={hm.summaryStatRow}>
-            {parentInfos.map((p, i) => {
-              const ps = getParentStatus(p.loc);
+          <View style={hm.parentStatsRow}>
+            {parentActivityStats.map((ps, i) => {
+              const status = getParentStatus(ps.loc);
+              const isActive = status.level === "good";
+              const activityText = ps.lastMinsAgo !== null
+                ? (t.summaryActivityDetected as string).replace("{m}", String(ps.lastMinsAgo))
+                : (t.summaryNoActivity as string);
               return (
-                <View key={p.deviceId || i} style={hm.summaryStat}>
-                  <View style={[hm.summaryStatDot, { backgroundColor: ps.color }]} />
-                  <Text style={hm.summaryStatName} numberOfLines={1}>{p.name}</Text>
-                  <Text style={[hm.summaryStatLabel, { color: ps.color }]}>{ps.isActive ? t.parentStatusActive : t.parentStatusIdle}</Text>
-                </View>
+                <React.Fragment key={ps.deviceId || i}>
+                  {i > 0 && <View style={hm.parentStatsVerticalLine} />}
+                  <View style={hm.parentStatsCol}>
+                    <Text style={hm.parentStatsName} numberOfLines={1}>{ps.name}</Text>
+                    <View style={[hm.statusBadge, { backgroundColor: isActive ? DS.success : DS.danger }]}>
+                      <Text style={hm.statusBadgeText}>{isActive ? t.parentStatusActive : t.parentStatusIdle}</Text>
+                    </View>
+                    <Text style={[hm.parentStatsLastTime, { color: isActive ? DS.success : DS.textTertiary }]}>{activityText}</Text>
+                    <Text style={hm.parentStatsCountText}>
+                      {(t.summaryLocationCount as string).replace("{n}", String(ps.locCount))}{"   "}{(t.summaryTouchCount as string).replace("{n}", String(ps.touchCount))}
+                    </Text>
+                  </View>
+                </React.Fragment>
               );
             })}
           </View>
-          <View style={hm.summaryDivider} />
-          <View style={hm.parentStatsRow}>
-            {parentActivityStats.map((ps, i) => (
-              <React.Fragment key={ps.deviceId || i}>
-                {i > 0 && <View style={hm.parentStatsVerticalLine} />}
-                <View style={hm.parentStatsCol}>
-                  <Text style={hm.parentStatsName} numberOfLines={1}>{ps.name}</Text>
-                  <Text style={hm.parentStatsLastTime}>
-                    {ps.lastTime || t.summaryNoActivity}
-                  </Text>
-                  <View style={hm.parentStatsCountRow}>
-                    <View style={hm.parentStatsCountItem}>
-                      <Ionicons name="navigate-outline" size={12} color={DS.info} />
-                      <Text style={hm.parentStatsCountText}>
-                        {(t.summaryLocationCount as string).replace("{n}", String(ps.locCount))}
-                      </Text>
-                    </View>
-                    <View style={hm.parentStatsCountItem}>
-                      <Ionicons name="hand-left-outline" size={12} color={DS.brand} />
-                      <Text style={hm.parentStatsCountText}>
-                        {(t.summaryTouchCount as string).replace("{n}", String(ps.touchCount))}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
+        </View>
+        <View style={hm.summaryExpandRow}>
+          <Ionicons name="chevron-down" size={18} color={DS.textTertiary} />
         </View>
       </View>
 
@@ -1302,28 +1289,19 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
-  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
-  summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
-  summaryStatRow: { flexDirection: "row", gap: 16, marginBottom: 12 },
-  summaryStat: { flexDirection: "row", alignItems: "center", gap: 6 },
-  summaryStatDot: { width: 8, height: 8, borderRadius: 4 },
-  summaryStatName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
-  summaryStatLabel: { fontFamily: "Inter_500Medium", fontSize: 12 },
-  summaryDivider: { height: 1, backgroundColor: DS.surfaceSoft, marginBottom: 12 },
-  summaryRow: { flexDirection: "row", gap: 24 },
-  summaryItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
-  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
+  summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 14 },
+  summaryTitleText: { fontFamily: "Inter_700Bold", fontSize: 20, color: DS.textPrimary },
+  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", borderWidth: 1, borderColor: DS.border },
+  summaryBody: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
   parentStatsRow: { flexDirection: "row", alignItems: "flex-start" },
-  parentStatsVerticalLine: { width: 1, backgroundColor: DS.border, alignSelf: "stretch", marginHorizontal: 12 },
-  parentStatsCol: { flex: 1, alignItems: "center", gap: 4 },
-  parentStatsName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
-  parentStatsLastTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary, marginBottom: 4 },
-  parentStatsCountRow: { flexDirection: "row", gap: 10 },
-  parentStatsCountItem: { flexDirection: "row", alignItems: "center", gap: 3 },
-  parentStatsCountText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textSecondary },
+  parentStatsVerticalLine: { width: 1, backgroundColor: DS.border, alignSelf: "stretch", marginHorizontal: 8 },
+  parentStatsCol: { flex: 1, alignItems: "flex-start", gap: 6 },
+  parentStatsName: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, marginTop: 2 },
+  statusBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
+  parentStatsLastTime: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
+  parentStatsCountText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary, marginTop: 4 },
+  summaryExpandRow: { alignItems: "center", paddingBottom: 10, paddingTop: 2 },
 
   parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
