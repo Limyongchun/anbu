@@ -809,7 +809,7 @@ function HomeScreen({
       const [locsArr, msgsArr, actsArr] = await Promise.all([
         Promise.all(allFamilyCodes.map(c => api.getAllLocations(c))),
         Promise.all(allFamilyCodes.map(c => api.getMessages(c))),
-        Promise.all(allFamilyCodes.map(c => api.getParentActivities(c).catch(() => [] as ParentActivityLog[]))),
+        Promise.all(allFamilyCodes.map(c => api.getParentActivities(c, 200).catch(() => [] as ParentActivityLog[]))),
       ]);
       const parentLocs = locsArr.flat().filter(l => l.role === "parent");
       setParentInfos(prev => prev.map(p => {
@@ -1070,6 +1070,51 @@ function HomeScreen({
           <Text style={hm.viewAllText}>{t.viewAllActivity}</Text>
         </Pressable>
       )}
+
+      {/* Monthly Activity Chart */}
+      <Text style={hm.sectionTitle}>{t.monthlyActivity}</Text>
+      {(() => {
+        const now = new Date();
+        const days: { key: string; label: string; count: number }[] = [];
+        for (let d = 29; d >= 0; d--) {
+          const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d);
+          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+          const label = `${date.getMonth() + 1}/${date.getDate()}`;
+          const count = parentActivities.filter(a => a.createdAt.startsWith(key)).length;
+          days.push({ key, label, count });
+        }
+        const maxCount = Math.max(...days.map(d => d.count), 1);
+        const barW = (width - 64) / 30;
+        if (parentActivities.length === 0) {
+          return (
+            <View style={[hm.activityCard, { padding: 28, alignItems: "center", gap: 8 }]}>
+              <Ionicons name="bar-chart-outline" size={26} color={DS.textTertiary} />
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary }}>{t.monthlyNoData}</Text>
+            </View>
+          );
+        }
+        return (
+          <View style={hm.chartCard}>
+            <View style={hm.chartBarArea}>
+              {days.map((d, i) => {
+                const h = d.count > 0 ? Math.max((d.count / maxCount) * 80, 4) : 2;
+                const isToday = i === 29;
+                return (
+                  <View key={d.key} style={{ alignItems: "center", width: barW }}>
+                    <View style={{ width: Math.max(barW - 2, 3), height: h, borderRadius: 2, backgroundColor: isToday ? DS.brand : d.count > 0 ? DS.success : DS.border }} />
+                  </View>
+                );
+              })}
+            </View>
+            <View style={hm.chartLabelRow}>
+              {days.filter((_, i) => i % 7 === 0 || i === 29).map(d => (
+                <Text key={d.key} style={hm.chartLabel}>{d.label}</Text>
+              ))}
+            </View>
+          </View>
+        );
+      })()}
+
     </ScrollView>
     </Animated.View>
   );
@@ -1319,6 +1364,10 @@ const hm = StyleSheet.create({
   interpretLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: DS.textTertiary, marginBottom: 6, letterSpacing: 0.5 },
   interpretMsg: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DS.textPrimary, lineHeight: 22, marginBottom: 4 },
   interpretSub: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
+  chartCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, padding: 16, borderWidth: 1, borderColor: DS.border },
+  chartBarArea: { flexDirection: "row", alignItems: "flex-end", height: 88, paddingHorizontal: 4 },
+  chartLabelRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 8, paddingHorizontal: 4 },
+  chartLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: DS.textTertiary },
 
   parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
