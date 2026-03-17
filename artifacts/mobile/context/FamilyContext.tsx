@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 
 export type FamilyRole = "parent" | "child";
 export type ChildRole = "master" | "sub" | null;
