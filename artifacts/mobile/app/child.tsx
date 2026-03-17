@@ -114,8 +114,8 @@ function BottomTabBar({ tab, onTab, onSettings, bottomInset }: {
 
 function StatusChip({ level, label }: { level: "good" | "warn" | "alert" | "none"; label: string }) {
   const colorMap = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary };
-  const bgMap = { good: "rgba(52,211,153,0.15)", warn: "rgba(251,191,36,0.15)", alert: "rgba(248,113,113,0.15)", none: "rgba(255,255,255,0.06)" };
-  const textMap = { good: "#34D399", warn: "#FBBF24", alert: "#F87171", none: "#7B9AAF" };
+  const bgMap = { good: "rgba(52,168,83,0.15)", warn: "rgba(212,168,67,0.15)", alert: "rgba(229,57,53,0.15)", none: "rgba(155,128,128,0.10)" };
+  const textMap = { good: "#34A853", warn: "#D4A843", alert: "#E53935", none: DS.textTertiary };
   return (
     <View style={[chip.wrap, { backgroundColor: bgMap[level] }]}>
       <View style={[chip.dot, { backgroundColor: colorMap[level] }]} />
@@ -172,7 +172,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const centerLat = hasParents ? parentLocs.reduce((s, l) => s + l.latitude, 0) / parentLocs.length : 37.5665;
   const centerLon = hasParents ? parentLocs.reduce((s, l) => s + l.longitude, 0) / parentLocs.length : 126.978;
 
-  const PIN_COLORS = ["#3B82F6", "#EC4899"];
+  const PIN_COLORS = [DS.brand, "#C0766E"];
 
   const openBannerFor = useCallback((idx: number) => {
     setSelectedIdx(idx);
@@ -268,7 +268,7 @@ ${boundsJs}
           <iframe srcDoc={mapHtml} style={{ width: "100%", height: "100%", border: "none" }} title={t.mapIframeTitle as string} />
         </View>
       ) : (
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#e8e6e1" }]}>
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED" }]}>
           {Array.from({ length: 8 }).map((_, i) => (
             <View key={`r${i}`} style={{ position: "absolute", left: 0, right: 0, top: `${12 + i * 11}%` as any, height: i % 3 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
           ))}
@@ -305,9 +305,9 @@ ${boundsJs}
       )}
 
       {!loading && privacyParents.length > 0 && (
-        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + (hasParents ? 100 : 16), borderColor: "rgba(139,92,246,0.2)" }]}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.purpleSoft, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="eye-off" size={18} color="#8b5cf6" />
+        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + (hasParents ? 100 : 16), borderColor: "rgba(122,84,84,0.2)" }]}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(122,84,84,0.10)", alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="eye-off" size={18} color={DS.brand} />
           </View>
           <View style={{ flex: 1, gap: 2 }}>
             {privacyParents.map(pp => {
@@ -385,7 +385,7 @@ ${boundsJs}
   );
 }
 
-function PulsingPin({ color = "#3B82F6" }: { color?: string } = {}) {
+function PulsingPin({ color = "#7A5454" }: { color?: string } = {}) {
   const s = useRef(new Animated.Value(1)).current;
   const o = useRef(new Animated.Value(0.5)).current;
   useEffect(() => {
@@ -848,8 +848,8 @@ function HomeScreen({
   };
 
   const ACTIVITY_ICON_MAP: Record<string, { icon: keyof typeof Ionicons.glyphMap; iconColor: string; iconBg: string }> = {
-    heart:      { icon: "heart",           iconColor: "#ec4899", iconBg: "#fdf2f8" },
-    view_slide: { icon: "eye",             iconColor: "#8b5cf6", iconBg: COLORS.purpleSoft },
+    heart:      { icon: "heart",           iconColor: "#C0766E", iconBg: "rgba(192,118,110,0.10)" },
+    view_slide: { icon: "eye",             iconColor: DS.brand, iconBg: "rgba(122,84,84,0.10)" },
     location:   { icon: "location",        iconColor: DS.info,   iconBg: COLORS.blueSoft },
     app_open:   { icon: "phone-portrait",  iconColor: DS.success, iconBg: COLORS.greenSoft },
     quiz:       { icon: "bulb",            iconColor: DS.warning, iconBg: COLORS.orangeSoft },
@@ -894,7 +894,7 @@ function HomeScreen({
     });
     return [
       { key: "walk", icon: "walk-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyWalk, count: counts.walk, color: DS.success },
-      { key: "photo", icon: "camera-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyPhoto, count: counts.photo, color: "#8b5cf6" },
+      { key: "photo", icon: "camera-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyPhoto, count: counts.photo, color: DS.brand },
       { key: "rest", icon: "cafe-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyRest, count: counts.rest, color: DS.warning },
       { key: "location", icon: "navigate-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyLocation, count: counts.location, color: DS.info },
     ];
@@ -1321,7 +1321,7 @@ const mp = StyleSheet.create({
   pinHintText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textPrimary },
   privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
-  privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: "#8b5cf6", marginTop: 2 },
+  privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.brand, marginTop: 2 },
   parentTabs: { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 8, justifyContent: "center" },
   parentTab: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.surface, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 2 },
   parentTabActive: { borderColor: DS.info, backgroundColor: COLORS.blueSoft },

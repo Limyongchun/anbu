@@ -645,8 +645,8 @@ export default function ProfileScreen() {
                 style={s.connectBigBtn}
                 onPress={() => { setJoinCode(""); setJoinName(""); setJoinRole(null); setJoinError(""); setShowJoinSheet(true); }}
               >
-                <View style={[s.connectBigIcon, { backgroundColor: "rgba(58,90,138,0.1)" }]}>
-                  <Ionicons name="enter-outline" size={24} color="#3a5a8a" />
+                <View style={[s.connectBigIcon, { backgroundColor: "rgba(122,84,84,0.10)" }]}>
+                  <Ionicons name="enter-outline" size={24} color={COLORS.brandPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.connectBigLabel}>{t.joinByCode}</Text>
@@ -716,7 +716,7 @@ export default function ProfileScreen() {
                           style={s.removeChildBtn}
                           hitSlop={8}
                         >
-                          <Ionicons name="trash-outline" size={17} color="#ef4444" />
+                          <Ionicons name="trash-outline" size={17} color={COLORS.danger} />
                         </Pressable>
                       )}
                     </View>
@@ -734,7 +734,7 @@ export default function ProfileScreen() {
             <View style={s.card}>
               <View style={s.privacyRow}>
                 <View style={s.privacyIconWrap}>
-                  <Ionicons name="eye-off" size={18} color="#8b5cf6" />
+                  <Ionicons name="eye-off" size={18} color={COLORS.brandPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.privacyTitle}>{t.privacyModeLabel}</Text>
@@ -743,7 +743,7 @@ export default function ProfileScreen() {
                 <Switch
                   value={privacyMode}
                   onValueChange={togglePrivacyMode}
-                  trackColor={{ false: "#e2e8f0", true: "#8b5cf6" }}
+                  trackColor={{ false: "#e2e8f0", true: COLORS.brandPrimary }}
                   thumbColor={privacyMode ? "#fff" : "#fff"}
                 />
               </View>
@@ -987,7 +987,7 @@ export default function ProfileScreen() {
               /* ── 코드 발급 완료 ── */
               <>
                 <View style={{ alignItems: "center", marginBottom: 8 }}>
-                  <Ionicons name="checkmark-circle" size={52} color="#4ade80" />
+                  <Ionicons name="checkmark-circle" size={52} color={COLORS.success} />
                 </View>
                 <Text style={[s.sheetTitle, { textAlign: "center" }]}>{t.roomCreated}</Text>
                 <Text style={[s.sheetSub, { textAlign: "center" }]}>{t.roomCreatedSub}</Text>
@@ -1164,7 +1164,7 @@ const s = StyleSheet.create({
   roleChipTextActive:{ color: COLORS.white },
   sheetInput:       { backgroundColor: COLORS.white, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
   codeInputStyle:   { fontFamily: "Inter_700Bold", fontSize: 22, letterSpacing: 8, textAlign: "center" },
-  errorText:        { fontFamily: "Inter_400Regular", fontSize: 13, color: "#ef4444", textAlign: "center", marginBottom: 12 },
+  errorText:        { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.danger, textAlign: "center", marginBottom: 12 },
 
   // ── 코드 발급 완료 ──
   createdCodeBox:   { backgroundColor: COLORS.navPill, borderRadius: 18, paddingVertical: 22, marginBottom: 14, alignItems: "center" },
@@ -1187,12 +1187,12 @@ const s = StyleSheet.create({
 
   confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
   confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },
-  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1a2535", textAlign: "center" },
-  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "#64748b", textAlign: "center", lineHeight: 20 },
+  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textDark, textAlign: "center" },
+  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.textMid, textAlign: "center", lineHeight: 20 },
   confirmBtns:       { flexDirection: "row", gap: 10, marginTop: 6 },
-  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#f1f5f9", alignItems: "center" },
-  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#64748b" },
-  confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#ff5050", alignItems: "center" },
+  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: COLORS.surfaceSoft, alignItems: "center" },
+  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.textMid },
+  confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: COLORS.danger, alignItems: "center" },
   confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 
   // ── 자녀 관리 섹션 ──
@@ -1204,7 +1204,7 @@ const s = StyleSheet.create({
   childCodeCellText:{ fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.neon, letterSpacing: 1 },
 
   childRow:        { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 12 },
-  removeChildBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fee2e2", alignItems: "center", justifyContent: "center" },
+  removeChildBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(229,57,53,0.10)", alignItems: "center", justifyContent: "center" },
   childAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   childAvatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
   childRowName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark, marginBottom: 2 },
@@ -1212,10 +1212,10 @@ const s = StyleSheet.create({
 
   masterBadge:     { backgroundColor: "rgba(212,242,0,0.4)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   masterBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.navPill },
-  subBadge:        { backgroundColor: "rgba(99,102,241,0.12)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  subBadgeText:    { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#6366f1" },
+  subBadge:        { backgroundColor: "rgba(122,84,84,0.12)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  subBadgeText:    { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.brandPrimary },
 
   subChildNotice:      { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
-  subChildNoticeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#6366f1", marginBottom: 2 },
+  subChildNoticeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.brandPrimary, marginBottom: 2 },
   subChildNoticeText:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
 });
