@@ -917,10 +917,20 @@ function HomeScreen({
     return <WaitingRoom familyCode={familyCode} topBarH={topBarH} bottomInset={bottomInset} />;
   }
 
-  const todayMsgCount = messages.filter(m => {
-    const today = new Date();
-    return new Date(m.createdAt).getTime() >= new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  }).length;
+  const parentActivityStats = useMemo(() => {
+    return parentInfos.map(p => {
+      const myActs = parentActivities.filter(
+        a => a.parentName === p.name || a.deviceId === p.deviceId
+      );
+      const locCount = myActs.filter(a => a.activityType === "location").length;
+      const touchCount = myActs.filter(a =>
+        a.activityType === "app_open" || a.activityType === "view_slide" || a.activityType === "heart"
+      ).length;
+      const lastAct = myActs.length > 0 ? myActs[0] : null;
+      const lastTime = lastAct ? formatTimeI18n(lastAct.createdAt, t) : null;
+      return { name: p.name, deviceId: p.deviceId, locCount, touchCount, lastTime, loc: p.loc };
+    });
+  }, [parentInfos, parentActivities, t]);
 
   return (
     <Animated.View style={{ flex: 1, opacity: revealAnim }}>
@@ -951,17 +961,32 @@ function HomeScreen({
             })}
           </View>
           <View style={hm.summaryDivider} />
-          <View style={hm.summaryRow}>
-            <View style={hm.summaryItem}>
-              <Ionicons name="chatbubble-outline" size={14} color={DS.info} />
-              <Text style={hm.summaryValue}>{todayMsgCount}</Text>
-              <Text style={hm.summaryLabel}>{t.anbuSegMessages}</Text>
-            </View>
-            <View style={hm.summaryItem}>
-              <Ionicons name="footsteps-outline" size={14} color={DS.success} />
-              <Text style={hm.summaryValue}>{parentActivities.length}</Text>
-              <Text style={hm.summaryLabel}>{t.recentActivity}</Text>
-            </View>
+          <View style={hm.parentStatsRow}>
+            {parentActivityStats.map((ps, i) => (
+              <React.Fragment key={ps.deviceId || i}>
+                {i > 0 && <View style={hm.parentStatsVerticalLine} />}
+                <View style={hm.parentStatsCol}>
+                  <Text style={hm.parentStatsName} numberOfLines={1}>{ps.name}</Text>
+                  <Text style={hm.parentStatsLastTime}>
+                    {ps.lastTime || t.summaryNoActivity}
+                  </Text>
+                  <View style={hm.parentStatsCountRow}>
+                    <View style={hm.parentStatsCountItem}>
+                      <Ionicons name="navigate-outline" size={12} color={DS.info} />
+                      <Text style={hm.parentStatsCountText}>
+                        {(t.summaryLocationCount as string).replace("{n}", String(ps.locCount))}
+                      </Text>
+                    </View>
+                    <View style={hm.parentStatsCountItem}>
+                      <Ionicons name="hand-left-outline" size={12} color={DS.brand} />
+                      <Text style={hm.parentStatsCountText}>
+                        {(t.summaryTouchCount as string).replace("{n}", String(ps.touchCount))}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </React.Fragment>
+            ))}
           </View>
         </View>
       </View>
@@ -1291,6 +1316,14 @@ const hm = StyleSheet.create({
   summaryItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
   summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
+  parentStatsRow: { flexDirection: "row", alignItems: "flex-start" },
+  parentStatsVerticalLine: { width: 1, backgroundColor: DS.border, alignSelf: "stretch", marginHorizontal: 12 },
+  parentStatsCol: { flex: 1, alignItems: "center", gap: 4 },
+  parentStatsName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
+  parentStatsLastTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary, marginBottom: 4 },
+  parentStatsCountRow: { flexDirection: "row", gap: 10 },
+  parentStatsCountItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  parentStatsCountText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textSecondary },
 
   parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
