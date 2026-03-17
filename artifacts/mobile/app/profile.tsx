@@ -1094,15 +1094,15 @@ const s = StyleSheet.create({
   headerTitle:  { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.white, letterSpacing: 0.5 },
   backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
 
-  profileCard:  { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: COLORS.white, borderRadius: 20, padding: 18, marginTop: 20, marginBottom: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  profileCard:  { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: COLORS.cardBg, borderRadius: 20, padding: 18, marginTop: 20, marginBottom: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: COLORS.border },
   avatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   avatarText:   { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white },
   avatarPhoto:  { width: 56, height: 56, borderRadius: 28 },
   profileName:  { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textDark, marginBottom: 6 },
   roleBadge:    { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   roleText:     { fontFamily: "Inter_600SemiBold", fontSize: 11 },
-  editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(26,34,48,0.07)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
-  editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.navPill },
+  editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
+  editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.neon },
 
   sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.textMid, letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
   privacyRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
@@ -1110,10 +1110,10 @@ const s = StyleSheet.create({
   privacyTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.textDark, marginBottom: 2 },
   privacyDesc:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, lineHeight: 16 },
 
-  card:         { backgroundColor: COLORS.white, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 },
+  card:         { backgroundColor: COLORS.cardBg, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 1, borderWidth: 1, borderColor: COLORS.border },
 
   row:          { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
-  rowIcon:      { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(26,34,48,0.07)", alignItems: "center", justifyContent: "center" },
+  rowIcon:      { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
   rowLabel:     { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.textDark, marginBottom: 1 },
   rowValue:     { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
 
@@ -1123,12 +1123,12 @@ const s = StyleSheet.create({
   codeCell:     { width: 44, height: 52, borderRadius: 12, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
   codeCellText: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.neon, letterSpacing: 2 },
   codeHint:     { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, textAlign: "center", marginBottom: 14 },
-  copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(26,34,48,0.07)" },
+  copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.08)" },
   copyBtnDone:  { backgroundColor: COLORS.neon },
-  copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.navPill },
+  copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.neon },
 
   connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
-  connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.neonText },
+  connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#0B1926" },
 
   // ── 자녀 다중 부모님 섹션 ──
   parentRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
@@ -1139,8 +1139,8 @@ const s = StyleSheet.create({
   parentRowLabel:   { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark },
   parentRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   parentRemoveBtn:  { padding: 4 },
-  addParentBtn:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 50, borderWidth: 1.5, borderColor: COLORS.navPill },
-  addParentBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.navPill },
+  addParentBtn:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 50, borderWidth: 1.5, borderColor: COLORS.neon },
+  addParentBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.neon },
 
   // ── 미연결 연결 섹션 ──
   connectSection:   { paddingTop: 4, paddingBottom: 8 },

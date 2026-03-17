@@ -42,6 +42,7 @@ const DS = {
   warning: COLORS.warning,
   danger: COLORS.danger,
   info: COLORS.info,
+  border: "rgba(255,255,255,0.08)",
   radius: { card: 16, cardLg: 20, pill: 999 },
   space: { xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32 },
 };
@@ -62,14 +63,14 @@ function AppHeader({ topInset, isMap }: { topInset: number; isMap: boolean }) {
   return (
     <View style={[hdr.wrap, {
       paddingTop: topInset + 12,
-      backgroundColor: isMap ? "rgba(28,36,48,0.88)" : DS.bg,
+      backgroundColor: isMap ? "rgba(11,25,38,0.92)" : DS.bg,
       borderBottomWidth: isMap ? 0 : 0,
     }]}>
       <Text style={[hdr.logo, { color: isMap ? "#fff" : DS.textPrimary }]}>A N B U</Text>
       <View style={{ flex: 1 }} />
       {isMasterChild && (
-        <View style={[hdr.masterBadge, isMap && { backgroundColor: "rgba(215,255,0,0.18)", borderColor: "rgba(215,255,0,0.35)" }]}>
-          <Ionicons name="shield-checkmark" size={11} color={isMap ? DS.brand : DS.brandDeep} />
+        <View style={[hdr.masterBadge, isMap && { backgroundColor: "rgba(45,212,191,0.18)", borderColor: "rgba(45,212,191,0.35)" }]}>
+          <Ionicons name="shield-checkmark" size={11} color={DS.brand} />
           <Text style={[hdr.masterText, isMap && { color: DS.brand }]}>{t.masterLabel}</Text>
         </View>
       )}
@@ -113,8 +114,8 @@ function BottomTabBar({ tab, onTab, onSettings, bottomInset }: {
 
 function StatusChip({ level, label }: { level: "good" | "warn" | "alert" | "none"; label: string }) {
   const colorMap = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary };
-  const bgMap = { good: "#DCFCE7", warn: "#FEF3C7", alert: "#FEE2E2", none: "#F1F5F9" };
-  const textMap = { good: "#16A34A", warn: "#D97706", alert: "#DC2626", none: "#64748B" };
+  const bgMap = { good: "rgba(52,211,153,0.15)", warn: "rgba(251,191,36,0.15)", alert: "rgba(248,113,113,0.15)", none: "rgba(255,255,255,0.06)" };
+  const textMap = { good: "#34D399", warn: "#FBBF24", alert: "#F87171", none: "#7B9AAF" };
   return (
     <View style={[chip.wrap, { backgroundColor: bgMap[level] }]}>
       <View style={[chip.dot, { backgroundColor: colorMap[level] }]} />
@@ -545,18 +546,18 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
             />
             <View style={ab.sheetBar}>
               <Pressable style={ab.attachBtn} onPress={pickCamera}>
-                <Ionicons name="camera" size={18} color={DS.brandDeep} />
+                <Ionicons name="camera" size={18} color={DS.textSecondary} />
               </Pressable>
               <Pressable style={ab.attachBtn} onPress={pickLibrary}>
-                <Ionicons name="images" size={18} color={DS.brandDeep} />
+                <Ionicons name="images" size={18} color={DS.textSecondary} />
               </Pressable>
               <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, marginLeft: 4 }}>{text.length}/200</Text>
               <View style={{ flex: 1 }} />
               <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
                 style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
                 {sending
-                  ? <ActivityIndicator size="small" color={DS.brandDeep} />
-                  : <Ionicons name="send" size={17} color={DS.brandDeep} />}
+                  ? <ActivityIndicator size="small" color="#0B1926" />
+                  : <Ionicons name="send" size={17} color="#0B1926" />}
               </Pressable>
             </View>
           </Pressable>
@@ -653,7 +654,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
       {subView === "messages" && familyCode && (
         <Pressable style={ab.fab} onPress={() => setShowCompose(true)}>
-          <Ionicons name="add" size={26} color={DS.brandDeep} />
+          <Ionicons name="add" size={26} color="#0B1926" />
         </Pressable>
       )}
     </>
@@ -1199,17 +1200,17 @@ export default function ChildScreen() {
 const hdr = StyleSheet.create({
   wrap: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 20, paddingBottom: 12 },
   logo: { fontFamily: "Inter_700Bold", fontSize: 18, letterSpacing: 3 },
-  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: DS.brand, borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "rgba(215,255,0,0.4)" },
-  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: DS.brandDeep, letterSpacing: 0.5 },
+  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(45,212,191,0.15)", borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "rgba(45,212,191,0.3)" },
+  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: DS.brand, letterSpacing: 0.5 },
 });
 
 const nav = StyleSheet.create({
-  wrap: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: DS.surface, paddingTop: 8, shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 8 },
+  wrap: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: DS.surface, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 },
   item: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
   iconCircle: { width: 36, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 10 },
-  iconCircleActive: { backgroundColor: DS.brandDeep + "0D" },
+  iconCircleActive: { backgroundColor: "rgba(45,212,191,0.12)" },
   label: { fontFamily: "Inter_500Medium", fontSize: 10, color: DS.textTertiary },
-  labelActive: { color: DS.brandDeep, fontFamily: "Inter_600SemiBold" },
+  labelActive: { color: DS.brand, fontFamily: "Inter_600SemiBold" },
 });
 
 const chip = StyleSheet.create({
@@ -1219,22 +1220,22 @@ const chip = StyleSheet.create({
 });
 
 const nf = StyleSheet.create({
-  chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: DS.radius.pill, backgroundColor: DS.surface, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
-  chipOn: { backgroundColor: DS.brand, borderColor: "transparent" },
+  chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: DS.radius.pill, backgroundColor: DS.surface, borderWidth: 1, borderColor: DS.border },
+  chipOn: { backgroundColor: "rgba(45,212,191,0.18)", borderColor: "rgba(45,212,191,0.4)" },
   chipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: DS.textSecondary },
-  chipTextOn: { color: DS.brandDeep, fontFamily: "Inter_600SemiBold" },
+  chipTextOn: { color: DS.brand, fontFamily: "Inter_600SemiBold" },
 });
 
 const mp = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  floatingPanel: { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  floatingPanel: { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6, borderWidth: 1, borderColor: DS.border },
   panelName: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary, marginBottom: 2 },
   panelAddr: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary, lineHeight: 16 },
   panelBtn: { backgroundColor: DS.brand, paddingHorizontal: 18, paddingVertical: 10, borderRadius: DS.radius.pill },
-  panelBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: DS.brandDeep },
+  panelBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#0B1926" },
   hintPill: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   hintText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textPrimary, backgroundColor: DS.surface, paddingHorizontal: 14, paddingVertical: 8, borderRadius: DS.radius.pill, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
-  banner: { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, paddingVertical: 16, paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 8, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  banner: { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, paddingVertical: 16, paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 8, borderWidth: 1, borderColor: DS.border },
   bannerClose: { position: "absolute", top: 12, right: 14, padding: 4 },
   bannerStatusText: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.textSecondary },
   bannerName: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
@@ -1247,7 +1248,7 @@ const mp = StyleSheet.create({
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
   privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: "#8b5cf6", marginTop: 2 },
   parentTabs: { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 8, justifyContent: "center" },
-  parentTab: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.surface, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  parentTab: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.surface, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 2 },
   parentTabActive: { borderColor: DS.info, backgroundColor: COLORS.blueSoft },
   parentTabDot: { width: 8, height: 8, borderRadius: 4 },
   parentTabText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textSecondary },
@@ -1255,18 +1256,18 @@ const mp = StyleSheet.create({
 });
 
 const wr = StyleSheet.create({
-  badge: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: DS.brand + "22", paddingHorizontal: 14, paddingVertical: 7, borderRadius: DS.radius.pill, marginBottom: 20, borderWidth: 1, borderColor: DS.brand + "44" },
+  badge: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(45,212,191,0.12)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: DS.radius.pill, marginBottom: 20, borderWidth: 1, borderColor: "rgba(45,212,191,0.25)" },
   badgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: DS.brand },
-  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#6B8A00" },
+  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
   title: { fontFamily: "Inter_700Bold", fontSize: 28, color: DS.textPrimary, textAlign: "center", lineHeight: 36, marginBottom: 10 },
   sub: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 32 },
-  qrWrap: { width: 232, height: 232, backgroundColor: DS.surface, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", overflow: "hidden" },
+  qrWrap: { width: 232, height: 232, backgroundColor: "#FFFFFF", borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: DS.border, overflow: "hidden" },
   codeLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, letterSpacing: 1, marginBottom: 10 },
   codeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 },
-  codePill: { backgroundColor: DS.surface, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  codeDigits: { fontFamily: "Inter_700Bold", fontSize: 26, color: DS.textPrimary, letterSpacing: 4 },
+  codePill: { backgroundColor: DS.surface, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 2 },
+  codeDigits: { fontFamily: "Inter_700Bold", fontSize: 26, color: DS.brand, letterSpacing: 4 },
   codeSep: { fontFamily: "Inter_700Bold", fontSize: 20, color: DS.textTertiary },
-  infoCard: { width: "100%", backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 20, gap: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  infoCard: { width: "100%", backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 20, gap: 14, borderWidth: 1, borderColor: DS.border },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   infoIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   infoText: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textSecondary, flex: 1 },
@@ -1276,7 +1277,7 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: DS.textPrimary },
   summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
@@ -1291,7 +1292,7 @@ const hm = StyleSheet.create({
   summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
   summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
 
-  parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
   parentContent: { flex: 1, padding: 18 },
   parentHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
@@ -1309,13 +1310,13 @@ const hm = StyleSheet.create({
   parentDailyLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary },
 
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary, marginHorizontal: 20, marginTop: 8, marginBottom: 12 },
-  activityCard: { marginHorizontal: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  activityCard: { marginHorizontal: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: DS.border },
   activityRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 16 },
   activityDivider: { height: 1, backgroundColor: DS.surfaceSoft, marginHorizontal: 16 },
   activityIconBg: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   activityLabel: { fontFamily: "Inter_500Medium", fontSize: 14, color: DS.textPrimary, flex: 1 },
   activityTime: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary },
-  viewAllBtn: { marginHorizontal: 16, marginTop: 10, borderRadius: DS.radius.card, borderWidth: 1.5, borderColor: DS.surfaceSoft, paddingVertical: 14, alignItems: "center", backgroundColor: DS.surface },
+  viewAllBtn: { marginHorizontal: 16, marginTop: 10, borderRadius: DS.radius.card, borderWidth: 1.5, borderColor: DS.border, paddingVertical: 14, alignItems: "center", backgroundColor: DS.surface },
   viewAllText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textSecondary },
   emptyIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: DS.surfaceSoft, alignItems: "center", justifyContent: "center", marginBottom: 16 },
   emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: DS.textPrimary, textAlign: "center" },
@@ -1325,33 +1326,33 @@ const hm = StyleSheet.create({
 const ab = StyleSheet.create({
   viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.96)", alignItems: "center", justifyContent: "center" },
   viewerDel: { position: "absolute", bottom: 56, flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(239,68,68,0.85)", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 18 },
-  sheet: { backgroundColor: DS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, alignItems: "center", paddingBottom: 40 },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.1)", marginBottom: 18 },
+  sheet: { backgroundColor: DS.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, alignItems: "center", paddingBottom: 40 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.15)", marginBottom: 18 },
   sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: DS.textPrimary, marginBottom: 16 },
-  input: { width: "100%", backgroundColor: DS.surface, borderRadius: DS.radius.card, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: DS.textPrimary, minHeight: 80, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
+  input: { width: "100%", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.card, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: DS.textPrimary, minHeight: 80, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: DS.border },
   sheetBar: { width: "100%", flexDirection: "row", alignItems: "center", gap: 8 },
   attachBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: DS.surfaceSoft, alignItems: "center", justifyContent: "center" },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: DS.brand, alignItems: "center", justifyContent: "center" },
   screenTitle: { fontFamily: "Inter_700Bold", fontSize: 24, color: DS.textPrimary, marginBottom: 16 },
   seg: { flexDirection: "row", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.pill, padding: 4, marginBottom: 16, alignSelf: "flex-start" },
   segBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: DS.radius.pill },
-  segBtnOn: { backgroundColor: DS.brandDeep },
+  segBtnOn: { backgroundColor: "rgba(45,212,191,0.18)" },
   segText: { fontFamily: "Inter_500Medium", fontSize: 14, color: DS.textSecondary },
-  segTextOn: { color: "#fff", fontFamily: "Inter_600SemiBold" },
+  segTextOn: { color: DS.brand, fontFamily: "Inter_600SemiBold" },
   toast: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: COLORS.greenSoft, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 9, marginBottom: 12, alignSelf: "flex-start", borderWidth: 1, borderColor: DS.success + "33" },
   toastText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.success },
-  connectCard: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 24, marginBottom: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", alignItems: "center", gap: 14 },
+  connectCard: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 24, marginBottom: 16, borderWidth: 1, borderColor: DS.border, alignItems: "center", gap: 14 },
   connectTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: DS.textSecondary, textAlign: "center", lineHeight: 22 },
   connectBtn: { backgroundColor: DS.brand, paddingHorizontal: 22, paddingVertical: 11, borderRadius: DS.radius.pill },
-  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: DS.brandDeep },
+  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#0B1926" },
   empty: { alignItems: "center", paddingVertical: 40, gap: 10 },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary },
-  card: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1 },
+  card: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: DS.border, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 1 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   cardAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.blueSoft, alignItems: "center", justifyContent: "center" },
   cardName: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.textSecondary, marginBottom: 1 },
   cardTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary },
-  heartBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#fdf2f8", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
+  heartBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "rgba(232,133,106,0.15)", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
   heartN: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.coral },
   cardText: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textPrimary, lineHeight: 22 },
   cardPhoto: { width: "100%", height: 180, borderRadius: 14, marginTop: 8 },

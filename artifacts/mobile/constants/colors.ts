@@ -1,78 +1,78 @@
 const COLORS = {
-  // ── Base ──
-  background: "#F5F7FA",
-  surface: "#FFFFFF",
-  surfaceSoft: "#F1F4F8",
+  // ── Base (Hatch-inspired deep navy) ──
+  background: "#0B1926",
+  surface: "#112940",
+  surfaceSoft: "#0F2235",
 
   // ── Text ──
-  textPrimary: "#142033",
-  textSecondary: "#6E7A8A",
-  textTertiary: "#9AA6B2",
+  textPrimary: "#E2ECF5",
+  textSecondary: "#7B9AAF",
+  textTertiary: "#4A6478",
 
   // ── Brand ──
-  brandPrimary: "#D7FF00",
-  brandDeep: "#1C2430",
+  brandPrimary: "#2DD4BF",
+  brandDeep: "#0B1926",
 
   // ── Status ──
-  success: "#22C55E",
-  warning: "#F59E0B",
-  danger: "#EF4444",
-  info: "#3B82F6",
+  success: "#34D399",
+  warning: "#FBBF24",
+  danger: "#F87171",
+  info: "#60A5FA",
 
-  // ── Card Accent (Runna style) ──
-  blueSoft: "#E8F1FF",
-  greenSoft: "#EAF7EE",
-  orangeSoft: "#FFF4E6",
-  purpleSoft: "#F3E8FF",
+  // ── Card Accent (dark tinted) ──
+  blueSoft: "rgba(96,165,250,0.12)",
+  greenSoft: "rgba(52,211,153,0.12)",
+  orangeSoft: "rgba(251,191,36,0.12)",
+  purpleSoft: "rgba(167,139,250,0.12)",
 
-  // ── Backward compat aliases (used by parent.tsx, profile.tsx, etc.) ──
-  mapBg:    "#252f3e",
-  mapCard:  "#1e2838",
-  navPill:  "#1C2430",
+  // ── Backward compat aliases ──
+  mapBg:    "#0B1926",
+  mapCard:  "#112940",
+  navPill:  "#112940",
 
-  bg:       "#F5F7FA",
-  cardBg:   "#FFFFFF",
-  border:   "rgba(0,0,0,0.06)",
+  bg:       "#0B1926",
+  cardBg:   "#112940",
+  border:   "rgba(255,255,255,0.08)",
 
-  neon:     "#D7FF00",
-  neonDim:  "rgba(215,255,0,0.18)",
-  neonText: "#1C2430",
+  neon:     "#2DD4BF",
+  neonDim:  "rgba(45,212,191,0.15)",
+  neonText: "#E2ECF5",
 
-  textDark:  "#142033",
-  textMid:   "#6E7A8A",
-  textMuted: "#9AA6B2",
-  white:     "#FFFFFF",
+  textDark:  "#E2ECF5",
+  textMid:   "#7B9AAF",
+  textMuted: "#4A6478",
+  white:     "#E2ECF5",
   black:     "#000000",
 
   coral: "#e8856a",
 
   parent: {
-    bg:           "#252f3e",
+    bg:           "#0B1926",
     bgCard:       "rgba(255,255,255,0.06)",
     bgCardBorder: "rgba(255,255,255,0.09)",
-    text:         "#e8eef5",
-    textSub:      "#8899aa",
-    textMuted:    "#5c6878",
-    accent:       "#D7FF00",
-    accentSoft:   "rgba(215,255,0,0.15)",
+    text:         "#E2ECF5",
+    textSub:      "#7B9AAF",
+    textMuted:    "#4A6478",
+    accent:       "#2DD4BF",
+    accentSoft:   "rgba(45,212,191,0.15)",
     heart:        "#e8856a",
   },
   child: {
-    bg:           "#F5F7FA",
-    bgCard:       "#FFFFFF",
-    bgCardBorder: "rgba(0,0,0,0.06)",
-    text:         "#142033",
-    textSub:      "#6E7A8A",
-    textMuted:    "#9AA6B2",
-    accent:       "#D7FF00",
-    accentSoft:   "rgba(215,255,0,0.18)",
-    tabActive:    "#142033",
-    tabInactive:  "#9AA6B2",
+    bg:           "#0B1926",
+    bgCard:       "#112940",
+    bgCardBorder: "rgba(255,255,255,0.08)",
+    text:         "#E2ECF5",
+    textSub:      "#7B9AAF",
+    textMuted:    "#4A6478",
+    accent:       "#2DD4BF",
+    accentSoft:   "rgba(45,212,191,0.15)",
+    tabActive:    "#2DD4BF",
+    tabInactive:  "#4A6478",
   },
   splash: {
-    bg1: "#1C2430",
-    bg2: "#252f3e",
-    bg3: "#1e2838",
+    bg1: "#0B1926",
+    bg2: "#112940",
+    bg3: "#0F2235",
   },
 };
 
