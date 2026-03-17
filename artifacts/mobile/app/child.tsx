@@ -1290,7 +1290,7 @@ const hm = StyleSheet.create({
   summaryRow: { flexDirection: "row", gap: 24 },
   summaryItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
-  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
+  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#000000", borderColor: "#000000" },
 
   parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
