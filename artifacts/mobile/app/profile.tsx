@@ -141,8 +141,8 @@ export default function ProfileScreen() {
 
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
   const [childCodeCopied, setChildCodeCopied] = useState(false);
-  const [parentNamesByCode, setParentNamesByCode] = useState<Record<string, string>>({});
-  const [parentDeviceIdsByCode, setParentDeviceIdsByCode] = useState<Record<string, string>>({});
+  type ParentEntry = { name: string; deviceId: string; code: string };
+  const [parentEntries, setParentEntries] = useState<ParentEntry[]>([]);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [privacyMode, setPrivacyMode] = useState(false);
 
@@ -229,20 +229,25 @@ export default function ProfileScreen() {
       allFamilyCodes.map(code =>
         api.getFamily(code)
           .then(data => {
-            const parent = (data.members ?? []).find((m: { role: string }) => m.role === "parent");
-            return [code, parent?.memberName ?? null, parent?.deviceId ?? null] as [string, string | null, string | null];
+            const parents = (data.members ?? []).filter((m: { role: string }) => m.role === "parent");
+            return parents.map((p: { memberName: string; deviceId?: string }) => ({
+              name: p.memberName,
+              deviceId: p.deviceId ?? "",
+              code,
+            }));
           })
-          .catch(() => [code, null, null] as [string, null, null])
+          .catch(() => [] as ParentEntry[])
       )
     ).then(results => {
-      const nameMap: Record<string, string> = {};
-      const idMap: Record<string, string> = {};
-      results.forEach(([code, name, did]) => {
-        if (name) nameMap[code] = name;
-        if (did) idMap[code] = did;
+      const all: ParentEntry[] = results.flat();
+      const seen = new Set<string>();
+      const unique = all.filter(p => {
+        const key = `${p.code}_${p.deviceId || p.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
-      setParentNamesByCode(nameMap);
-      setParentDeviceIdsByCode(idMap);
+      setParentEntries(unique);
     });
   };
 
@@ -348,41 +353,49 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleRemoveFamily = (code: string) => {
+  const handleRemoveParent = (entry: ParentEntry) => {
     setConfirmModal({
       title: t.removeParent,
       message: t.removeParentMsg as string,
       onConfirm: async () => {
-        const parentDid = parentDeviceIdsByCode[code];
-        if (parentDid && deviceId) {
+        if (entry.deviceId && deviceId) {
           try {
-            await api.removeFamilyMember(code, parentDid, deviceId);
+            await api.removeFamilyMember(entry.code, entry.deviceId, deviceId);
           } catch {}
         }
-        if (code === familyCode) {
+        const entryKey = entry.deviceId || entry.name;
+        const remainingInCode = parentEntries.filter(p => p.code === entry.code && (p.deviceId || p.name) !== entryKey);
+        if (remainingInCode.length > 0) {
+          loadParentNames();
+          return;
+        }
+        if (entry.code === familyCode) {
           if (allFamilyCodes.length > 1) {
-            const nextCode = allFamilyCodes.find(c => c !== code);
+            const nextCode = allFamilyCodes.find(c => c !== entry.code);
             if (nextCode && deviceId) {
-              await api.leaveFamily(code, deviceId).catch(() => {});
+              await api.leaveFamily(entry.code, deviceId).catch(() => {});
               await disconnect();
               const familyData = await api.getFamily(nextCode).catch(() => null);
               const me = familyData?.members?.find((m: { deviceId: string }) => m.deviceId === deviceId);
               if (me) {
                 await connect(nextCode, me.memberName, me.role as "parent" | "child");
-                for (const extra of allFamilyCodes.filter(c => c !== code && c !== nextCode)) {
+                for (const extra of allFamilyCodes.filter(c => c !== entry.code && c !== nextCode)) {
                   await addExtraFamily(extra);
                 }
               }
             }
           } else {
-            if (deviceId) await api.leaveFamily(code, deviceId).catch(() => {});
+            if (deviceId) await api.leaveFamily(entry.code, deviceId).catch(() => {});
             await disconnect();
             router.replace("/");
             return;
           }
         } else {
-          if (deviceId) await api.leaveFamily(code, deviceId).catch(() => {});
-          await removeExtraFamily(code);
+          const anyLeftInCode = parentEntries.some(p => p.code === entry.code && (p.deviceId || p.name) !== entryKey);
+          if (!anyLeftInCode) {
+            if (deviceId) await api.leaveFamily(entry.code, deviceId).catch(() => {});
+            await removeExtraFamily(entry.code);
+          }
         }
         loadParentNames();
       },
@@ -572,27 +585,37 @@ export default function ProfileScreen() {
         <View style={s.card}>
           {isConnected && familyCode ? (
             myRole === "child" ? (
-              /* ── 자녀: 연결된 부모님 코드 목록 ── */
+              /* ── 자녀: 연결된 부모님 목록 (코드당 복수 부모 지원) ── */
               <View>
-                {allFamilyCodes.map((code, idx) => {
-                  const pName = parentNamesByCode[code] ?? `${t.parentN} ${idx + 1}`;
+                {parentEntries.length > 0 ? parentEntries.map((entry, idx) => {
+                  const isFirst = entry.code === familyCode;
                   return (
-                    <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                    <View key={`${entry.code}_${entry.deviceId}`} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
                       <View style={s.parentAvatar}>
-                        <Text style={s.parentAvatarText}>{pName[0]?.toUpperCase()}</Text>
+                        <Text style={s.parentAvatarText}>{entry.name[0]?.toUpperCase()}</Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={s.parentRowLabel}>{pName}</Text>
-                        <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
+                        <Text style={s.parentRowLabel}>{entry.name}</Text>
+                        <Text style={s.parentRowSub}>{isFirst ? t.basicLink : t.extraLink}</Text>
                       </View>
                       {isMasterChild && (
-                        <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
+                        <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveParent(entry)}>
                           <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
                         </Pressable>
                       )}
                     </View>
                   );
-                })}
+                }) : allFamilyCodes.map((code, idx) => (
+                  <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                    <View style={s.parentAvatar}>
+                      <Text style={s.parentAvatarText}>?</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.parentRowLabel}>{`${t.parentN} ${idx + 1}`}</Text>
+                      <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             ) : (
               /* ── 부모님: 단일 코드 표시 + 복사 ── */
