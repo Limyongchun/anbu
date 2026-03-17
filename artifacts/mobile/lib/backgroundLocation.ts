@@ -48,33 +48,36 @@ async function uploadLocationInBackground(
       }),
     });
 
-    if (address) {
-      await fetch(`${BASE}/family/${familyCode}/activity`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          deviceId,
-          parentName: memberName,
-          activityType: "location",
-          detail: `백그라운드 위치 공유 · ${address}`,
-        }),
-      }).catch(() => {});
-    }
+    const detail = address
+      ? `백그라운드 위치 공유 · ${address}`
+      : "백그라운드 위치를 공유했습니다";
+    await fetch(`${BASE}/family/${familyCode}/activity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        deviceId,
+        parentName: memberName,
+        activityType: "location",
+        detail,
+      }),
+    }).catch(() => {});
   } catch {}
 }
 
-TaskManager.defineTask(TASK_NAME, async ({ data, error }: any) => {
+interface LocationTaskBody {
+  data: { locations: Location.LocationObject[] } | null;
+  error: TaskManager.TaskManagerError | null;
+}
+
+TaskManager.defineTask(TASK_NAME, async ({ data, error }: LocationTaskBody) => {
   if (error) return;
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    if (locations && locations.length > 0) {
-      const loc = locations[locations.length - 1];
-      await uploadLocationInBackground(
-        loc.coords.latitude,
-        loc.coords.longitude,
-        loc.coords.accuracy
-      );
-    }
+  if (data && data.locations && data.locations.length > 0) {
+    const loc = data.locations[data.locations.length - 1];
+    await uploadLocationInBackground(
+      loc.coords.latitude,
+      loc.coords.longitude,
+      loc.coords.accuracy
+    );
   }
 });
 
