@@ -154,8 +154,9 @@ router.delete("/family/:code/member/:memberDeviceId", async (req, res) => {
       return res.status(403).json({ error: "마스터 자녀만 삭제할 수 있습니다" });
     }
     const target = members.find(m => m.deviceId === memberDeviceId);
-    if (!target) return res.status(404).json({ error: "대상 자녀를 찾을 수 없습니다" });
+    if (!target) return res.status(404).json({ error: "대상 멤버를 찾을 수 없습니다" });
     if (target.childRole === "master") return res.status(400).json({ error: "마스터 자녀는 삭제할 수 없습니다" });
+    if (target.deviceId === requestorDeviceId) return res.status(400).json({ error: "자기 자신은 삭제할 수 없습니다" });
 
     await db.delete(familyMembersTable)
       .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, memberDeviceId)));

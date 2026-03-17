@@ -17,7 +17,12 @@ export interface FamilyState {
 }
 
 interface FamilyContextValue extends FamilyState {
-  connect: (code: string, name: string, role: FamilyRole, childRole?: ChildRole) => Promise<void>;
+  connect: (
+    code: string,
+    name: string,
+    role: FamilyRole,
+    childRole?: ChildRole,
+  ) => Promise<void>;
   disconnect: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
   addExtraFamily: (code: string) => Promise<void>;
@@ -26,12 +31,12 @@ interface FamilyContextValue extends FamilyState {
 }
 
 const STORAGE_KEYS = {
-  familyCode:  "family_code",
-  extraCodes:  "extra_family_codes",
-  deviceId:    "device_id",
-  myName:      "my_name",
-  myRole:      "my_role",
-  childRole:   "child_role",
+  familyCode: "family_code",
+  extraCodes: "extra_family_codes",
+  deviceId: "device_id",
+  myName: "my_name",
+  myRole: "my_role",
+  childRole: "child_role",
 };
 
 function generateDeviceId(): string {
@@ -43,7 +48,10 @@ function buildAllCodes(primary: string | null, extras: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const c of [primary, ...extras]) {
-    if (!seen.has(c)) { seen.add(c); result.push(c); }
+    if (!seen.has(c)) {
+      seen.add(c);
+      result.push(c);
+    }
   }
   return result;
 }
@@ -52,14 +60,14 @@ const FamilyContext = createContext<FamilyContextValue | null>(null);
 
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FamilyState>({
-    familyCode:     null,
+    familyCode: null,
     allFamilyCodes: [],
-    deviceId:       "",
-    myName:         null,
-    myRole:         null,
-    childRole:      null,
-    isMasterChild:  false,
-    isConnected:    false,
+    deviceId: "",
+    myName: null,
+    myRole: null,
+    childRole: null,
+    isMasterChild: false,
+    isConnected: false,
   });
   const [loading, setLoading] = useState(true);
 
@@ -82,7 +90,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         }
 
         let extras: string[] = [];
-        try { extras = extrasRaw ? JSON.parse(extrasRaw) : []; } catch {}
+        try {
+          extras = extrasRaw ? JSON.parse(extrasRaw) : [];
+        } catch {}
 
         let childRole = (cr as ChildRole) || null;
 
@@ -94,24 +104,30 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
             const res = await fetch(`${BASE}/family/${code}`);
             if (res.ok) {
               const data = await res.json();
-              const me = (data.members ?? []).find((m: { deviceId: string; childRole: string | null }) => m.deviceId === effectiveDeviceId);
+              const me = (data.members ?? []).find(
+                (m: { deviceId: string; childRole: string | null }) =>
+                  m.deviceId === effectiveDeviceId,
+              );
               if (me?.childRole) {
                 childRole = me.childRole as ChildRole;
-                await AsyncStorage.setItem(STORAGE_KEYS.childRole, childRole as string);
+                await AsyncStorage.setItem(
+                  STORAGE_KEYS.childRole,
+                  childRole as string,
+                );
               }
             }
           } catch {}
         }
 
         setState({
-          familyCode:     code,
+          familyCode: code,
           allFamilyCodes: buildAllCodes(code, extras),
-          deviceId:       effectiveDeviceId,
-          myName:         name,
-          myRole:         (role as FamilyRole) || null,
+          deviceId: effectiveDeviceId,
+          myName: name,
+          myRole: (role as FamilyRole) || null,
           childRole,
-          isMasterChild:  childRole === "master",
-          isConnected:    !!(code && name && role),
+          isMasterChild: childRole === "master",
+          isConnected: !!(code && name && role),
         });
       } catch (e) {
         console.error("Failed to load family state", e);
@@ -122,7 +138,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     load();
   }, []);
 
-  const connect = async (code: string, name: string, role: FamilyRole, childRole: ChildRole = null) => {
+  const connect = async (
+    code: string,
+    name: string,
+    role: FamilyRole,
+    childRole: ChildRole = null,
+  ) => {
     const tasks: Promise<void>[] = [
       AsyncStorage.setItem(STORAGE_KEYS.familyCode, code),
       AsyncStorage.setItem(STORAGE_KEYS.myName, name),
@@ -136,23 +157,28 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     await Promise.all(tasks);
     setState((prev) => ({
       ...prev,
-      familyCode:     code,
+      familyCode: code,
       allFamilyCodes: buildAllCodes(code, []),
-      myName:         name,
-      myRole:         role,
+      myName: name,
+      myRole: role,
       childRole,
-      isMasterChild:  childRole === "master",
-      isConnected:    true,
+      isMasterChild: childRole === "master",
+      isConnected: true,
     }));
   };
 
   const addExtraFamily = async (code: string) => {
     const extrasRaw = await AsyncStorage.getItem(STORAGE_KEYS.extraCodes);
     let extras: string[] = [];
-    try { extras = extrasRaw ? JSON.parse(extrasRaw) : []; } catch {}
+    try {
+      extras = extrasRaw ? JSON.parse(extrasRaw) : [];
+    } catch {}
     if (!extras.includes(code)) {
       extras = [...extras, code];
-      await AsyncStorage.setItem(STORAGE_KEYS.extraCodes, JSON.stringify(extras));
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.extraCodes,
+        JSON.stringify(extras),
+      );
     }
     setState((prev) => ({
       ...prev,
@@ -161,12 +187,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeExtraFamily = async (code: string) => {
-    if (state.deviceId) {
-      await api.leaveFamily(code, state.deviceId).catch(() => {});
-    }
     const extrasRaw = await AsyncStorage.getItem(STORAGE_KEYS.extraCodes);
     let extras: string[] = [];
-    try { extras = extrasRaw ? JSON.parse(extrasRaw) : []; } catch {}
+    try {
+      extras = extrasRaw ? JSON.parse(extrasRaw) : [];
+    } catch {}
     extras = extras.filter((c) => c !== code);
     await AsyncStorage.setItem(STORAGE_KEYS.extraCodes, JSON.stringify(extras));
     setState((prev) => ({
@@ -184,7 +209,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     const { deviceId: did, allFamilyCodes: codes } = state;
     if (did && codes.length > 0) {
       await Promise.all(
-        codes.map(code => api.leaveFamily(code, did).catch(() => {}))
+        codes.map((code) => api.leaveFamily(code, did).catch(() => {})),
       );
     }
     await Promise.all([
@@ -196,18 +221,28 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     ]);
     setState((prev) => ({
       ...prev,
-      familyCode:     null,
+      familyCode: null,
       allFamilyCodes: [],
-      myName:         null,
-      myRole:         null,
-      childRole:      null,
-      isMasterChild:  false,
-      isConnected:    false,
+      myName: null,
+      myRole: null,
+      childRole: null,
+      isMasterChild: false,
+      isConnected: false,
     }));
   };
 
   return (
-    <FamilyContext.Provider value={{ ...state, connect, disconnect, updateName, addExtraFamily, removeExtraFamily, loading }}>
+    <FamilyContext.Provider
+      value={{
+        ...state,
+        connect,
+        disconnect,
+        updateName,
+        addExtraFamily,
+        removeExtraFamily,
+        loading,
+      }}
+    >
       {children}
     </FamilyContext.Provider>
   );
@@ -215,6 +250,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
 export function useFamilyContext(): FamilyContextValue {
   const ctx = useContext(FamilyContext);
-  if (!ctx) throw new Error("useFamilyContext must be used inside FamilyProvider");
+  if (!ctx)
+    throw new Error("useFamilyContext must be used inside FamilyProvider");
   return ctx;
 }

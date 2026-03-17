@@ -138,6 +138,7 @@ export default function ProfileScreen() {
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
   const [childCodeCopied, setChildCodeCopied] = useState(false);
   const [parentNamesByCode, setParentNamesByCode] = useState<Record<string, string>>({});
+  const [parentDeviceIdsByCode, setParentDeviceIdsByCode] = useState<Record<string, string>>({});
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [privacyMode, setPrivacyMode] = useState(false);
 
@@ -225,14 +226,19 @@ export default function ProfileScreen() {
         api.getFamily(code)
           .then(data => {
             const parent = (data.members ?? []).find((m: { role: string }) => m.role === "parent");
-            return [code, parent?.memberName ?? null] as [string, string | null];
+            return [code, parent?.memberName ?? null, parent?.deviceId ?? null] as [string, string | null, string | null];
           })
-          .catch(() => [code, null] as [string, null])
+          .catch(() => [code, null, null] as [string, null, null])
       )
     ).then(results => {
-      const map: Record<string, string> = {};
-      results.forEach(([code, name]) => { if (name) map[code] = name; });
-      setParentNamesByCode(map);
+      const nameMap: Record<string, string> = {};
+      const idMap: Record<string, string> = {};
+      results.forEach(([code, name, did]) => {
+        if (name) nameMap[code] = name;
+        if (did) idMap[code] = did;
+      });
+      setParentNamesByCode(nameMap);
+      setParentDeviceIdsByCode(idMap);
     });
   };
 
@@ -339,17 +345,21 @@ export default function ProfileScreen() {
   };
 
   const handleRemoveFamily = (code: string) => {
-    const isPrimary = code === familyCode;
+    const pName = parentNamesByCode[code] ?? t.parentN;
     setConfirmModal({
-      title: isPrimary ? t.leaveFamily : t.removeParent,
-      message: isPrimary ? t.leaveFamilyMsg : t.removeParentMsg,
+      title: t.removeParent,
+      message: t.removeParentMsg as string,
       onConfirm: async () => {
-        if (isPrimary) {
-          await disconnect();
-          router.replace("/setup");
-        } else {
+        const parentDid = parentDeviceIdsByCode[code];
+        if (parentDid && deviceId) {
+          try {
+            await api.removeFamilyMember(code, parentDid, deviceId);
+          } catch {}
+        }
+        if (code !== familyCode) {
           await removeExtraFamily(code);
         }
+        loadParentNames();
       },
     });
   };
