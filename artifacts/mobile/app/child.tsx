@@ -63,15 +63,15 @@ function AppHeader({ topInset, isMap }: { topInset: number; isMap: boolean }) {
   return (
     <View style={[hdr.wrap, {
       paddingTop: topInset + 12,
-      backgroundColor: isMap ? "rgba(11,25,38,0.92)" : DS.bg,
+      backgroundColor: isMap ? "rgba(90,58,58,0.92)" : DS.bg,
       borderBottomWidth: isMap ? 0 : 0,
     }]}>
-      <Text style={[hdr.logo, { color: isMap ? "#fff" : DS.textPrimary }]}>A N B U</Text>
+      <Text style={[hdr.logo, { color: "#FFFFFF" }]}>A N B U</Text>
       <View style={{ flex: 1 }} />
       {isMasterChild && (
-        <View style={[hdr.masterBadge, isMap && { backgroundColor: "rgba(45,212,191,0.18)", borderColor: "rgba(45,212,191,0.35)" }]}>
-          <Ionicons name="shield-checkmark" size={11} color={DS.brand} />
-          <Text style={[hdr.masterText, isMap && { color: DS.brand }]}>{t.masterLabel}</Text>
+        <View style={hdr.masterBadge}>
+          <Ionicons name="shield-checkmark" size={11} color="#D4A843" />
+          <Text style={hdr.masterText}>{t.masterLabel}</Text>
         </View>
       )}
     </View>
@@ -941,7 +941,7 @@ function HomeScreen({
       showsVerticalScrollIndicator={false}
     >
       <View style={hm.summaryTitleRow}>
-        <Ionicons name="calendar-outline" size={22} color={DS.textPrimary} />
+        <Ionicons name="calendar-outline" size={22} color="#FFFFFF" />
         <Text style={hm.summaryTitleText}>{t.todayAnbu}</Text>
       </View>
 
@@ -1212,15 +1212,15 @@ export default function ChildScreen() {
 const hdr = StyleSheet.create({
   wrap: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 20, paddingBottom: 12 },
   logo: { fontFamily: "Inter_700Bold", fontSize: 18, letterSpacing: 3 },
-  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(45,212,191,0.15)", borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "rgba(45,212,191,0.3)" },
-  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: DS.brand, letterSpacing: 0.5 },
+  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "transparent", borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1.5, borderColor: "#D4A843" },
+  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#D4A843", letterSpacing: 0.5 },
 });
 
 const nav = StyleSheet.create({
-  wrap: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: DS.surface, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 },
+  wrap: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: DS.surface, paddingTop: 8, borderTopWidth: 1, borderTopColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 8 },
   item: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
   iconCircle: { width: 36, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 10 },
-  iconCircleActive: { backgroundColor: "rgba(45,212,191,0.12)" },
+  iconCircleActive: { backgroundColor: "rgba(122,84,84,0.10)" },
   label: { fontFamily: "Inter_500Medium", fontSize: 10, color: DS.textTertiary },
   labelActive: { color: DS.brand, fontFamily: "Inter_600SemiBold" },
 });
@@ -1290,7 +1290,7 @@ const hm = StyleSheet.create({
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
   summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 14 },
-  summaryTitleText: { fontFamily: "Inter_700Bold", fontSize: 20, color: DS.textPrimary },
+  summaryTitleText: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#FFFFFF" },
   summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", borderWidth: 1, borderColor: DS.border },
   summaryBody: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
   parentStatsRow: { flexDirection: "row", alignItems: "flex-start" },
