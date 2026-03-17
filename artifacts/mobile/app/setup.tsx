@@ -62,7 +62,7 @@ export default function SetupScreen() {
     setError("");
     try {
       const code = joinCodeInput.trim().toUpperCase();
-      let finalName = name.trim() || "부모님";
+      let finalName = name.trim() || (t.setupParentDefault as string);
 
       try {
         const family = await api.getFamily(code);
@@ -73,7 +73,7 @@ export default function SetupScreen() {
         } else if (role === "parent") {
           const existingParents = members.filter((m: { role: string }) => m.role === "parent");
           if (existingParents.length >= 1 && !name.trim()) {
-            finalName = "부모님 2";
+            finalName = t.setupParentDefault2 as string;
           }
         }
       } catch {}
@@ -142,7 +142,7 @@ export default function SetupScreen() {
               style={[styles.nextBtn, !role && styles.nextBtnDisabled]}
               disabled={!role}
               onPress={() => {
-                if (role === "parent") setName(prev => prev.trim() || "부모님");
+                if (role === "parent") setName(prev => prev.trim() || (t.setupParentDefault as string));
                 setStep("name");
               }}
             >
@@ -258,7 +258,7 @@ export default function SetupScreen() {
                 style={[styles.nameInput, styles.codeInput]}
                 value={joinCodeInput}
                 onChangeText={(v) => setJoinCodeInput(v.toUpperCase())}
-                placeholder="예: AB3XY7"
+                placeholder={t.setupJoinPlaceholder as string}
                 placeholderTextColor={COLORS.child.textMuted}
                 maxLength={6}
                 autoCapitalize="characters"

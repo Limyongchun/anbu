@@ -15,7 +15,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FamilyProvider } from "@/context/FamilyContext";
-import { LanguageProvider } from "@/context/LanguageContext";
+import { LanguageProvider, useLang } from "@/context/LanguageContext";
 import "@/lib/backgroundLocation";
 
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +38,7 @@ function RootLayoutNav() {
 }
 
 function WhiteSplash({ onDone }: { onDone: () => void }) {
+  const { t } = useLang();
   const opacity = useRef(new Animated.Value(1)).current;
   const letterSpread = useRef(new Animated.Value(0)).current;
 
@@ -54,7 +55,7 @@ function WhiteSplash({ onDone }: { onDone: () => void }) {
   return (
     <Animated.View style={[sp.overlay, { opacity }]} pointerEvents="none">
       <Animated.Text style={[sp.logo, { letterSpacing: spacing }]}>ANBU</Animated.Text>
-      <Text style={sp.sub}>부모님과 자녀를 잇는 안전 연결</Text>
+      <Text style={sp.sub}>{t.appSubSplash}</Text>
     </Animated.View>
   );
 }

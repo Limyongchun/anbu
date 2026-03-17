@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
+import { useLang } from "@/context/LanguageContext";
 import { api, FamilyMessage } from "@/lib/api";
 import {
   saveBackgroundLocationConfig,
@@ -32,12 +33,7 @@ function logActivity(familyCode: string | null, deviceId: string | null, parentN
 const { width, height } = Dimensions.get("window");
 const INTERVAL_MS = 6000;
 
-// ── 데모 슬라이드 ─────────────────────────────────────────────────────────────
-const DEMO_SLIDES = [
-  { id: -1, emoji: "☀️", text: "오늘 날씨가 너무 좋아요!\n건강하게 지내세요 엄마 아빠 💛", name: "예진", bg: "#1a3a2a" },
-  { id: -2, emoji: "🏠", text: "학교 잘 다녀왔어요~\n저녁 맛있게 드세요!", name: "민준", bg: "#1a2a3a" },
-  { id: -3, emoji: "💌", text: "빨리 보고싶어요!\n사랑해요 ❤️", name: "예진", bg: "#2a1a3a" },
-];
+const DEMO_SLIDE_BGS = ["#1a3a2a", "#1a2a3a", "#2a1a3a"];
 
 // ── 하트 파티클 ──────────────────────────────────────────────────────────────
 interface FloatHeart { id: number; x: number; delay: number; anim: Animated.Value }
@@ -56,11 +52,13 @@ function HeartParticle({ h }: { h: FloatHeart }) {
   );
 }
 
-function formatTime(s: string): string {
+function formatTimeI18n(s: string, t: any): string {
   const m = Math.floor((Date.now() - new Date(s).getTime()) / 60000);
-  if (m < 1) return "방금 전"; if (m < 60) return `${m}분 전`;
-  const hh = Math.floor(m / 60); if (hh < 24) return `${hh}시간 전`;
-  return `${Math.floor(hh / 24)}일 전`;
+  if (m < 1) return t.timeJustNow;
+  if (m < 60) return (t.timeMinAgo as string).replace("{m}", String(m));
+  const hh = Math.floor(m / 60);
+  if (hh < 24) return (t.timeHourAgo as string).replace("{h}", String(hh));
+  return (t.timeDayAgo as string).replace("{d}", String(Math.floor(hh / 24)));
 }
 
 // ── 슬라이드 타입 ─────────────────────────────────────────────────────────────
@@ -68,13 +66,14 @@ type Slide =
   | { kind: "msg";  msg: FamilyMessage }
   | { kind: "demo"; id: number; emoji: string; text: string; name: string; bg: string };
 
-function buildSlides(msgs: FamilyMessage[]): Slide[] {
+function buildSlides(msgs: FamilyMessage[], demoSlides: any[]): Slide[] {
   if (msgs.length > 0) return msgs.map(msg => ({ kind: "msg", msg }));
-  return DEMO_SLIDES.map(d => ({ kind: "demo", ...d }));
+  return demoSlides.map((d, i) => ({ kind: "demo", id: -(i + 1), emoji: d.emoji, text: d.text, name: d.name, bg: DEMO_SLIDE_BGS[i] ?? "#1a2a3a" }));
 }
 
 // ── 슬라이드 카드 (터치 없음 — 디지털 액자) ──────────────────────────────────
 function SlideCard({ slide }: { slide: Slide }) {
+  const { t } = useLang();
   if (slide.kind === "demo") {
     return (
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: slide.bg }]}>
@@ -99,7 +98,7 @@ function SlideCard({ slide }: { slide: Slide }) {
         {!!msg.text && (
           <View style={sl.photoCaption}>
             <Text style={sl.captionText} numberOfLines={3}>{msg.text}</Text>
-            <Text style={sl.captionTime}>{formatTime(msg.createdAt)}</Text>
+            <Text style={sl.captionTime}>{formatTimeI18n(msg.createdAt, t)}</Text>
           </View>
         )}
       </View>
@@ -114,7 +113,7 @@ function SlideCard({ slide }: { slide: Slide }) {
         <Text style={sl.bigQuote}>"</Text>
         <Text style={sl.bigText}>{msg.text}</Text>
         <Text style={[sl.bigQuote, { alignSelf: "flex-end", marginTop: 8 }]}>"</Text>
-        <Text style={sl.captionTime2}>{formatTime(msg.createdAt)}</Text>
+        <Text style={sl.captionTime2}>{formatTimeI18n(msg.createdAt, t)}</Text>
       </View>
     </View>
   );
@@ -124,6 +123,7 @@ function SlideCard({ slide }: { slide: Slide }) {
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, deviceId, isConnected } = useFamilyContext();
+  const { t } = useLang();
 
   const topInset    = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -204,7 +204,7 @@ export default function ParentScreen() {
 
   useEffect(() => {
     if (familyCode && deviceId && myName) {
-      logActivity(familyCode, deviceId, myName, "app_open", "앱을 열었습니다");
+      logActivity(familyCode, deviceId, myName, "app_open", t.parentLogAppOpen as string);
     }
   }, [familyCode, deviceId, myName]);
 
@@ -223,7 +223,7 @@ export default function ParentScreen() {
       const now = Date.now();
       if (sharing && addr && now - lastLocLogRef.current > 300000) {
         lastLocLogRef.current = now;
-        logActivity(familyCode, deviceId, myName, "location", `위치를 공유했습니다 · ${addr}`);
+        logActivity(familyCode, deviceId, myName, "location", `${t.parentLogLocShared} · ${addr}`);
       }
     } catch {} finally { setLocUploading(false); }
   }, [familyCode, myName, deviceId]);
@@ -268,8 +268,7 @@ export default function ParentScreen() {
     if (currentLoc) await uploadLoc(currentLoc, next);
   };
 
-  // ── 슬라이드 데이터 ──
-  const slides = buildSlides(msgs);
+  const slides = buildSlides(msgs, t.parentDemoSlides as any[]);
   const total  = slides.length;
 
   // ── 슬라이드 이동 ──
@@ -290,8 +289,8 @@ export default function ParentScreen() {
       lastSlideLogRef.current = now;
       const s = slides[safeIdx];
       const detail = s?.kind === "msg" && s.msg.photoData
-        ? "사진을 감상하고 계세요"
-        : "메시지를 확인하고 계세요";
+        ? (t.parentLogViewPhoto as string)
+        : (t.parentLogViewMsg as string);
       logActivity(familyCode, deviceId, myName, "view_slide", detail);
     }
 
@@ -356,7 +355,7 @@ export default function ParentScreen() {
     spawnHearts();
     if (slide.kind !== "msg" || !familyCode) return;
     const hasPhoto = !!slide.msg.photoData;
-    logActivity(familyCode, deviceId, myName, "heart", hasPhoto ? "사진에 좋아요를 눌렀습니다" : "메시지에 좋아요를 눌렀습니다");
+    logActivity(familyCode, deviceId, myName, "heart", hasPhoto ? (t.parentLogHeartPhoto as string) : (t.parentLogHeartMsg as string));
     try {
       const updated = await api.heartMessage(familyCode, slide.msg.id);
       setMsgs(p => p.map(m => m.id === updated.id ? updated : m));
@@ -385,7 +384,7 @@ export default function ParentScreen() {
           {loadingMsgs && msgs.length === 0 ? (
             <View style={ps.loadingWrap}>
               <ActivityIndicator color={COLORS.neon} size="large" />
-              <Text style={ps.loadingText}>사진 불러오는 중...</Text>
+              <Text style={ps.loadingText}>{t.parentLoadingPhotos}</Text>
             </View>
           ) : currentSlide ? (
             <>
@@ -401,11 +400,11 @@ export default function ParentScreen() {
           ) : (
             <View style={ps.emptyWrap}>
               <Ionicons name="images-outline" size={56} color="rgba(255,255,255,0.15)" />
-              <Text style={ps.emptyTitle}>아직 사진이 없어요</Text>
-              <Text style={ps.emptySub}>자녀가 사진을 보내면{"\n"}여기 표시됩니다</Text>
+              <Text style={ps.emptyTitle}>{t.parentNoPhotos}</Text>
+              <Text style={ps.emptySub}>{t.parentNoPhotosSub}</Text>
               {!isConnected && (
                 <Pressable style={ps.connectBtn} onPress={() => router.push("/profile")}>
-                  <Text style={ps.connectBtnText}>가족 연결하기</Text>
+                  <Text style={ps.connectBtnText}>{t.parentConnectFamily}</Text>
                 </Pressable>
               )}
             </View>
@@ -445,7 +444,7 @@ export default function ParentScreen() {
                 ? <ActivityIndicator size="small" color={COLORS.neon} style={{ width: 10, height: 10 }} />
                 : <View style={[ps.gpsDot, !isSharing && { backgroundColor: "rgba(255,255,255,0.3)" }]} />}
               <Text style={[ps.gpsText, !isSharing && { color: "rgba(255,255,255,0.35)" }]} numberOfLines={1}>
-                {isSharing ? (address || "위치 공유 중") : "공유 중지됨"}
+                {isSharing ? (address || t.parentLocSharing) : t.parentLocStopped}
               </Text>
             </Pressable>
           </View>
@@ -478,7 +477,7 @@ export default function ParentScreen() {
           <View style={ps.pauseOverlay} pointerEvents="none">
             <View style={ps.pauseBadge}>
               <Ionicons name="pause" size={12} color="rgba(255,255,255,0.9)" />
-              <Text style={ps.pauseText}>일시정지</Text>
+              <Text style={ps.pauseText}>{t.parentPaused}</Text>
             </View>
           </View>
         )}

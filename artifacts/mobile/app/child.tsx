@@ -27,25 +27,19 @@ import { useLang } from "@/context/LanguageContext";
 import { api, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
-type Tab = "홈" | "사진" | "위치" | "알림";
+type Tab = "home" | "photo" | "map" | "alarm";
 
-const GIFTS = [
-  { id: 1, name: "제철 과일 선물세트", price: "39,000원", icon: "nutrition"   as const, category: "식품", popular: true  },
-  { id: 2, name: "한우 정육 세트",     price: "89,000원", icon: "restaurant"  as const, category: "식품", popular: false },
-  { id: 3, name: "홍삼 건강세트",      price: "59,000원", icon: "leaf"        as const, category: "건강", popular: true  },
-  { id: 4, name: "꽃바구니 선물",      price: "45,000원", icon: "flower"      as const, category: "꽃",  popular: false },
-  { id: 5, name: "전통 한과 세트",     price: "32,000원", icon: "cafe"        as const, category: "식품", popular: false },
-  { id: 6, name: "건강기능식품",       price: "75,000원", icon: "fitness"     as const, category: "건강", popular: true  },
-];
+const GIFT_ICONS = ["nutrition", "restaurant", "leaf", "flower", "cafe", "fitness"] as const;
+const GIFT_POPULAR = [true, false, true, false, false, true];
 
-function formatTime(dateStr: string): string {
+function formatTimeI18n(dateStr: string, t: any): string {
   const d = new Date(dateStr), now = new Date();
   const m = Math.floor((now.getTime() - d.getTime()) / 60000);
-  if (m < 1) return "방금 전";
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return t.timeJustNow;
+  if (m < 60) return (t.timeMinAgo as string).replace("{m}", String(m));
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return (t.timeHourAgo as string).replace("{h}", String(h));
+  return (t.timeDayAgo as string).replace("{d}", String(Math.floor(h / 24)));
 }
 
 // ─── 원형 아이콘 버튼 ─────────────────────────────────────────────────────────
@@ -64,7 +58,8 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // ─── 상단 바 (로고 + 카테고리 탭) ───────────────────────────────────────────
 function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
   const { isMasterChild } = useFamilyContext();
-  const isMap = tab === "위치";
+  const { t } = useLang();
+  const isMap = tab === "map";
   return (
     <View style={[tb.wrap, {
       paddingTop: topInset + 10,
@@ -77,7 +72,7 @@ function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
       {isMasterChild && (
         <View style={[tb.masterBadge, isMap && { backgroundColor: "rgba(212,242,0,0.18)", borderColor: "rgba(212,242,0,0.35)" }]}>
           <Ionicons name="shield-checkmark" size={11} color={isMap ? COLORS.neon : COLORS.neonText} />
-          <Text style={[tb.masterText, isMap && { color: COLORS.neon }]}>마스터</Text>
+          <Text style={[tb.masterText, isMap && { color: COLORS.neon }]}>{t.masterLabel}</Text>
         </View>
       )}
       {!isMap && (
@@ -91,11 +86,11 @@ function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
 
 // ─── 하단 탭 바 ───────────────────────────────────────────────────────────────
 const NAV_ITEM_DEFS = [
-  { id: "홈",  iconOn: "home"          as const, iconOff: "home-outline"          as const, labelKey: "tabHome"     },
-  { id: "사진", iconOn: "images"        as const, iconOff: "images-outline"        as const, labelKey: "tabPhoto"    },
-  { id: "위치", iconOn: "location"      as const, iconOff: "location-outline"      as const, labelKey: "tabMap"      },
-  { id: "알림", iconOn: "notifications" as const, iconOff: "notifications-outline" as const, labelKey: "tabAlarm"    },
-  { id: "설정", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, labelKey: "tabSettings" },
+  { id: "home",     iconOn: "home"          as const, iconOff: "home-outline"          as const, labelKey: "tabHome"     },
+  { id: "photo",    iconOn: "images"        as const, iconOff: "images-outline"        as const, labelKey: "tabPhoto"    },
+  { id: "map",      iconOn: "location"      as const, iconOff: "location-outline"      as const, labelKey: "tabMap"      },
+  { id: "alarm",    iconOn: "notifications" as const, iconOff: "notifications-outline" as const, labelKey: "tabAlarm"    },
+  { id: "settings", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, labelKey: "tabSettings" },
 ] as const;
 
 function BottomNav({ tab, onTab, onSettings, bottomInset }: {
@@ -105,8 +100,8 @@ function BottomNav({ tab, onTab, onSettings, bottomInset }: {
   return (
     <View style={[bn.wrap, { paddingBottom: Math.max(bottomInset, 12) }]}>
       {NAV_ITEM_DEFS.map(item => {
-        const active = item.id !== "설정" && tab === (item.id as Tab);
-        const onPress = item.id === "설정" ? onSettings : () => onTab(item.id as Tab);
+        const active = item.id !== "settings" && tab === (item.id as Tab);
+        const onPress = item.id === "settings" ? onSettings : () => onTab(item.id as Tab);
         return (
           <Pressable key={item.id} style={({ pressed }) => [bn.item, { opacity: pressed ? 0.65 : 1 }]} onPress={onPress}>
             <View style={[bn.iconWrap, active && bn.iconWrapActive]}>
@@ -231,7 +226,7 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
       {Platform.OS === "web" ? (
         <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
           {/* @ts-ignore */}
-          <iframe srcDoc={mapHtml} style={{ width: "100%", height: "100%", border: "none" }} title="부모님 위치" />
+          <iframe srcDoc={mapHtml} style={{ width: "100%", height: "100%", border: "none" }} title={t.mapIframeTitle as string} />
         </View>
       ) : (
         // Native 폴백 지도
@@ -299,7 +294,7 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={[mp.dot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
-              <Text style={mp.bannerStatus}>{isRecent ? t.mapSafe : `${minsAgo}분 전`}</Text>
+              <Text style={mp.bannerStatus}>{isRecent ? t.mapSafe : (t.timeMinAgo as string).replace("{m}", String(minsAgo))}</Text>
             </View>
             <Text style={mp.bannerName}>{parentLoc.memberName}</Text>
             <Text style={mp.bannerAddr} numberOfLines={1}>
@@ -347,6 +342,7 @@ function PulsingPin() {
 function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
   allFamilyCodes: string[]; deviceId: string; topBarH: number;
 }) {
+  const { t } = useLang();
   const [todayMsgs, setTodayMsgs] = useState<FamilyMessage[]>([]);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -376,8 +372,8 @@ function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
   const count  = todayMsgs.length;
 
   const previewText = latest
-    ? (latest.text ? latest.text.slice(0, 36) + (latest.text.length > 36 ? "…" : "") : "📷 사진")
-    : "오늘 아직 안부를 보내지 않았어요";
+    ? (latest.text ? latest.text.slice(0, 36) + (latest.text.length > 36 ? "…" : "") : t.anbuPhotoLabel)
+    : t.todayAnbuNone;
 
   return (
     <Pressable
@@ -386,7 +382,7 @@ function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
     >
       <View style={sw.header}>
         <View style={sw.dot} />
-        <Text style={sw.label}>오늘 안부</Text>
+        <Text style={sw.label}>{t.todayAnbu}</Text>
         {count > 0 && (
           <View style={sw.badge}>
             <Text style={sw.badgeText}>{count}</Text>
@@ -404,7 +400,7 @@ function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
         <View style={sw.body}>
           <Text style={sw.preview} numberOfLines={2}>{previewText}</Text>
           {count > 1 && (
-            <Text style={sw.more}>외 {count - 1}건 더</Text>
+            <Text style={sw.more}>{(t.todayAnbuMore as string).replace("{n}", String(count - 1))}</Text>
           )}
         </View>
       )}
@@ -416,6 +412,7 @@ function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
 function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topBarH }: {
   familyCode: string | null; allFamilyCodes: string[]; myName: string | null; myRole: string | null; deviceId: string; topBarH: number;
 }) {
+  const { t } = useLang();
   const [subView, setSubView] = useState<"messages" | "gallery">("messages");
   const [text, setText]       = useState("");
   const [photo, setPhoto]     = useState<string | null>(null);
@@ -462,9 +459,9 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   };
   const pickPhoto = () => {
     if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions({ options: ["취소", "카메라", "갤러리"], cancelButtonIndex: 0 }, i => { if (i === 1) pickCamera(); if (i === 2) pickLibrary(); });
+      ActionSheetIOS.showActionSheetWithOptions({ options: [t.anbuActionSheetCancel, t.anbuActionSheetCamera, t.anbuActionSheetGallery], cancelButtonIndex: 0 }, i => { if (i === 1) pickCamera(); if (i === 2) pickLibrary(); });
     } else {
-      Alert.alert("사진", "", [{ text: "취소", style: "cancel" }, { text: "카메라", onPress: pickCamera }, { text: "갤러리", onPress: pickLibrary }]);
+      Alert.alert(t.anbuActionSheetTitle, "", [{ text: t.anbuActionSheetCancel, style: "cancel" }, { text: t.anbuActionSheetCamera, onPress: pickCamera }, { text: t.anbuActionSheetGallery, onPress: pickLibrary }]);
     }
   };
 
@@ -480,7 +477,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
       setText(""); setPhoto(null); setSent(true); setShowCompose(false);
       setTimeout(() => setSent(false), 2500);
     } catch (e: any) {
-      Alert.alert("전송 실패", e?.message === "request entity too large" ? "사진 크기가 너무 큽니다. 더 작은 사진을 선택해 주세요." : "전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      Alert.alert(t.anbuSendFailed, e?.message === "request entity too large" ? t.anbuSendFailedSizeTip : t.anbuSendFailedRetryTip);
     }
     finally { setSending(false); }
   };
@@ -489,12 +486,12 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
     const msg = msgs.find(m => m.id === id);
     const code = msg?.familyCode ?? familyCode;
     if (!code) return;
-    Alert.alert("삭제", "이 메시지를 삭제할까요?", [
-      { text: "취소", style: "cancel" },
-      { text: "삭제", style: "destructive", onPress: async () => {
+    Alert.alert(t.anbuDelete, t.anbuDeleteConfirm, [
+      { text: t.anbuActionSheetCancel, style: "cancel" },
+      { text: t.anbuDelete, style: "destructive", onPress: async () => {
         setDelId(id);
         try { await api.deleteMessage(code, id, deviceId); setMsgs(p => p.filter(m => m.id !== id)); }
-        catch { Alert.alert("오류", "삭제 실패"); }
+        catch { Alert.alert(t.anbuSendFailed, t.anbuDeleteFailed); }
         finally { setDelId(null); }
       }},
     ]);
@@ -511,7 +508,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
           {viewerMid !== null && msgs.find(m => m.id === viewerMid)?.deviceId === deviceId && (
             <Pressable style={ab.viewerDel} onPress={() => { del(viewerMid!); setViewerUri(null); setViewerMid(null); }}>
               <Ionicons name="trash-outline" size={17} color="#fff" />
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>삭제</Text>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>{t.anbuDelete}</Text>
             </Pressable>
           )}
         </View>
@@ -526,7 +523,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
           {/* 시트 — 내부 터치가 배경 Pressable로 전파되지 않도록 Pressable로 감쌈 */}
           <Pressable onPress={() => {}} style={ab.sheet}>
             <View style={ab.handle} />
-            <Text style={ab.sheetTitle}>안부 보내기</Text>
+            <Text style={ab.sheetTitle}>{t.anbuCompose}</Text>
             {photo && (
               <View style={{ borderRadius: 14, overflow: "hidden", marginBottom: 12, height: 140 }}>
                 <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
@@ -541,7 +538,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
               style={ab.input}
               value={text}
               onChangeText={setText}
-              placeholder="부모님께 안부를 전해요..."
+              placeholder={t.anbuPlaceholder}
               placeholderTextColor={COLORS.textMuted}
               multiline
               maxLength={200}
@@ -568,26 +565,26 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={ab.hdr}>
-          <View style={ab.pill}><Text style={ab.pillText}>실시간</Text></View>
-          <Text style={ab.bigTitle}>안부{"\n"}메시지</Text>
+          <View style={ab.pill}><Text style={ab.pillText}>{t.anbuLive}</Text></View>
+          <Text style={ab.bigTitle}>{t.anbuTitle}</Text>
         </View>
 
         <View style={ab.seg}>
           {(["messages", "gallery"] as const).map(v => (
             <Pressable key={v} onPress={() => setSubView(v)} style={[ab.segBtn, subView === v && ab.segBtnOn]}>
-              <Text style={[ab.segText, subView === v && ab.segTextOn]}>{v === "messages" ? "메시지" : `갤러리${photos.length > 0 ? ` ${photos.length}` : ""}`}</Text>
+              <Text style={[ab.segText, subView === v && ab.segTextOn]}>{v === "messages" ? t.anbuSegMessages : `${t.anbuSegGallery}${photos.length > 0 ? ` ${photos.length}` : ""}`}</Text>
             </Pressable>
           ))}
         </View>
 
         {sent && (
-          <View style={ab.toast}><Ionicons name="checkmark-circle" size={14} color={COLORS.neonText} /><Text style={ab.toastText}>부모님께 전송됐어요</Text></View>
+          <View style={ab.toast}><Ionicons name="checkmark-circle" size={14} color={COLORS.neonText} /><Text style={ab.toastText}>{t.anbuSentToast}</Text></View>
         )}
 
         {!familyCode && (
           <View style={ab.connectCard}>
-            <Text style={ab.connectTitle}>가족 코드를 연결하면{"\n"}안부를 주고받을 수 있어요</Text>
-            <Pressable style={ab.connectBtn} onPress={() => router.push("/setup")}><Text style={ab.connectBtnText}>연결하기</Text></Pressable>
+            <Text style={ab.connectTitle}>{t.anbuConnectHint}</Text>
+            <Pressable style={ab.connectBtn} onPress={() => router.push("/setup")}><Text style={ab.connectBtnText}>{t.anbuConnect}</Text></Pressable>
           </View>
         )}
 
@@ -595,7 +592,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
           <>
             {loading && <ActivityIndicator color={COLORS.neon} style={{ marginVertical: 20 }} />}
             {!loading && msgs.length === 0 && familyCode && (
-              <View style={ab.empty}><Ionicons name="chatbubble-outline" size={32} color={COLORS.textMuted} /><Text style={ab.emptyText}>아직 보낸 메시지가 없어요</Text></View>
+              <View style={ab.empty}><Ionicons name="chatbubble-outline" size={32} color={COLORS.textMuted} /><Text style={ab.emptyText}>{t.anbuNoMessages}</Text></View>
             )}
             {msgs.map((msg, idx) => {
               const first = idx === 0;
@@ -608,7 +605,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[ab.cardName, first && { color: COLORS.neonText }]}>{msg.fromName}</Text>
-                      <Text style={[ab.cardTime, first && { color: "rgba(26,37,53,0.55)" }]}>{formatTime(msg.createdAt)}</Text>
+                      <Text style={[ab.cardTime, first && { color: "rgba(26,37,53,0.55)" }]}>{formatTimeI18n(msg.createdAt, t)}</Text>
                     </View>
                     {msg.hearts > 0 && (
                       <View style={ab.heartBadge}>
@@ -638,7 +635,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
           <>
             {loading && <ActivityIndicator color={COLORS.neon} style={{ marginVertical: 24 }} />}
             {!loading && photos.length === 0 && (
-              <View style={ab.empty}><Ionicons name="images-outline" size={32} color={COLORS.textMuted} /><Text style={ab.emptyText}>보낸 사진이 없어요</Text></View>
+              <View style={ab.empty}><Ionicons name="images-outline" size={32} color={COLORS.textMuted} /><Text style={ab.emptyText}>{t.anbuNoPhotos}</Text></View>
             )}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {photos.map(m => (
@@ -646,7 +643,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
                   <Pressable onPress={() => { setViewerUri(m.photoData!); setViewerMid(m.id); }} style={{ flex: 1, borderRadius: 16, overflow: "hidden" }}>
                     <Image source={{ uri: m.photoData! }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                     <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.38)", padding: 4, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}>
-                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: "#fff", textAlign: "center" }}>{formatTime(m.createdAt)}</Text>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: "#fff", textAlign: "center" }}>{formatTimeI18n(m.createdAt, t)}</Text>
                     </View>
                   </Pressable>
                   {m.deviceId === deviceId && (
@@ -678,6 +675,7 @@ const QR_API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 function WaitingRoom({ familyCode, topBarH, bottomInset }: {
   familyCode: string; topBarH: number; bottomInset: number;
 }) {
+  const { t } = useLang();
   const qrUri = `${QR_API_BASE}/qr/${familyCode}`;
   const segments = familyCode.match(/.{1,3}/g) ?? [familyCode];
 
@@ -687,13 +685,12 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
       contentContainerStyle={{ paddingTop: topBarH + 24, paddingBottom: bottomInset + 40, alignItems: "center", paddingHorizontal: 24 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* 안내 헤더 */}
       <View style={wr.badge}>
         <View style={wr.badgeDot} />
-        <Text style={wr.badgeText}>연결 대기 중</Text>
+        <Text style={wr.badgeText}>{t.waitingBadge}</Text>
       </View>
-      <Text style={wr.title}>부모님을{"\n"}초대해보세요</Text>
-      <Text style={wr.sub}>아래 QR코드 또는 코드번호를{"\n"}부모님 기기에서 입력하면 연결됩니다</Text>
+      <Text style={wr.title}>{t.waitingTitle}</Text>
+      <Text style={wr.sub}>{t.waitingSub}</Text>
 
       {/* QR 코드 */}
       <View style={wr.qrWrap}>
@@ -704,8 +701,7 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
         />
       </View>
 
-      {/* 코드 번호 */}
-      <Text style={wr.codeLabel}>코드 번호</Text>
+      <Text style={wr.codeLabel}>{t.waitingCodeLabel}</Text>
       <View style={wr.codeRow}>
         {segments.map((seg, i) => (
           <React.Fragment key={i}>
@@ -717,25 +713,24 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
         ))}
       </View>
 
-      {/* 안내 카드 */}
       <View style={wr.infoCard}>
         <View style={wr.infoRow}>
           <View style={[wr.infoIcon, { backgroundColor: "#eff6ff" }]}>
             <Ionicons name="qr-code-outline" size={18} color="#3b82f6" />
           </View>
-          <Text style={wr.infoText}>부모님 앱에서 QR을 스캔하거나</Text>
+          <Text style={wr.infoText}>{t.waitingInfo1}</Text>
         </View>
         <View style={wr.infoRow}>
           <View style={[wr.infoIcon, { backgroundColor: "#f0fdf4" }]}>
             <Ionicons name="keypad-outline" size={18} color="#22c55e" />
           </View>
-          <Text style={wr.infoText}>코드번호를 직접 입력하면 연결됩니다</Text>
+          <Text style={wr.infoText}>{t.waitingInfo2}</Text>
         </View>
         <View style={wr.infoRow}>
           <View style={[wr.infoIcon, { backgroundColor: "rgba(212,242,0,0.18)" }]}>
             <Ionicons name="radio-outline" size={18} color="#84a800" />
           </View>
-          <Text style={wr.infoText}>연결되는 순간 홈이 자동으로 열려요</Text>
+          <Text style={wr.infoText}>{t.waitingInfo3}</Text>
         </View>
       </View>
     </ScrollView>
@@ -763,6 +758,7 @@ function HomeScreen({
   bottomInset: number;
   onGoToAnbu: () => void;
 }) {
+  const { t } = useLang();
   const [parentLoc, setParentLoc] = useState<LocationData | null>(null);
   const [messages, setMessages]   = useState<FamilyMessage[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -840,13 +836,13 @@ function HomeScreen({
     :                  "alert";
 
   const STATUS_COLOR = { good: "#22c55e", warn: "#f59e0b", alert: "#ef4444", none: "#94a3b8" } as const;
-  const STATUS_LABEL = { good: "활동 중", warn: "최근 활동 없음", alert: "확인 필요", none: "연결 대기 중" } as const;
+  const STATUS_LABEL = { good: t.statusLabelGood, warn: t.statusLabelWarn, alert: t.statusLabelAlert, none: t.statusLabelNone };
   const STATUS_MSG   = {
-    good:  { title: "모두 안전해요.", sub: `${minsAgo}분 전 활동이 감지됐어요` },
-    warn:  { title: "확인이 필요할 수 있어요.", sub: `${minsAgo}분 전 마지막 활동` },
-    alert: { title: "부모님께 연락해보세요.", sub: `${Math.floor((minsAgo ?? 0) / 60)}시간 전 마지막 활동` },
-    none:  { title: "부모님을 기다리는 중이에요.", sub: "연결되면 바로 알려드릴게요" },
-  } as const;
+    good:  { title: t.statusMsgGoodTitle, sub: (t.statusMsgGoodSub as string).replace("{m}", String(minsAgo)) },
+    warn:  { title: t.statusMsgWarnTitle, sub: (t.statusMsgWarnSub as string).replace("{m}", String(minsAgo)) },
+    alert: { title: t.statusMsgAlertTitle, sub: (t.statusMsgAlertSub as string).replace("{h}", String(Math.floor((minsAgo ?? 0) / 60))) },
+    none:  { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub },
+  };
 
   const statusColor = STATUS_COLOR[statusLevel];
   const statusMsg   = STATUS_MSG[statusLevel];
@@ -870,23 +866,23 @@ function HomeScreen({
         iconColor: style.iconColor,
         iconBg: style.iconBg,
         label: a.detail || a.activityType,
-        time: formatTime(a.createdAt),
+        time: formatTimeI18n(a.createdAt, t),
         timestamp: new Date(a.createdAt).getTime(),
       };
     });
   }, [parentActivities, showAll]);
 
-  const parentName = parentLoc?.memberName ?? parentMemberName ?? "부모님";
+  const parentName = parentLoc?.memberName ?? parentMemberName ?? t.parentDefault;
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "좋은 아침이에요" : hour < 18 ? "안녕하세요" : "좋은 저녁이에요";
+  const greeting = hour < 12 ? t.homeGreetMorning : hour < 18 ? t.homeGreetDay : t.homeGreetEvening;
 
   // 가족 코드 없음 (회원가입 전 직접 접근)
   if (!familyCode) {
     return (
       <View style={[{ flex: 1, backgroundColor: "#f4f6fb", paddingTop: topBarH }, hm.centerEmpty]}>
         <View style={hm.emptyIcon}><Ionicons name="wifi-outline" size={28} color="#94a3b8" /></View>
-        <Text style={hm.emptyTitle}>아직 연결되지 않았어요</Text>
-        <Text style={hm.emptySub}>자녀로 가입하면{"\n"}가족과 연결할 수 있어요</Text>
+        <Text style={hm.emptyTitle}>{t.homeNotConnected}</Text>
+        <Text style={hm.emptySub}>{t.homeNotConnectedSub}</Text>
       </View>
     );
   }
@@ -937,20 +933,20 @@ function HomeScreen({
             <Text style={hm.parentStatusText}>{STATUS_LABEL[statusLevel]}</Text>
           </View>
           {parentLoc && (
-            <Text style={hm.parentTime}>마지막 활동 · {formatTime(parentLoc.updatedAt)}</Text>
+            <Text style={hm.parentTime}>{t.lastActivity} · {formatTimeI18n(parentLoc.updatedAt, t)}</Text>
           )}
         </View>
         <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
       </View>
 
       {/* 최근 활동 */}
-      <Text style={hm.sectionTitle}>최근 활동</Text>
+      <Text style={hm.sectionTitle}>{t.recentActivity}</Text>
       {loading ? (
         <ActivityIndicator style={{ marginVertical: 20 }} color="#3b82f6" />
       ) : activities.length === 0 ? (
         <View style={[hm.activityCard, { padding: 28, alignItems: "center", gap: 8 }]}>
           <Ionicons name="time-outline" size={26} color="#cbd5e1" />
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: "#94a3b8" }}>아직 활동 기록이 없어요</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: "#94a3b8" }}>{t.noActivityYet}</Text>
         </View>
       ) : (
         <View style={hm.activityCard}>
@@ -971,33 +967,33 @@ function HomeScreen({
 
       {!showAll && parentActivities.length > 4 && (
         <Pressable style={hm.viewAllBtn} onPress={() => setShowAll(true)}>
-          <Text style={hm.viewAllText}>전체 활동 보기</Text>
+          <Text style={hm.viewAllText}>{t.viewAllActivity}</Text>
         </Pressable>
       )}
 
       {/* 연락하기 */}
-      <Text style={hm.sectionTitle}>연락하기</Text>
+      <Text style={hm.sectionTitle}>{t.contactSection}</Text>
       <View style={hm.actionsRow}>
         <Pressable style={({ pressed }) => [hm.actionBtn, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => Linking.openURL("tel:")}>
           <View style={[hm.actionIconBg, { backgroundColor: "#f0fdf4" }]}>
             <Ionicons name="call" size={22} color="#22c55e" />
           </View>
-          <Text style={hm.actionLabel}>전화</Text>
+          <Text style={hm.actionLabel}>{t.contactCall}</Text>
         </Pressable>
         <Pressable style={({ pressed }) => [hm.actionBtn, { opacity: pressed ? 0.85 : 1 }]}
           onPress={onGoToAnbu}>
           <View style={[hm.actionIconBg, { backgroundColor: "#eff6ff" }]}>
             <Ionicons name="chatbubble-ellipses" size={22} color="#3b82f6" />
           </View>
-          <Text style={hm.actionLabel}>메시지</Text>
+          <Text style={hm.actionLabel}>{t.contactMessage}</Text>
         </Pressable>
         <Pressable style={({ pressed }) => [hm.actionBtn, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => Linking.openURL("facetime:")}>
           <View style={[hm.actionIconBg, { backgroundColor: "#fdf4ff" }]}>
             <Ionicons name="videocam" size={22} color="#a855f7" />
           </View>
-          <Text style={hm.actionLabel}>영상통화</Text>
+          <Text style={hm.actionLabel}>{t.contactVideo}</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -1009,6 +1005,7 @@ function HomeScreen({
 function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
   allFamilyCodes: string[]; topBarH: number; bottomInset: number;
 }) {
+  const { t } = useLang();
   const [messages, setMessages] = useState<FamilyMessage[]>([]);
   const [loading, setLoading]   = useState(true);
 
@@ -1028,14 +1025,14 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={hm.sectionTitle}>알림</Text>
+      <Text style={hm.sectionTitle}>{t.notifTitle}</Text>
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} color="#3b82f6" />
       ) : messages.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 56 }}>
           <View style={hm.emptyIcon}><Ionicons name="notifications-outline" size={28} color="#94a3b8" /></View>
-          <Text style={hm.emptyTitle}>새로운 알림이 없어요</Text>
-          <Text style={hm.emptySub}>가족에게 안부를 보내보세요</Text>
+          <Text style={hm.emptyTitle}>{t.notifEmpty}</Text>
+          <Text style={hm.emptySub}>{t.notifEmptySub}</Text>
         </View>
       ) : (
         <View style={hm.activityCard}>
@@ -1053,10 +1050,10 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={hm.activityLabel}>{m.fromName}</Text>
                   <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: "#64748b" }} numberOfLines={1}>
-                    {m.text || "사진을 보냈어요"}
+                    {m.text || t.notifSentPhoto}
                   </Text>
                 </View>
-                <Text style={hm.activityTime}>{formatTime(m.createdAt)}</Text>
+                <Text style={hm.activityTime}>{formatTimeI18n(m.createdAt, t)}</Text>
               </View>
             </React.Fragment>
           ))}
@@ -1067,42 +1064,69 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
 }
 
 // ─── 선물샵 화면 ──────────────────────────────────────────────────────────────
+type GiftItem = { id: number; name: string; price: string; category: string; icon: string; popular: boolean };
+
 function GiftScreen({ topBarH }: { topBarH: number }) {
-  const [sel, setSel]     = useState<typeof GIFTS[0] | null>(null);
-  const [bought, setBought] = useState<typeof GIFTS[0] | null>(null);
-  const [filter, setFilter] = useState("전체");
-  const cats = ["전체", "식품", "건강", "꽃"];
-  const filtered = filter === "전체" ? GIFTS : GIFTS.filter(g => g.category === filter);
+  const { t } = useLang();
+  const GIFTS: GiftItem[] = useMemo(() =>
+    (t.giftItems as any[]).map((g: any, i: number) => ({
+      id: i,
+      name: g.name,
+      price: g.price,
+      category: g.category,
+      icon: GIFT_ICONS[i] ?? "gift",
+      popular: GIFT_POPULAR[i] ?? false,
+    })),
+  [t.giftItems]);
+
+  const [sel, setSel]       = useState<GiftItem | null>(null);
+  const [bought, setBought] = useState<GiftItem | null>(null);
+  const [filter, setFilter] = useState("all");
+  const cats = [
+    { key: "all",    label: t.giftFilterAll },
+    { key: "food",   label: t.giftFilterFood },
+    { key: "health", label: t.giftFilterHealth },
+    { key: "flower", label: t.giftFilterFlower },
+  ];
+  const CAT_MAP: Record<string, string> = useMemo(() => {
+    const items = t.giftItems as any[];
+    const unique = [...new Set(items.map((g: any) => g.category))];
+    const keys = ["food", "health", "flower"];
+    const map: Record<string, string> = {};
+    unique.forEach((cat: string, i: number) => { map[keys[i] ?? cat] = cat; });
+    return map;
+  }, [t.giftItems]);
+  const filtered = filter === "all" ? GIFTS : GIFTS.filter(g => g.category === CAT_MAP[filter]);
 
   return (
     <>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={gf.hdr}>
-          <View style={ab.pill}><Text style={ab.pillText}>선물샵</Text></View>
-          <Text style={ab.bigTitle}>부모님께{"\n"}선물 보내기</Text>
+          <View style={ab.pill}><Text style={ab.pillText}>{t.giftFilterAll}</Text></View>
+          <Text style={ab.bigTitle}>{t.giftShopTitle}</Text>
         </View>
 
         {bought && (
-          <View style={gf.success}><Ionicons name="checkmark-circle" size={16} color={COLORS.neonText} /><Text style={gf.successText}>{bought.name} 주문 완료!</Text></View>
+          <View style={gf.success}><Ionicons name="checkmark-circle" size={16} color={COLORS.neonText} /><Text style={gf.successText}>{bought.name} {t.giftOrderDone}</Text></View>
         )}
 
         <View style={gf.filterRow}>
           {cats.map(c => (
-            <Pressable key={c} onPress={() => setFilter(c)} style={[gf.chip, filter === c && gf.chipOn]}>
-              <Text style={[gf.chipText, filter === c && gf.chipTextOn]}>{c}</Text>
+            <Pressable key={c.key} onPress={() => setFilter(c.key)} style={[gf.chip, filter === c.key && gf.chipOn]}>
+              <Text style={[gf.chipText, filter === c.key && gf.chipTextOn]}>{c.label}</Text>
             </Pressable>
           ))}
         </View>
 
         <View style={gf.grid}>
           {filtered.map((g, idx) => {
-            const first = idx === 0 && filter === "전체";
+            const first = idx === 0 && filter === "all";
             return (
               <Pressable key={g.id} style={({ pressed }) => [gf.card, first && gf.cardNeon, { opacity: pressed ? 0.9 : 1 }]} onPress={() => setSel(g)}>
-                {g.popular && <View style={gf.pop}><Text style={gf.popText}>인기</Text></View>}
+                {g.popular && <View style={gf.pop}><Text style={gf.popText}>{t.giftPopular}</Text></View>}
                 {first && <><View style={ab.deco1} /><View style={ab.deco2} /></>}
                 <View style={[gf.iconBg, first && { backgroundColor: "rgba(0,0,0,0.1)" }]}>
-                  <Ionicons name={g.icon} size={26} color={first ? COLORS.neonText : COLORS.neon} />
+                  <Ionicons name={g.icon as any} size={26} color={first ? COLORS.neonText : COLORS.neon} />
                 </View>
                 <Text style={[gf.name, first && { color: COLORS.neonText }]}>{g.name}</Text>
                 <Text style={[gf.price, first && { color: COLORS.neonText }]}>{g.price}</Text>
@@ -1117,17 +1141,17 @@ function GiftScreen({ topBarH }: { topBarH: number }) {
           <View style={ab.sheet}>
             <View style={ab.handle} />
             <View style={[gf.iconBg, { width: 70, height: 70, borderRadius: 22, marginBottom: 14, backgroundColor: COLORS.child.accentSoft }]}>
-              <Ionicons name={sel?.icon ?? "gift"} size={32} color={COLORS.neonText} />
+              <Ionicons name={(sel?.icon ?? "gift") as any} size={32} color={COLORS.neonText} />
             </View>
             <Text style={gf.sheetTitle}>{sel?.name}</Text>
             <Text style={gf.sheetPrice}>{sel?.price}</Text>
-            <Text style={gf.sheetDesc}>부모님께 따뜻한 마음을 전해보세요.</Text>
+            <Text style={gf.sheetDesc}>{t.giftSheetDesc}</Text>
             <Pressable style={ab.sendBtn} onPress={() => { setBought(sel); setSel(null); }}>
               <Ionicons name="gift" size={16} color={COLORS.neonText} />
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.neonText, marginLeft: 8 }}>선물하기 · {sel?.price}</Text>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.neonText, marginLeft: 8 }}>{t.giftSendBtn} · {sel?.price}</Text>
             </Pressable>
             <Pressable style={{ marginTop: 12 }} onPress={() => setSel(null)}>
-              <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textMuted }}>취소</Text>
+              <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textMuted }}>{t.giftCancel}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -1140,42 +1164,38 @@ function GiftScreen({ topBarH }: { topBarH: number }) {
 export default function ChildScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, myRole, deviceId, isMasterChild, childRole } = useFamilyContext();
-  const [tab, setTab] = useState<Tab>("홈");
+  const [tab, setTab] = useState<Tab>("home");
 
   const topInset    = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
   const TOP_H       = topInset + 60;
-  const isMap       = tab === "위치";
+  const isMap       = tab === "map";
 
   return (
     <View style={{ flex: 1, backgroundColor: isMap ? COLORS.mapBg : COLORS.bg }}>
 
-      {/* ── 홈 ── */}
-      {tab === "홈" && (
+      {tab === "home" && (
         <HomeScreen
           familyCode={familyCode}
           allFamilyCodes={allFamilyCodes}
           deviceId={deviceId}
           topBarH={TOP_H}
           bottomInset={bottomInset}
-          onGoToAnbu={() => setTab("사진")}
+          onGoToAnbu={() => setTab("photo")}
         />
       )}
 
-      {/* ── 사진 (안부) ── */}
-      {tab === "사진" && (
+      {tab === "photo" && (
         <AnbuScreen familyCode={familyCode} allFamilyCodes={allFamilyCodes} myName={myName} myRole={myRole} deviceId={deviceId} topBarH={TOP_H} />
       )}
 
-      {/* ── 위치 (지도) ── */}
       {isMap && (
         <View style={StyleSheet.absoluteFillObject}>
           <MapScreen familyCode={familyCode} bottomInset={bottomInset} />
         </View>
       )}
 
-      {/* ── 알림 ── */}
-      {tab === "알림" && (
+      {tab === "alarm" && (
         <NotificationScreen allFamilyCodes={allFamilyCodes} topBarH={TOP_H} bottomInset={bottomInset} />
       )}
 

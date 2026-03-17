@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
+import { useLang } from "@/context/LanguageContext";
 
 const BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -28,7 +29,7 @@ async function post<T>(path: string, body: object): Promise<T> {
     body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "오류가 발생했습니다");
+  if (!res.ok) throw new Error(data.error || "Error");
   return data as T;
 }
 
@@ -51,6 +52,7 @@ export default function ChildSignupScreen() {
   const topInset    = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const familyCtx   = useFamilyContext();
+  const { t } = useLang();
 
   const [mode, setMode] = useState<Mode>(null);
   const [step, setStep] = useState<Step>("mode");
@@ -140,7 +142,7 @@ export default function ChildSignupScreen() {
         Animated.spring(scaleUp, { toValue: 1, useNativeDriver: false, tension: 70, friction: 8 }),
       ]).start();
     } catch (e: any) {
-      setJoinError(e.message || "가입 처리 중 오류가 발생했습니다");
+      setJoinError(e.message || (t.signupJoinError as string));
     } finally {
       setJoining(false);
     }
@@ -172,13 +174,13 @@ export default function ChildSignupScreen() {
           <View style={s.completeIcon}>
             <Ionicons name="checkmark-circle" size={80} color={COLORS.neon} />
           </View>
-          <Text style={s.completeTitle}>가입 완료!</Text>
-          <Text style={s.completeSub}>{name}님, 환영합니다{"\n"}이제 가족과 안부를 나눠보세요</Text>
+          <Text style={s.completeTitle}>{t.signupComplete}</Text>
+          <Text style={s.completeSub}>{(t.signupCompleteSub as string).replace("{name}", name)}</Text>
           <Pressable
             style={({ pressed }) => [s.startBtn, { opacity: pressed ? 0.88 : 1 }]}
             onPress={() => router.replace("/child")}
           >
-            <Text style={s.startBtnText}>안부 시작하기</Text>
+            <Text style={s.startBtnText}>{t.signupStartAnbu}</Text>
             <Ionicons name="arrow-forward" size={20} color={COLORS.neonText} />
           </Pressable>
         </Animated.View>
@@ -194,21 +196,21 @@ export default function ChildSignupScreen() {
           <Pressable style={s.backBtn} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
           </Pressable>
-          <Text style={s.headerTitle}>자녀 가입</Text>
+          <Text style={s.headerTitle}>{t.signupChildHeader}</Text>
           <View style={{ width: 36 }} />
         </View>
 
         <View style={s.modeWrap}>
-          <Text style={s.modeHeading}>어떻게 시작하시겠어요?</Text>
-          <Text style={s.modeSub}>처음 가족방을 만드는 경우 "새 가족 만들기"를{"\n"}선택하세요. 이미 있는 경우 코드로 참여하세요.</Text>
+          <Text style={s.modeHeading}>{t.signupModeHeading}</Text>
+          <Text style={s.modeSub}>{t.signupModeSub}</Text>
 
           <Pressable style={s.modeCard} onPress={() => handleSelectMode("create")}>
             <View style={[s.modeIconBg, { backgroundColor: "rgba(212,242,0,0.15)" }]}>
               <Ionicons name="home-outline" size={28} color={COLORS.navPill} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.modeCardTitle}>새 가족 만들기</Text>
-              <Text style={s.modeCardDesc}>처음 가입하는 자녀</Text>
+              <Text style={s.modeCardTitle}>{t.signupCreateFamily}</Text>
+              <Text style={s.modeCardDesc}>{t.signupCreateFamilyDesc}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
           </Pressable>
@@ -218,8 +220,8 @@ export default function ChildSignupScreen() {
               <Ionicons name="enter-outline" size={28} color="#6366f1" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.modeCardTitle}>코드로 참여하기</Text>
-              <Text style={s.modeCardDesc}>이미 있는 가족방에 추가 자녀로 참여</Text>
+              <Text style={s.modeCardTitle}>{t.signupJoinByCode}</Text>
+              <Text style={s.modeCardDesc}>{t.signupJoinByCodeDesc}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
           </Pressable>
@@ -237,7 +239,7 @@ export default function ChildSignupScreen() {
           <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
         </Pressable>
         <Text style={s.headerTitle}>
-          {mode === "create" ? "새 가족 만들기" : "가족방 참여하기"}
+          {mode === "create" ? t.signupFormCreateTitle : t.signupFormJoinTitle}
         </Text>
         <View style={{ width: 36 }} />
       </View>
@@ -250,8 +252,8 @@ export default function ChildSignupScreen() {
         >
           {mode === "join" && (
             <>
-              <Text style={s.sectionTitle}>가족 코드 입력</Text>
-              <Text style={s.fieldLabel}>마스터 자녀의 가족 코드</Text>
+              <Text style={s.sectionTitle}>{t.signupFamilyCodeInput}</Text>
+              <Text style={s.fieldLabel}>{t.signupMasterCodeLabel}</Text>
               <TextInput
                 style={[s.input, s.codeInput]}
                 value={joinCode}
@@ -265,19 +267,19 @@ export default function ChildSignupScreen() {
             </>
           )}
 
-          <Text style={s.sectionTitle}>기본 정보</Text>
+          <Text style={s.sectionTitle}>{t.signupBasicInfo}</Text>
 
-          <Text style={s.fieldLabel}>성함</Text>
+          <Text style={s.fieldLabel}>{t.signupNameLabel}</Text>
           <TextInput
             style={s.input}
             value={name}
             onChangeText={setName}
-            placeholder="이름을 입력해주세요"
+            placeholder={t.signupNamePlaceholder as string}
             placeholderTextColor={COLORS.child.textMuted}
             maxLength={20}
           />
 
-          <Text style={s.fieldLabel}>휴대폰 번호</Text>
+          <Text style={s.fieldLabel}>{t.signupPhoneLabel}</Text>
           <View style={s.phoneRow}>
             <TextInput
               style={[s.input, s.phoneInput]}
@@ -300,7 +302,7 @@ export default function ChildSignupScreen() {
             >
               {sendingOtp
                 ? <ActivityIndicator size="small" color="#9ca3af" />
-                : <Text style={[s.otpRequestBtnText, (!phone.trim() || sendingOtp) && s.otpRequestBtnTextDisabled]}>{otpSent ? "재전송" : "인증번호 받기"}</Text>
+                : <Text style={[s.otpRequestBtnText, (!phone.trim() || sendingOtp) && s.otpRequestBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
               }
             </Pressable>
           </View>
@@ -309,19 +311,19 @@ export default function ChildSignupScreen() {
           {devCode && (
             <View style={s.devCodeBox}>
               <Ionicons name="information-circle-outline" size={15} color="#f59e0b" />
-              <Text style={s.devCodeText}>개발 모드 — 인증번호: <Text style={{ fontFamily: "Inter_700Bold" }}>{devCode}</Text></Text>
+              <Text style={s.devCodeText}>{t.signupDevCode} <Text style={{ fontFamily: "Inter_700Bold" }}>{devCode}</Text></Text>
             </View>
           )}
 
           {otpSent && (
             <View>
-              <Text style={s.fieldLabel}>인증번호</Text>
+              <Text style={s.fieldLabel}>{t.signupOtpLabel}</Text>
               <View style={s.phoneRow}>
                 <TextInput
                   style={[s.input, s.phoneInput, s.otpInput]}
                   value={otp}
                   onChangeText={(v) => { setOtp(v); setOtpVerified(false); setOtpError(""); }}
-                  placeholder="6자리 입력"
+                  placeholder={t.signupOtpPlaceholder as string}
                   placeholderTextColor={COLORS.child.textMuted}
                   keyboardType="number-pad"
                   maxLength={6}
@@ -340,9 +342,9 @@ export default function ChildSignupScreen() {
                     : otpVerified
                     ? <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <Ionicons name="checkmark" size={16} color="#fff" />
-                        <Text style={s.otpRequestBtnText}>인증 완료</Text>
+                        <Text style={s.otpRequestBtnText}>{t.signupOtpVerified}</Text>
                       </View>
-                    : <Text style={[s.otpRequestBtnText, otp.length !== 6 && s.otpRequestBtnTextDisabled]}>확인</Text>
+                    : <Text style={[s.otpRequestBtnText, otp.length !== 6 && s.otpRequestBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
                   }
                 </Pressable>
               </View>
@@ -352,16 +354,16 @@ export default function ChildSignupScreen() {
 
           <View style={s.divider} />
 
-          <Text style={s.sectionTitle}>동의 항목</Text>
+          <Text style={s.sectionTitle}>{t.signupAgreementTitle}</Text>
           <Checkbox
             checked={allowNotif}
             onPress={() => setAllowNotif(v => !v)}
-            label="알림 허용 — 부모님의 하트·메시지 알림을 받아요"
+            label={t.signupAgreeNotif as string}
           />
           <Checkbox
             checked={agreeTerms}
             onPress={() => setAgreeTerms(v => !v)}
-            label="서비스 이용약관 및 개인정보처리방침에 동의합니다 (필수)"
+            label={t.signupAgreeTerms as string}
           />
 
           {!!joinError && <Text style={s.errorText}>{joinError}</Text>}
@@ -372,7 +374,7 @@ export default function ChildSignupScreen() {
           >
             {joining
               ? <ActivityIndicator color={canJoin ? COLORS.neonText : "#9ca3af"} />
-              : <Text style={[s.joinBtnText, !canJoin && s.joinBtnTextDisabled]}>{mode === "create" ? "가족 만들기" : "가족방 참여"}</Text>
+              : <Text style={[s.joinBtnText, !canJoin && s.joinBtnTextDisabled]}>{mode === "create" ? t.signupCreateBtn : t.signupJoinBtn}</Text>
             }
           </Pressable>
         </ScrollView>
