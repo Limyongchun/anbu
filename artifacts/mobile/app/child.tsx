@@ -978,7 +978,37 @@ function HomeScreen({
         </View>
       </View>
 
-      
+      {/* Recent Activity */}
+      <Text style={hm.sectionTitle}>{t.recentActivity}</Text>
+      {loading ? (
+        <ActivityIndicator style={{ marginVertical: 20 }} color={DS.info} />
+      ) : activities.length === 0 ? (
+        <View style={[hm.activityCard, { padding: 28, alignItems: "center", gap: 8 }]}>
+          <Ionicons name="time-outline" size={26} color={DS.textTertiary} />
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary }}>{t.noActivityYet}</Text>
+        </View>
+      ) : (
+        <View style={hm.activityCard}>
+          {activities.map((item, i) => (
+            <React.Fragment key={item.id}>
+              {i > 0 && <View style={hm.activityDivider} />}
+              <View style={hm.activityRow}>
+                <View style={[hm.activityIconBg, { backgroundColor: item.iconBg }]}>
+                  <Ionicons name={item.icon} size={14} color={item.iconColor} />
+                </View>
+                <Text style={hm.activityLabel}>{item.label}</Text>
+                <Text style={hm.activityTime}>{item.time}</Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+      )}
+
+      {!showAll && parentActivities.length > 4 && (
+        <Pressable style={hm.viewAllBtn} onPress={() => setShowAll(true)}>
+          <Text style={hm.viewAllText}>{t.viewAllActivity}</Text>
+        </Pressable>
+      )}
     </ScrollView>
     </Animated.View>
   );
