@@ -935,6 +935,23 @@ function HomeScreen({
   const parentName = parentLoc?.memberName ?? parentMemberName ?? t.parentDefault;
   const hour = new Date().getHours();
   const greeting = t.homeParentActivity;
+  const isActive = statusLevel === "good";
+
+  const dailySummary = useMemo(() => {
+    const counts: Record<string, number> = { walk: 0, photo: 0, rest: 0, location: 0 };
+    parentActivities.forEach(a => {
+      if (a.activityType === "location") counts.location++;
+      else if (a.activityType === "view_slide" || a.activityType === "heart") counts.photo++;
+      else if (a.activityType === "app_open") counts.rest++;
+      else counts.walk++;
+    });
+    return [
+      { key: "walk", icon: "walk-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyWalk, count: counts.walk, color: "#22c55e" },
+      { key: "photo", icon: "camera-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyPhoto, count: counts.photo, color: "#8b5cf6" },
+      { key: "rest", icon: "cafe-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyRest, count: counts.rest, color: "#f59e0b" },
+      { key: "location", icon: "navigate-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyLocation, count: counts.location, color: "#3b82f6" },
+    ];
+  }, [parentActivities, t]);
 
   // 가족 코드 없음 (회원가입 전 직접 접근)
   if (!familyCode) {
@@ -968,35 +985,53 @@ function HomeScreen({
       {/* 인사말 */}
       <Text style={hm.greeting}>{greeting}</Text>
 
-      {/* 상태 배너 */}
-      <View style={hm.statusBanner}>
-        <View style={hm.statusRow}>
-          <View style={[hm.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={hm.statusTitle}>{statusMsg.title}</Text>
-        </View>
-        <Text style={hm.statusSub}>{statusMsg.sub}</Text>
-      </View>
+      {/* ── 통합 부모 상태 카드 ── */}
+      <View style={hm.unifiedCard}>
+        <View style={[hm.ucStatusStripe, { backgroundColor: statusColor }]} />
 
-      {/* 부모님 카드 */}
-      <View style={hm.parentCard}>
-        <View style={hm.parentAvatar}>
-          {parentPhoto ? (
-            <Image source={{ uri: parentPhoto }} style={{ width: 50, height: 50, borderRadius: 25 }} />
-          ) : (
-            <Ionicons name="person" size={26} color="#3b82f6" />
-          )}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={hm.parentName}>{parentName}</Text>
-          <View style={hm.parentStatusRow}>
-            <View style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: statusColor }]} />
-            <Text style={hm.parentStatusText}>{STATUS_LABEL[statusLevel]}</Text>
+        <View style={hm.ucHeader}>
+          <View style={hm.ucAvatar}>
+            {parentPhoto ? (
+              <Image source={{ uri: parentPhoto }} style={{ width: 60, height: 60, borderRadius: 30 }} />
+            ) : (
+              <Ionicons name="person" size={30} color="#3b82f6" />
+            )}
+            <View style={[hm.ucOnlineDot, { backgroundColor: statusColor }]} />
           </View>
-          {parentLoc && (
-            <Text style={hm.parentTime}>{t.lastActivity} · {formatTimeI18n(parentLoc.updatedAt, t)}</Text>
-          )}
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={hm.ucName}>{parentName}</Text>
+            </View>
+            <View style={hm.ucStatusBadgeRow}>
+              <View style={[hm.ucStatusBadge, { backgroundColor: isActive ? "#dcfce7" : statusLevel === "warn" ? "#fef3c7" : statusLevel === "alert" ? "#fee2e2" : "#f1f5f9" }]}>
+                <View style={[hm.ucStatusBadgeDot, { backgroundColor: statusColor }]} />
+                <Text style={[hm.ucStatusBadgeText, { color: isActive ? "#16a34a" : statusLevel === "warn" ? "#d97706" : statusLevel === "alert" ? "#dc2626" : "#64748b" }]}>
+                  {isActive ? t.parentStatusActive : t.parentStatusIdle}
+                </Text>
+              </View>
+              {parentLoc && (
+                <Text style={hm.ucLastTime}>{t.lastActivity} {formatTimeI18n(parentLoc.updatedAt, t)}</Text>
+              )}
+            </View>
+          </View>
         </View>
-        <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+
+        <View style={hm.ucEmotionBox}>
+          <Text style={hm.ucEmotionText}>{statusMsg.title}</Text>
+          <Text style={hm.ucEmotionSub}>{statusMsg.sub}</Text>
+        </View>
+
+        <View style={hm.ucDailyRow}>
+          {dailySummary.map(d => (
+            <View key={d.key} style={hm.ucDailyItem}>
+              <View style={[hm.ucDailyIconBg, { backgroundColor: d.color + "18" }]}>
+                <Ionicons name={d.icon} size={18} color={d.color} />
+              </View>
+              <Text style={hm.ucDailyCount}>{d.count}</Text>
+              <Text style={hm.ucDailyLabel}>{d.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       {/* 최근 활동 */}
@@ -1286,18 +1321,28 @@ const wr = StyleSheet.create({
 const hm = StyleSheet.create({
   centerEmpty:     { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting:        { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#64748b", marginHorizontal: 20, marginBottom: 10 },
-  statusBanner:    { marginHorizontal: 16, marginBottom: 12, borderRadius: 24, padding: 22, backgroundColor: "#fff", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 14, elevation: 3 },
-  statusRow:       { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
-  statusDot:       { width: 10, height: 10, borderRadius: 5 },
-  statusTitle:     { fontFamily: "Inter_700Bold", fontSize: 20, color: "#1a2535", flex: 1, lineHeight: 26 },
-  statusSub:       { fontFamily: "Inter_400Regular", fontSize: 14, color: "#64748b", lineHeight: 20 },
-  parentCard:      { marginHorizontal: 16, marginBottom: 6, borderRadius: 20, backgroundColor: "#fff", padding: 16, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  parentAvatar:    { width: 52, height: 52, borderRadius: 26, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  parentName:      { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1a2535", marginBottom: 4 },
-  parentStatusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  parentStatusText:{ fontFamily: "Inter_500Medium", fontSize: 13, color: "#64748b" },
-  parentTime:      { fontFamily: "Inter_400Regular", fontSize: 12, color: "#94a3b8", marginTop: 3 },
-  sectionTitle:    { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1a2535", marginHorizontal: 20, marginTop: 22, marginBottom: 10 },
+
+  unifiedCard:     { marginHorizontal: 16, marginBottom: 16, borderRadius: 24, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 5 },
+  ucStatusStripe:  { height: 4, width: "100%" },
+  ucHeader:        { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
+  ucAvatar:        { width: 64, height: 64, borderRadius: 32, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  ucOnlineDot:     { position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, borderColor: "#fff" },
+  ucName:          { fontFamily: "Inter_700Bold", fontSize: 20, color: "#1a2535" },
+  ucStatusBadgeRow:{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+  ucStatusBadge:   { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  ucStatusBadgeDot:{ width: 7, height: 7, borderRadius: 4 },
+  ucStatusBadgeText:{ fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  ucLastTime:      { fontFamily: "Inter_400Regular", fontSize: 11, color: "#94a3b8" },
+  ucEmotionBox:    { marginHorizontal: 20, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: "#f8fafc", borderRadius: 16, marginBottom: 16 },
+  ucEmotionText:   { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1a2535", marginBottom: 4, lineHeight: 24 },
+  ucEmotionSub:    { fontFamily: "Inter_400Regular", fontSize: 13, color: "#64748b", lineHeight: 18 },
+  ucDailyRow:      { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, paddingBottom: 20, paddingTop: 4 },
+  ucDailyItem:     { alignItems: "center", gap: 4 },
+  ucDailyIconBg:   { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  ucDailyCount:    { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1a2535" },
+  ucDailyLabel:    { fontFamily: "Inter_400Regular", fontSize: 11, color: "#94a3b8" },
+
+  sectionTitle:    { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1a2535", marginHorizontal: 20, marginTop: 6, marginBottom: 10 },
   activityCard:    { marginHorizontal: 16, borderRadius: 20, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   activityRow:     { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7, paddingHorizontal: 14 },
   activityDivider: { height: 1, backgroundColor: "#f1f5f9", marginHorizontal: 14 },
