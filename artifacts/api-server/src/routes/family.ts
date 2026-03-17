@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
+  accountsTable,
   familyGroupsTable,
   familyMembersTable,
   familyLocationsTable,
@@ -44,7 +45,7 @@ function serializeMember(m: typeof familyMembersTable.$inferSelect) {
 // POST /api/family/create
 router.post("/family/create", async (req, res) => {
   try {
-    const { deviceId, memberName, role } = req.body;
+    const { deviceId, memberName, role, accountId } = req.body;
     if (!deviceId || !memberName || !role) {
       return res.status(400).json({ error: "deviceId, memberName, role are required" });
     }
@@ -58,7 +59,15 @@ router.post("/family/create", async (req, res) => {
     }
     await db.insert(familyGroupsTable).values({ code });
     const childRole = role === "child" ? "master" : null;
-    await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role, childRole });
+    let validAccountId: number | null = null;
+    if (accountId) {
+      const [acct] = await db.select().from(accountsTable).where(eq(accountsTable.id, Number(accountId)));
+      if (acct) validAccountId = acct.id;
+    }
+    await db.insert(familyMembersTable).values({
+      familyCode: code, deviceId, memberName, role, childRole,
+      accountId: validAccountId,
+    });
     const members = await db.select().from(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
     const [group] = await db.select().from(familyGroupsTable).where(eq(familyGroupsTable.code, code));
     return res.json({
@@ -76,7 +85,7 @@ router.post("/family/create", async (req, res) => {
 // POST /api/family/join
 router.post("/family/join", async (req, res) => {
   try {
-    const { code, deviceId, memberName, role } = req.body;
+    const { code, deviceId, memberName, role, accountId } = req.body;
     if (!code || !deviceId || !memberName || !role) {
       return res.status(400).json({ error: "code, deviceId, memberName, role are required" });
     }
@@ -105,15 +114,21 @@ router.post("/family/join", async (req, res) => {
     const hasMasterChild = allMembers.some(m => m.role === "child" && m.childRole === "master");
     const childRole = role === "child" ? (hasMasterChild ? "sub" : "master") : null;
 
+    let validAccountId: number | null = null;
+    if (accountId) {
+      const [acct] = await db.select().from(accountsTable).where(eq(accountsTable.id, Number(accountId)));
+      if (acct) validAccountId = acct.id;
+    }
     let member;
     if (selfExisting.length > 0) {
       [member] = await db.update(familyMembersTable)
-        .set({ memberName, role, childRole })
+        .set({ memberName, role, childRole, ...(validAccountId ? { accountId: validAccountId } : {}) })
         .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)))
         .returning();
     } else {
-      [member] = await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role, childRole }).returning();
-
+      [member] = await db.insert(familyMembersTable).values({
+        familyCode: code, deviceId, memberName, role, childRole, accountId: validAccountId,
+      }).returning();
     }
     return res.json({ ...serializeMember(member), childRole });
   } catch (e) {
@@ -419,6 +434,27 @@ router.get("/family/:code/activities", async (req, res) => {
     return res.json(logs);
   } catch (e) {
     return res.status(500).json({ error: "Failed to fetch activities" });
+  }
+});
+
+router.get("/account/:accountId/families", async (req, res) => {
+  try {
+    const accountId = Number(req.params.accountId);
+    if (!accountId || isNaN(accountId)) {
+      return res.status(400).json({ error: "Invalid accountId" });
+    }
+    const memberships = await db.select().from(familyMembersTable).where(eq(familyMembersTable.accountId, accountId));
+    const families = memberships.map(m => ({
+      familyCode: m.familyCode,
+      memberName: m.memberName,
+      role: m.role,
+      childRole: m.childRole,
+      deviceId: m.deviceId,
+    }));
+    return res.json({ accountId, families });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Failed to fetch account families" });
   }
 });
 

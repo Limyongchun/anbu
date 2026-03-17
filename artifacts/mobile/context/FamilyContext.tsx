@@ -9,6 +9,7 @@ export interface FamilyState {
   familyCode: string | null;
   allFamilyCodes: string[];
   deviceId: string;
+  accountId: number | null;
   myName: string | null;
   myRole: FamilyRole | null;
   childRole: ChildRole;
@@ -22,9 +23,11 @@ interface FamilyContextValue extends FamilyState {
     name: string,
     role: FamilyRole,
     childRole?: ChildRole,
+    accountId?: number | null,
   ) => Promise<void>;
   disconnect: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
+  setAccountId: (id: number) => Promise<void>;
   addExtraFamily: (code: string) => Promise<void>;
   removeExtraFamily: (code: string) => Promise<void>;
   loading: boolean;
@@ -34,6 +37,7 @@ const STORAGE_KEYS = {
   familyCode: "family_code",
   extraCodes: "extra_family_codes",
   deviceId: "device_id",
+  accountId: "account_id",
   myName: "my_name",
   myRole: "my_role",
   childRole: "child_role",
@@ -63,6 +67,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     familyCode: null,
     allFamilyCodes: [],
     deviceId: "",
+    accountId: null,
     myName: null,
     myRole: null,
     childRole: null,
@@ -74,14 +79,16 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load() {
       try {
-        const [code, extrasRaw, deviceId, name, role, cr] = await Promise.all([
+        const [code, extrasRaw, deviceId, acctIdRaw, name, role, cr] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.familyCode),
           AsyncStorage.getItem(STORAGE_KEYS.extraCodes),
           AsyncStorage.getItem(STORAGE_KEYS.deviceId),
+          AsyncStorage.getItem(STORAGE_KEYS.accountId),
           AsyncStorage.getItem(STORAGE_KEYS.myName),
           AsyncStorage.getItem(STORAGE_KEYS.myRole),
           AsyncStorage.getItem(STORAGE_KEYS.childRole),
         ]);
+        const accountId = acctIdRaw ? Number(acctIdRaw) : null;
 
         let effectiveDeviceId = deviceId;
         if (!effectiveDeviceId) {
@@ -123,6 +130,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           familyCode: code,
           allFamilyCodes: buildAllCodes(code, extras),
           deviceId: effectiveDeviceId,
+          accountId,
           myName: name,
           myRole: (role as FamilyRole) || null,
           childRole,
@@ -143,6 +151,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     name: string,
     role: FamilyRole,
     childRole: ChildRole = null,
+    acctId?: number | null,
   ) => {
     const tasks: Promise<void>[] = [
       AsyncStorage.setItem(STORAGE_KEYS.familyCode, code),
@@ -154,17 +163,26 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     } else {
       tasks.push(AsyncStorage.removeItem(STORAGE_KEYS.childRole));
     }
+    if (acctId) {
+      tasks.push(AsyncStorage.setItem(STORAGE_KEYS.accountId, String(acctId)));
+    }
     await Promise.all(tasks);
     setState((prev) => ({
       ...prev,
       familyCode: code,
       allFamilyCodes: buildAllCodes(code, []),
+      accountId: acctId ?? prev.accountId,
       myName: name,
       myRole: role,
       childRole,
       isMasterChild: childRole === "master",
       isConnected: true,
     }));
+  };
+
+  const setAccountId = async (id: number) => {
+    await AsyncStorage.setItem(STORAGE_KEYS.accountId, String(id));
+    setState((prev) => ({ ...prev, accountId: id }));
   };
 
   const addExtraFamily = async (code: string) => {
@@ -238,6 +256,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         connect,
         disconnect,
         updateName,
+        setAccountId,
         addExtraFamily,
         removeExtraFamily,
         loading,

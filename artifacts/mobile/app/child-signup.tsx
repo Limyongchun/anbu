@@ -17,21 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
-
-const BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
-
-async function post<T>(path: string, body: object): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Error");
-  return data as T;
-}
+import { api, type AccountFamily } from "@/lib/api";
 
 type Mode = null | "create" | "join";
 type Step = "mode" | "form" | "complete";
@@ -65,6 +51,8 @@ export default function ChildSignupScreen() {
   const [devCode,     setDevCode]     = useState<string | null>(null);
 
   const [joinCode,    setJoinCode]    = useState("");
+  const [accountId,   setAccountId]   = useState<number | null>(null);
+  const [existingFamilies, setExistingFamilies] = useState<AccountFamily[]>([]);
 
   const [allowNotif,  setAllowNotif]  = useState(false);
   const [agreeTerms,  setAgreeTerms]  = useState(false);
@@ -90,7 +78,7 @@ export default function ChildSignupScreen() {
     setOtpVerified(false);
     setDevCode(null);
     try {
-      const res = await post<{ success: boolean; devCode?: string }>("/auth/send-otp", { phone: phone.trim() });
+      const res = await api.sendOtp(phone.trim());
       setOtpSent(true);
       if (res.devCode) setDevCode(res.devCode);
     } catch (e: any) {
@@ -105,12 +93,50 @@ export default function ChildSignupScreen() {
     setVerifyingOtp(true);
     setOtpError("");
     try {
-      await post("/auth/verify-otp", { phone: phone.trim(), otp: otp.trim() });
+      const res = await api.verifyOtp(phone.trim(), otp.trim());
       setOtpVerified(true);
+      if (res.accountId) {
+        setAccountId(res.accountId);
+        familyCtx.setAccountId(res.accountId);
+      }
+      if (res.existingFamilies && res.existingFamilies.length > 0) {
+        setExistingFamilies(res.existingFamilies);
+      }
     } catch (e: any) {
       setOtpError(e.message);
     } finally {
       setVerifyingOtp(false);
+    }
+  };
+
+  const handleRecoverFamily = async (fam: AccountFamily) => {
+    setJoining(true);
+    setJoinError("");
+    try {
+      const member = await api.joinFamily(
+        fam.familyCode,
+        familyCtx.deviceId,
+        fam.memberName,
+        fam.role,
+        accountId,
+      );
+      await familyCtx.connect(
+        fam.familyCode,
+        fam.memberName,
+        fam.role as "parent" | "child",
+        (member.childRole as "master" | "sub") || (fam.childRole as "master" | "sub") || null,
+        accountId,
+      );
+      setName(fam.memberName);
+      setStep("complete");
+      Animated.parallel([
+        Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: false }),
+        Animated.spring(scaleUp, { toValue: 1, useNativeDriver: false, tension: 70, friction: 8 }),
+      ]).start();
+    } catch (e: any) {
+      setJoinError(e.message);
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -120,21 +146,12 @@ export default function ChildSignupScreen() {
     setJoinError("");
     try {
       if (mode === "create") {
-        const group = await post<{ code: string; childRole: string }>("/family/create", {
-          deviceId:   familyCtx.deviceId,
-          memberName: name.trim(),
-          role:       "child",
-        });
-        await familyCtx.connect(group.code, name.trim(), "child", "master");
+        const group = await api.createFamily(familyCtx.deviceId, name.trim(), "child", accountId);
+        await familyCtx.connect(group.code, name.trim(), "child", "master", accountId);
       } else {
         const code = joinCode.trim().toUpperCase();
-        const member = await post<{ childRole: string }>("/family/join", {
-          code,
-          deviceId:   familyCtx.deviceId,
-          memberName: name.trim(),
-          role:       "child",
-        });
-        await familyCtx.connect(code, name.trim(), "child", (member.childRole as "master" | "sub") || "sub");
+        const member = await api.joinFamily(code, familyCtx.deviceId, name.trim(), "child", accountId);
+        await familyCtx.connect(code, name.trim(), "child", (member.childRole as "master" | "sub") || "sub", accountId);
       }
       setStep("complete");
       Animated.parallel([
@@ -315,6 +332,24 @@ export default function ChildSignupScreen() {
             </View>
           )}
 
+          {existingFamilies.length > 0 && otpVerified && (
+            <View style={s.recoveryBox}>
+              <Text style={s.recoveryTitle}>{t.signupRecoveryTitle || "기존 가족이 발견됐어요!"}</Text>
+              <Text style={s.recoveryDesc}>{t.signupRecoveryDesc || "이 번호로 등록된 가족이 있습니다. 바로 복구할 수 있어요."}</Text>
+              {existingFamilies.map((fam) => (
+                <Pressable key={fam.familyCode} style={s.recoveryCard} onPress={() => handleRecoverFamily(fam)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.recoveryName}>{fam.memberName}</Text>
+                    <Text style={s.recoveryCode}>{fam.familyCode} · {fam.role === "child" ? (fam.childRole === "master" ? "마스터" : "서브") : "부모"}</Text>
+                  </View>
+                  <Ionicons name="arrow-forward-circle" size={28} color={COLORS.child.accent} />
+                </Pressable>
+              ))}
+              <View style={s.divider} />
+              <Text style={[s.recoveryDesc, { marginTop: 0 }]}>{t.signupRecoveryOrNew || "또는 아래에서 새로 시작할 수 있어요."}</Text>
+            </View>
+          )}
+
           {otpSent && (
             <View>
               <Text style={s.fieldLabel}>{t.signupOtpLabel}</Text>
@@ -433,6 +468,13 @@ const s = StyleSheet.create({
   joinBtnDisabled: { backgroundColor: "#d1d5db" },
   joinBtnText:     { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.neonText },
   joinBtnTextDisabled: { color: "#9ca3af" },
+
+  recoveryBox:   { backgroundColor: "rgba(212,242,0,0.08)", borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: "rgba(212,242,0,0.25)" },
+  recoveryTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 6 },
+  recoveryDesc:  { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub, marginBottom: 12, lineHeight: 20 },
+  recoveryCard:  { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.child.bgCard, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
+  recoveryName:  { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.child.text, marginBottom: 2 },
+  recoveryCode:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textSub },
 
   completeWrap:  { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
   completeIcon:  { marginBottom: 24 },

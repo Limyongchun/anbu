@@ -58,17 +58,45 @@ export interface FamilyMessage {
   createdAt: string;
 }
 
+export interface AccountFamily {
+  familyCode: string;
+  memberName: string;
+  role: string;
+  childRole: string | null;
+  deviceId: string;
+}
+
 export const api = {
-  createFamily: (deviceId: string, memberName: string, role: string): Promise<FamilyGroup> =>
-    request("/family/create", {
+  sendOtp: (phone: string): Promise<{ success: boolean; devCode?: string }> =>
+    request("/auth/send-otp", {
       method: "POST",
-      body: JSON.stringify({ deviceId, memberName, role }),
+      body: JSON.stringify({ phone }),
     }),
 
-  joinFamily: (code: string, deviceId: string, memberName: string, role: string): Promise<FamilyMember> =>
+  verifyOtp: (phone: string, otp: string): Promise<{
+    success: boolean;
+    accountId: number | null;
+    phone: string;
+    existingFamilies: AccountFamily[];
+  }> =>
+    request("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone, otp }),
+    }),
+
+  getAccountFamilies: (accountId: number): Promise<{ accountId: number; families: AccountFamily[] }> =>
+    request(`/account/${accountId}/families`),
+
+  createFamily: (deviceId: string, memberName: string, role: string, accountId?: number | null): Promise<FamilyGroup> =>
+    request("/family/create", {
+      method: "POST",
+      body: JSON.stringify({ deviceId, memberName, role, accountId }),
+    }),
+
+  joinFamily: (code: string, deviceId: string, memberName: string, role: string, accountId?: number | null): Promise<FamilyMember> =>
     request("/family/join", {
       method: "POST",
-      body: JSON.stringify({ code, deviceId, memberName, role }),
+      body: JSON.stringify({ code, deviceId, memberName, role, accountId }),
     }),
 
   getFamily: (code: string): Promise<FamilyGroup> =>

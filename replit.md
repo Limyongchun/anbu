@@ -112,7 +112,8 @@ Expo React Native app called A N B U. Korean family safety app.
 - **Context**: `context/FamilyContext.tsx` — AsyncStorage-backed: familyCode, allFamilyCodes, deviceId, myName, myRole, childRole ("master"|"sub"|null), isMasterChild
 - **API client**: `lib/api.ts` — typed fetch client using `EXPO_PUBLIC_DOMAIN` env var
 - **Auth**: OTP via `POST /api/auth/send-otp` + `POST /api/auth/verify-otp`; devCode returned in non-production
-- **DB schema** `familyMembersTable`: includes `childRole text` column (null for parents, "master"/"sub" for children)
+- **Account system**: `accountsTable` (id serial, phone text unique, created_at, updated_at); `family_members.account_id` nullable FK to accounts; on verify-otp, find-or-create account by phone → returns `accountId` + `existingFamilies`; client stores `accountId` in AsyncStorage via FamilyContext; `child-signup.tsx` shows recovery UI if existing families found; `GET /api/account/:accountId/families` for auto-recovery; `family/create` and `family/join` accept optional `accountId`
+- **DB schema** `familyMembersTable`: includes `childRole text` column (null for parents, "master"/"sub" for children), `accountId integer` nullable FK to `accountsTable`
 - **Parent Activity Logs**: `parentActivityLogsTable` in DB; API `POST /api/family/:code/activity` + `GET /api/family/:code/activities`; parent app logs heart/view_slide/location/app_open activities with throttling; child app fetches real logs for "최근 활동" section
 - **Privacy Mode**: Parents can toggle privacy mode in profile settings; when enabled, their location pin is hidden on child's map and replaced with a status card showing activity status (active/last seen); DB `privacyMode` boolean in `familyMembersTable`; API `PATCH /api/family/:code/member/:deviceId/privacy`; purple-themed UI (#8b5cf6)
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`

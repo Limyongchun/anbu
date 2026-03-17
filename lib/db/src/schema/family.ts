@@ -62,11 +62,13 @@ export const parentActivityLogsTable = pgTable("parent_activity_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const insertAccountSchema = createInsertSchema(accountsTable);
 export const insertFamilyGroupSchema = createInsertSchema(familyGroupsTable);
 export const insertFamilyMemberSchema = createInsertSchema(familyMembersTable);
 export const insertFamilyLocationSchema = createInsertSchema(familyLocationsTable);
 export const insertFamilyMessageSchema = createInsertSchema(familyMessagesTable);
 
+export type Account = typeof accountsTable.$inferSelect;
 export type FamilyGroup = typeof familyGroupsTable.$inferSelect;
 export type FamilyMember = typeof familyMembersTable.$inferSelect;
 export type FamilyLocation = typeof familyLocationsTable.$inferSelect;
