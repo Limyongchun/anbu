@@ -1242,7 +1242,7 @@ const hm = StyleSheet.create({
   summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 3, marginTop: 2 },
   summaryTitleText: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#FFFFFF" },
   summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", borderWidth: 1, borderColor: DS.border },
-  summaryBody: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
+  summaryBody: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 17 },
   parentStatsRow: { flexDirection: "row", alignItems: "flex-start" },
   parentStatsVerticalLine: { width: 1, backgroundColor: DS.border, alignSelf: "stretch", marginHorizontal: 8 },
   parentStatsCol: { flex: 1, alignItems: "flex-start", gap: 6 },
