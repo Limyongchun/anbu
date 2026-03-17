@@ -72,7 +72,7 @@ function InfoRow({
         {!!value && <Text style={s.rowValue}>{value}</Text>}
       </View>
       {onPress && (
-        <Ionicons name={rightIcon as any} size={16} color={danger ? "#ff5050" : "rgba(0,0,0,0.2)"} />
+        <Ionicons name={rightIcon as any} size={16} color={danger ? "#ff5050" : "rgba(255,255,255,0.25)"} />
       )}
     </Pressable>
   );
@@ -107,7 +107,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
         <View style={{ flex: 1 }}>
           <Text style={s.rowLabel}>{current.label}</Text>
         </View>
-        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color="rgba(0,0,0,0.2)" />
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color="rgba(255,255,255,0.25)" />
       </Pressable>
       {open && others.map((id) => {
         const opt = LANG_MAP[id];
@@ -119,7 +119,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
               onPress={() => { setLang(id); setOpen(false); }}
             >
               <View style={s.rowIcon}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.textMuted }}>{opt.code}</Text>
                 </View>
               </View>
@@ -600,7 +600,7 @@ export default function ProfileScreen() {
                       </View>
                       {isMasterChild && (
                         <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveParent(entry)}>
-                          <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
+                          <Ionicons name="close-circle-outline" size={20} color="rgba(255,255,255,0.3)" />
                         </Pressable>
                       )}
                     </View>
@@ -652,7 +652,7 @@ export default function ProfileScreen() {
                   <Text style={s.connectBigLabel}>{t.joinByCode}</Text>
                   <Text style={s.connectBigDesc}>{t.joinByCodeDesc}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.25)" />
               </Pressable>
 
               <View style={s.connectOrRow}>
@@ -673,7 +673,7 @@ export default function ProfileScreen() {
                   <Text style={s.connectBigLabel}>{t.createFamily}</Text>
                   <Text style={s.connectBigDesc}>{t.createFamilyDesc}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.25)" />
               </Pressable>
             </View>
           )}
@@ -801,7 +801,7 @@ export default function ProfileScreen() {
                 <Ionicons
                   name={showFaq === i ? "chevron-up" : "chevron-down"}
                   size={15}
-                  color="rgba(0,0,0,0.25)"
+                  color="rgba(255,255,255,0.3)"
                 />
               </Pressable>
               {showFaq === i && (
@@ -1128,7 +1128,7 @@ const s = StyleSheet.create({
   copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.neon },
 
   connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
-  connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#0B1926" },
+  connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#c97c79" },
 
   // ── 자녀 다중 부모님 섹션 ──
   parentRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
@@ -1172,13 +1172,13 @@ const s = StyleSheet.create({
 
   faqQ:         { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },
   faqQText:     { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textDark, flex: 1, lineHeight: 20 },
-  faqA:         { backgroundColor: "rgba(26,34,48,0.04)", paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 8, marginBottom: 10, borderRadius: 12 },
+  faqA:         { backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 8, marginBottom: 10, borderRadius: 12 },
   faqAText:     { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.textMid, lineHeight: 20 },
 
-  bottomNote:   { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(0,0,0,0.2)", textAlign: "center", marginTop: 28 },
+  bottomNote:   { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center", marginTop: 28 },
 
   nameSheet:    { backgroundColor: COLORS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
-  sheetHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.12)", alignSelf: "center", marginBottom: 18 },
+  sheetHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.15)", alignSelf: "center", marginBottom: 18 },
   sheetTitle:   { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.textDark, marginBottom: 16, textAlign: "center" },
   nameInput:    { backgroundColor: COLORS.white, borderRadius: 16, padding: 14, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
   saveBtn:      { backgroundColor: COLORS.navPill, paddingVertical: 14, borderRadius: 50, alignItems: "center" },
@@ -1186,12 +1186,12 @@ const s = StyleSheet.create({
 
 
   confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
-  confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },
-  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1a2535", textAlign: "center" },
-  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "#64748b", textAlign: "center", lineHeight: 20 },
+  confirmBox:        { backgroundColor: COLORS.surface, borderRadius: 24, padding: 24, width: "100%", gap: 12 },
+  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textPrimary, textAlign: "center" },
+  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.textSecondary, textAlign: "center", lineHeight: 20 },
   confirmBtns:       { flexDirection: "row", gap: 10, marginTop: 6 },
-  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#f1f5f9", alignItems: "center" },
-  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#64748b" },
+  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: COLORS.surfaceSoft, alignItems: "center" },
+  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.textSecondary },
   confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#ff5050", alignItems: "center" },
   confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 
