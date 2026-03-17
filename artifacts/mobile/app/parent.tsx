@@ -123,7 +123,7 @@ function SlideCard({ slide }: { slide: Slide }) {
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, deviceId, isConnected } = useFamilyContext();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const topInset    = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -255,7 +255,7 @@ export default function ParentScreen() {
 
     if (isSharing) {
       (async () => {
-        await saveBackgroundLocationConfig(familyCode, deviceId, myName);
+        await saveBackgroundLocationConfig(familyCode, deviceId, myName, lang);
         await startBackgroundLocationTracking();
       })();
     } else {

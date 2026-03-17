@@ -857,20 +857,31 @@ function HomeScreen({
   };
   const DEFAULT_ICON = { icon: "ellipse" as keyof typeof Ionicons.glyphMap, iconColor: "#94a3b8", iconBg: "#f1f5f9" };
 
+  const ACTIVITY_LABEL_MAP: Record<string, string> = {
+    app_open:   t.parentLogAppOpen as string,
+    location:   t.parentLogLocShared as string,
+    view_slide: t.parentLogViewPhoto as string,
+    heart:      t.parentLogHeartPhoto as string,
+    message:    t.parentLogViewMsg as string,
+  };
+
   const activities = useMemo<ActivityItem[]>(() => {
     return parentActivities.slice(0, showAll ? 20 : 4).map((a) => {
       const style = ACTIVITY_ICON_MAP[a.activityType] || DEFAULT_ICON;
+      const baseLabel = ACTIVITY_LABEL_MAP[a.activityType] || a.activityType;
+      const detailAddr = a.detail?.includes(" · ") ? a.detail.split(" · ").slice(1).join(" · ") : null;
+      const label = detailAddr ? `${baseLabel} · ${detailAddr}` : baseLabel;
       return {
         id: `pa${a.id}`,
         icon: style.icon,
         iconColor: style.iconColor,
         iconBg: style.iconBg,
-        label: a.detail || a.activityType,
+        label,
         time: formatTimeI18n(a.createdAt, t),
         timestamp: new Date(a.createdAt).getTime(),
       };
     });
-  }, [parentActivities, showAll]);
+  }, [parentActivities, showAll, t]);
 
   const parentName = parentLoc?.memberName ?? parentMemberName ?? t.parentDefault;
   const hour = new Date().getHours();

@@ -7,6 +7,13 @@ const TASK_NAME = "ANBU_BACKGROUND_LOCATION";
 const STORAGE_KEY_FAMILY_CODE = "bg_loc_familyCode";
 const STORAGE_KEY_DEVICE_ID = "bg_loc_deviceId";
 const STORAGE_KEY_MEMBER_NAME = "bg_loc_memberName";
+const STORAGE_KEY_LANG = "bg_loc_lang";
+
+const BG_STRINGS: Record<string, { notifBody: string; locShared: string; locSharedBg: string }> = {
+  ko: { notifBody: "위치를 공유하고 있습니다", locShared: "백그라운드 위치 공유", locSharedBg: "백그라운드 위치를 공유했습니다" },
+  en: { notifBody: "Sharing location", locShared: "Background location shared", locSharedBg: "Background location shared" },
+  ja: { notifBody: "位置情報を共有しています", locShared: "バックグラウンド位置共有", locSharedBg: "バックグラウンド位置情報を共有しました" },
+};
 
 const BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -18,12 +25,14 @@ async function uploadLocationInBackground(
   accuracy: number | null
 ) {
   try {
-    const [familyCode, deviceId, memberName] = await Promise.all([
+    const [familyCode, deviceId, memberName, lang] = await Promise.all([
       AsyncStorage.getItem(STORAGE_KEY_FAMILY_CODE),
       AsyncStorage.getItem(STORAGE_KEY_DEVICE_ID),
       AsyncStorage.getItem(STORAGE_KEY_MEMBER_NAME),
+      AsyncStorage.getItem(STORAGE_KEY_LANG),
     ]);
     if (!familyCode || !deviceId || !memberName) return;
+    const s = BG_STRINGS[lang || "ko"] || BG_STRINGS.ko;
 
     let address = "";
     try {
@@ -49,8 +58,8 @@ async function uploadLocationInBackground(
     });
 
     const detail = address
-      ? `백그라운드 위치 공유 · ${address}`
-      : "백그라운드 위치를 공유했습니다";
+      ? `${s.locShared} · ${address}`
+      : s.locSharedBg;
     await fetch(`${BASE}/family/${familyCode}/activity`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,12 +95,14 @@ if (!TaskManager.isTaskDefined(TASK_NAME)) {
 export async function saveBackgroundLocationConfig(
   familyCode: string,
   deviceId: string,
-  memberName: string
+  memberName: string,
+  lang?: string
 ) {
   await Promise.all([
     AsyncStorage.setItem(STORAGE_KEY_FAMILY_CODE, familyCode),
     AsyncStorage.setItem(STORAGE_KEY_DEVICE_ID, deviceId),
     AsyncStorage.setItem(STORAGE_KEY_MEMBER_NAME, memberName),
+    AsyncStorage.setItem(STORAGE_KEY_LANG, lang || "ko"),
   ]);
 }
 
@@ -100,6 +111,7 @@ export async function clearBackgroundLocationConfig() {
     AsyncStorage.removeItem(STORAGE_KEY_FAMILY_CODE),
     AsyncStorage.removeItem(STORAGE_KEY_DEVICE_ID),
     AsyncStorage.removeItem(STORAGE_KEY_MEMBER_NAME),
+    AsyncStorage.removeItem(STORAGE_KEY_LANG),
   ]);
 }
 
@@ -112,6 +124,9 @@ export async function startBackgroundLocationTracking(): Promise<boolean> {
   const { status } = await Location.requestBackgroundPermissionsAsync();
   if (status !== "granted") return false;
 
+  const lang = await AsyncStorage.getItem(STORAGE_KEY_LANG);
+  const s = BG_STRINGS[lang || "ko"] || BG_STRINGS.ko;
+
   await Location.startLocationUpdatesAsync(TASK_NAME, {
     accuracy: Location.Accuracy.Balanced,
     timeInterval: 5 * 60 * 1000,
@@ -120,7 +135,7 @@ export async function startBackgroundLocationTracking(): Promise<boolean> {
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: "A N B U",
-      notificationBody: "위치를 공유하고 있습니다",
+      notificationBody: s.notifBody,
       notificationColor: "#d4f200",
     },
   });
