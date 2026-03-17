@@ -899,6 +899,24 @@ function HomeScreen({
     ];
   }, [parentActivities, t]);
 
+  const breatheAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(breatheAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(breatheAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: false }),
+      ])
+    ).start();
+  }, []);
+
   const parentActivityStats = useMemo(() => {
     return parentInfos.map(p => {
       const myActs = parentActivities.filter(
@@ -946,23 +964,44 @@ function HomeScreen({
       </View>
 
       {/* Today Summary Card */}
-      <View style={hm.summaryCard}>
+      {(() => {
+        const anyLongIdle = parentActivityStats.some(ps => {
+          const st = getParentStatus(ps.loc);
+          return st.level !== "good" && ps.lastMinsAgo !== null && ps.lastMinsAgo >= 720;
+        });
+        const cardShadow = anyLongIdle ? {
+          shadowColor: "#c0392b",
+          shadowOpacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.25] }),
+          shadowRadius: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 18] }),
+        } : {};
+        const CardWrap = anyLongIdle ? Animated.View : View;
+        return (
+      <CardWrap style={[hm.summaryCard, cardShadow]}>
         <View style={hm.summaryBody}>
           <View style={hm.parentStatsRow}>
             {parentActivityStats.map((ps, i) => {
               const status = getParentStatus(ps.loc);
               const isActive = status.level === "good";
+              const isLongIdle = !isActive && ps.lastMinsAgo !== null && ps.lastMinsAgo >= 720;
               const activityText = ps.lastMinsAgo !== null
                 ? (t.summaryActivityDetected as string).replace("{m}", String(ps.lastMinsAgo))
                 : (t.summaryNoActivity as string);
+              const badgeScale = !isActive ? breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) : undefined;
+              const badgeOpacity = !isActive ? breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.7, 1] }) : undefined;
               return (
                 <React.Fragment key={ps.deviceId || i}>
                   {i > 0 && <View style={hm.parentStatsVerticalLine} />}
                   <View style={hm.parentStatsCol}>
                     <Text style={hm.parentStatsName} numberOfLines={1}>{ps.name}</Text>
-                    <View style={[hm.statusBadge, { backgroundColor: isActive ? DS.success : DS.danger }]}>
-                      <Text style={hm.statusBadgeText}>{isActive ? t.parentStatusActive : t.parentStatusIdle}</Text>
-                    </View>
+                    {isActive ? (
+                      <View style={[hm.statusBadge, { backgroundColor: DS.success }]}>
+                        <Text style={hm.statusBadgeText}>{t.parentStatusActive}</Text>
+                      </View>
+                    ) : (
+                      <Animated.View style={[hm.statusBadge, { backgroundColor: DS.danger, transform: [{ scale: badgeScale! }], opacity: badgeOpacity }]}>
+                        <Text style={hm.statusBadgeText}>{t.parentStatusIdle}</Text>
+                      </Animated.View>
+                    )}
                     <Text style={[hm.parentStatsLastTime, { color: isActive ? DS.success : DS.textTertiary }]}>{activityText}</Text>
                     <Text style={hm.parentStatsCountText}>
                       {(t.summaryLocationCount as string).replace("{n}", String(ps.locCount))}{"   "}{(t.summaryTouchCount as string).replace("{n}", String(ps.touchCount))}
@@ -974,7 +1013,9 @@ function HomeScreen({
           </View>
         </View>
         
-      </View>
+      </CardWrap>
+        );
+      })()}
 
       {/* Anbu Interpretation Card */}
       {(() => {
