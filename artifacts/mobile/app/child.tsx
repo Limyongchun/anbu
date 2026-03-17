@@ -1423,7 +1423,7 @@ const ab = StyleSheet.create({
   heartN:       { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.coral },
   cardText:     { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.textDark, lineHeight: 22 },
   cardPhoto:    { width: "100%", height: 180, borderRadius: 14, marginTop: 8 },
-  fab:          { position: "absolute", bottom: 60, right: 20, width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center", shadowColor: COLORS.neon, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 14, elevation: 10 },
+  fab:          { position: "absolute", bottom: 90, right: 20, width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center", shadowColor: COLORS.neon, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 14, elevation: 10 },
 });
 
 // 선물샵
