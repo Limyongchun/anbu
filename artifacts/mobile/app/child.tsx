@@ -836,7 +836,7 @@ function HomeScreen({
 
   const getParentStatus = (loc: LocationData | null) => {
     const minsAgo = loc ? Math.floor((Date.now() - new Date(loc.updatedAt).getTime()) / 60000) : null;
-    const level = minsAgo === null ? "none" : minsAgo < 30 ? "good" : minsAgo < 120 ? "warn" : "alert";
+    const level = minsAgo === null ? "none" : minsAgo < 60 ? "good" : minsAgo < 180 ? "warn" : "alert";
     const color = STATUS_COLOR[level];
     const msgs: Record<string, { title: string; sub: string }> = {
       good:  { title: t.statusMsgGoodTitle, sub: (t.statusMsgGoodSub as string).replace("{m}", String(minsAgo)) },
