@@ -808,14 +808,13 @@ function HomeScreen({
   onGoToAnbu: () => void;
 }) {
   const { t } = useLang();
-  const [parentLoc, setParentLoc] = useState<LocationData | null>(null);
+  type ParentInfo = { name: string; photo: string | null; loc: LocationData | null; deviceId: string };
+  const [parentInfos, setParentInfos] = useState<ParentInfo[]>([]);
   const [messages, setMessages]   = useState<FamilyMessage[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showAll, setShowAll]     = useState(false);
   const [parentJoined, setParentJoined] = useState(false);
   const [parentChecked, setParentChecked] = useState(false);
-  const [parentMemberName, setParentMemberName] = useState<string | null>(null);
-  const [parentPhoto, setParentPhoto] = useState<string | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   // ── 부모 연결 감지 (5초 폴링) ──
@@ -824,13 +823,28 @@ function HomeScreen({
     let cancelled = false;
     const check = async () => {
       try {
-        const group = await api.getFamily(familyCode);
-        const parentMember = group.members.find(m => m.role === "parent");
+        const results = await Promise.all(allFamilyCodes.map(c => api.getFamily(c).catch(() => null)));
+        const allParents: ParentInfo[] = [];
+        const seen = new Set<string>();
+        results.forEach(group => {
+          if (!group) return;
+          group.members.filter(m => m.role === "parent").forEach(m => {
+            const key = m.deviceId ?? m.memberName;
+            if (!seen.has(key)) {
+              seen.add(key);
+              allParents.push({ name: m.memberName, photo: m.photoData || null, loc: null, deviceId: m.deviceId ?? "" });
+            }
+          });
+        });
         if (!cancelled) {
           setParentChecked(true);
-          if (parentMember) {
-            setParentMemberName(parentMember.memberName);
-            if (parentMember.photoData) setParentPhoto(parentMember.photoData);
+          if (allParents.length > 0) {
+            setParentInfos(prev => {
+              return allParents.map(p => {
+                const existing = prev.find(e => e.deviceId === p.deviceId || e.name === p.name);
+                return { ...p, loc: existing?.loc ?? null };
+              });
+            });
             revealAnim.setValue(1);
             setParentJoined(true);
           }
@@ -842,7 +856,7 @@ function HomeScreen({
     check();
     const iv = setInterval(check, 5000);
     return () => { cancelled = true; clearInterval(iv); };
-  }, [familyCode]);
+  }, [familyCode, allFamilyCodes]);
 
   const [parentActivities, setParentActivities] = useState<ParentActivityLog[]>([]);
 
@@ -855,10 +869,10 @@ function HomeScreen({
         Promise.all(allFamilyCodes.map(c => api.getParentActivities(c).catch(() => [] as ParentActivityLog[]))),
       ]);
       const parentLocs = locsArr.flat().filter(l => l.role === "parent");
-      const newest = parentLocs.sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      )[0] ?? null;
-      setParentLoc(newest);
+      setParentInfos(prev => prev.map(p => {
+        const loc = parentLocs.find(l => l.deviceId === p.deviceId || l.memberName === p.name) ?? null;
+        return { ...p, loc };
+      }));
       setMessages(
         msgsArr.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       );
@@ -875,26 +889,20 @@ function HomeScreen({
     return () => clearInterval(t);
   }, [load]);
 
-  const minsAgo = parentLoc
-    ? Math.floor((Date.now() - new Date(parentLoc.updatedAt).getTime()) / 60000)
-    : null;
-  const statusLevel =
-    minsAgo === null ? "none"
-    : minsAgo < 30   ? "good"
-    : minsAgo < 120  ? "warn"
-    :                  "alert";
-
   const STATUS_COLOR = { good: "#22c55e", warn: "#f59e0b", alert: "#ef4444", none: "#94a3b8" } as const;
-  const STATUS_LABEL = { good: t.statusLabelGood, warn: t.statusLabelWarn, alert: t.statusLabelAlert, none: t.statusLabelNone };
-  const STATUS_MSG   = {
-    good:  { title: t.statusMsgGoodTitle, sub: (t.statusMsgGoodSub as string).replace("{m}", String(minsAgo)) },
-    warn:  { title: t.statusMsgWarnTitle, sub: (t.statusMsgWarnSub as string).replace("{m}", String(minsAgo)) },
-    alert: { title: t.statusMsgAlertTitle, sub: (t.statusMsgAlertSub as string).replace("{h}", String(Math.floor((minsAgo ?? 0) / 60))) },
-    none:  { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub },
-  };
 
-  const statusColor = STATUS_COLOR[statusLevel];
-  const statusMsg   = STATUS_MSG[statusLevel];
+  const getParentStatus = (loc: LocationData | null) => {
+    const minsAgo = loc ? Math.floor((Date.now() - new Date(loc.updatedAt).getTime()) / 60000) : null;
+    const level = minsAgo === null ? "none" : minsAgo < 30 ? "good" : minsAgo < 120 ? "warn" : "alert";
+    const color = STATUS_COLOR[level];
+    const msgs: Record<string, { title: string; sub: string }> = {
+      good:  { title: t.statusMsgGoodTitle, sub: (t.statusMsgGoodSub as string).replace("{m}", String(minsAgo)) },
+      warn:  { title: t.statusMsgWarnTitle, sub: (t.statusMsgWarnSub as string).replace("{m}", String(minsAgo)) },
+      alert: { title: t.statusMsgAlertTitle, sub: (t.statusMsgAlertSub as string).replace("{h}", String(Math.floor((minsAgo ?? 0) / 60))) },
+      none:  { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub },
+    };
+    return { level, color, msg: msgs[level], minsAgo, isActive: level === "good" };
+  };
 
   const ACTIVITY_ICON_MAP: Record<string, { icon: keyof typeof Ionicons.glyphMap; iconColor: string; iconBg: string }> = {
     heart:      { icon: "heart",           iconColor: "#ec4899", iconBg: "#fdf2f8" },
@@ -932,10 +940,7 @@ function HomeScreen({
     });
   }, [parentActivities, showAll, t]);
 
-  const parentName = parentLoc?.memberName ?? parentMemberName ?? t.parentDefault;
-  const hour = new Date().getHours();
   const greeting = t.homeParentActivity;
-  const isActive = statusLevel === "good";
 
   const dailySummary = useMemo(() => {
     const counts: Record<string, number> = { walk: 0, photo: 0, rest: 0, location: 0 };
@@ -985,54 +990,57 @@ function HomeScreen({
       {/* 인사말 */}
       <Text style={hm.greeting}>{greeting}</Text>
 
-      {/* ── 통합 부모 상태 카드 ── */}
-      <View style={hm.unifiedCard}>
-        <View style={[hm.ucStatusStripe, { backgroundColor: statusColor }]} />
+      {/* ── 통합 부모 상태 카드 (부모별) ── */}
+      {parentInfos.map((parent, idx) => {
+        const ps = getParentStatus(parent.loc);
+        return (
+          <View key={parent.deviceId || idx} style={hm.unifiedCard}>
+            <View style={[hm.ucStatusStripe, { backgroundColor: ps.color }]} />
 
-        <View style={hm.ucHeader}>
-          <View style={hm.ucAvatar}>
-            {parentPhoto ? (
-              <Image source={{ uri: parentPhoto }} style={{ width: 60, height: 60, borderRadius: 30 }} />
-            ) : (
-              <Ionicons name="person" size={30} color="#3b82f6" />
-            )}
-            <View style={[hm.ucOnlineDot, { backgroundColor: statusColor }]} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={hm.ucName}>{parentName}</Text>
-            </View>
-            <View style={hm.ucStatusBadgeRow}>
-              <View style={[hm.ucStatusBadge, { backgroundColor: isActive ? "#dcfce7" : statusLevel === "warn" ? "#fef3c7" : statusLevel === "alert" ? "#fee2e2" : "#f1f5f9" }]}>
-                <View style={[hm.ucStatusBadgeDot, { backgroundColor: statusColor }]} />
-                <Text style={[hm.ucStatusBadgeText, { color: isActive ? "#16a34a" : statusLevel === "warn" ? "#d97706" : statusLevel === "alert" ? "#dc2626" : "#64748b" }]}>
-                  {isActive ? t.parentStatusActive : t.parentStatusIdle}
-                </Text>
+            <View style={hm.ucHeader}>
+              <View style={hm.ucAvatar}>
+                {parent.photo ? (
+                  <Image source={{ uri: parent.photo }} style={{ width: 60, height: 60, borderRadius: 30 }} />
+                ) : (
+                  <Ionicons name="person" size={30} color={idx === 0 ? "#3b82f6" : "#ec4899"} />
+                )}
+                <View style={[hm.ucOnlineDot, { backgroundColor: ps.color }]} />
               </View>
-              {parentLoc && (
-                <Text style={hm.ucLastTime}>{t.lastActivity} {formatTimeI18n(parentLoc.updatedAt, t)}</Text>
-              )}
+              <View style={{ flex: 1 }}>
+                <Text style={hm.ucName}>{parent.name}</Text>
+                <View style={hm.ucStatusBadgeRow}>
+                  <View style={[hm.ucStatusBadge, { backgroundColor: ps.isActive ? "#dcfce7" : ps.level === "warn" ? "#fef3c7" : ps.level === "alert" ? "#fee2e2" : "#f1f5f9" }]}>
+                    <View style={[hm.ucStatusBadgeDot, { backgroundColor: ps.color }]} />
+                    <Text style={[hm.ucStatusBadgeText, { color: ps.isActive ? "#16a34a" : ps.level === "warn" ? "#d97706" : ps.level === "alert" ? "#dc2626" : "#64748b" }]}>
+                      {ps.isActive ? t.parentStatusActive : t.parentStatusIdle}
+                    </Text>
+                  </View>
+                  {parent.loc && (
+                    <Text style={hm.ucLastTime}>{t.lastActivity} {formatTimeI18n(parent.loc.updatedAt, t)}</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            <View style={hm.ucEmotionBox}>
+              <Text style={hm.ucEmotionText}>{ps.msg.title}</Text>
+              <Text style={hm.ucEmotionSub}>{ps.msg.sub}</Text>
+            </View>
+
+            <View style={hm.ucDailyRow}>
+              {dailySummary.map(d => (
+                <View key={d.key} style={hm.ucDailyItem}>
+                  <View style={[hm.ucDailyIconBg, { backgroundColor: d.color + "18" }]}>
+                    <Ionicons name={d.icon} size={18} color={d.color} />
+                  </View>
+                  <Text style={hm.ucDailyCount}>{d.count}</Text>
+                  <Text style={hm.ucDailyLabel}>{d.label}</Text>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
-
-        <View style={hm.ucEmotionBox}>
-          <Text style={hm.ucEmotionText}>{statusMsg.title}</Text>
-          <Text style={hm.ucEmotionSub}>{statusMsg.sub}</Text>
-        </View>
-
-        <View style={hm.ucDailyRow}>
-          {dailySummary.map(d => (
-            <View key={d.key} style={hm.ucDailyItem}>
-              <View style={[hm.ucDailyIconBg, { backgroundColor: d.color + "18" }]}>
-                <Ionicons name={d.icon} size={18} color={d.color} />
-              </View>
-              <Text style={hm.ucDailyCount}>{d.count}</Text>
-              <Text style={hm.ucDailyLabel}>{d.label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
+        );
+      })}
 
       {/* 최근 활동 */}
       <Text style={hm.sectionTitle}>{t.recentActivity}</Text>
