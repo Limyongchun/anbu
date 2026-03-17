@@ -269,16 +269,6 @@ export default function ParentScreen() {
   const toggleShare = async () => {
     const next = !isSharing; setIsSharing(next);
     if (currentLoc) await uploadLoc(currentLoc, next);
-    if (Platform.OS !== "web") {
-      if (next && familyCode && deviceId && myName) {
-        await saveBackgroundLocationConfig(familyCode, deviceId, myName);
-        const started = await startBackgroundLocationTracking();
-        setBgTrackingActive(started);
-      } else {
-        await stopBackgroundLocationTracking();
-        setBgTrackingActive(false);
-      }
-    }
   };
 
   // ── 슬라이드 데이터 ──
