@@ -1031,31 +1031,6 @@ function HomeScreen({
         </Pressable>
       )}
 
-      {/* 연락하기 */}
-      <Text style={hm.sectionTitle}>{t.contactSection}</Text>
-      <View style={hm.actionsRow}>
-        <Pressable style={({ pressed }) => [hm.actionBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => Linking.openURL("tel:")}>
-          <View style={[hm.actionIconBg, { backgroundColor: "#f0fdf4" }]}>
-            <Ionicons name="call" size={22} color="#22c55e" />
-          </View>
-          <Text style={hm.actionLabel}>{t.contactCall}</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [hm.actionBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={onGoToAnbu}>
-          <View style={[hm.actionIconBg, { backgroundColor: "#eff6ff" }]}>
-            <Ionicons name="chatbubble-ellipses" size={22} color="#3b82f6" />
-          </View>
-          <Text style={hm.actionLabel}>{t.contactMessage}</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [hm.actionBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => Linking.openURL("facetime:")}>
-          <View style={[hm.actionIconBg, { backgroundColor: "#fdf4ff" }]}>
-            <Ionicons name="videocam" size={22} color="#a855f7" />
-          </View>
-          <Text style={hm.actionLabel}>{t.contactVideo}</Text>
-        </Pressable>
-      </View>
     </ScrollView>
     </Animated.View>
   );
@@ -1331,10 +1306,6 @@ const hm = StyleSheet.create({
   activityTime:    { fontFamily: "Inter_400Regular", fontSize: 12, color: "#94a3b8" },
   viewAllBtn:      { marginHorizontal: 16, marginTop: 10, borderRadius: 16, borderWidth: 1.5, borderColor: "#e2e8f0", paddingVertical: 14, alignItems: "center", backgroundColor: "#fff" },
   viewAllText:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#475569" },
-  actionsRow:      { flexDirection: "row", gap: 12, marginHorizontal: 16 },
-  actionBtn:       { flex: 1, borderRadius: 20, backgroundColor: "#fff", paddingVertical: 18, alignItems: "center", gap: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  actionIconBg:    { width: 46, height: 46, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  actionLabel:     { fontFamily: "Inter_500Medium", fontSize: 12, color: "#475569" },
   emptyIcon:       { width: 64, height: 64, borderRadius: 32, backgroundColor: "#f1f5f9", alignItems: "center", justifyContent: "center", marginBottom: 16 },
   emptyTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1a2535", textAlign: "center" },
   emptySub:        { fontFamily: "Inter_400Regular", fontSize: 14, color: "#94a3b8", textAlign: "center", marginTop: 6, lineHeight: 22 },
