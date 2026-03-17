@@ -253,19 +253,17 @@ export default function ParentScreen() {
 
   useEffect(() => {
     if (Platform.OS === "web" || !familyCode || !deviceId || !myName) return;
-    if (!permission?.granted || !isSharing) return;
+    if (!permission?.granted) return;
 
-    (async () => {
-      await saveBackgroundLocationConfig(familyCode, deviceId, myName);
-      const started = await startBackgroundLocationTracking();
-      setBgTrackingActive(started);
-    })();
-
-    return () => {
-      isBackgroundLocationRunning().then(running => {
-        if (running && !isSharing) stopBackgroundLocationTracking();
-      });
-    };
+    if (isSharing) {
+      (async () => {
+        await saveBackgroundLocationConfig(familyCode, deviceId, myName);
+        const started = await startBackgroundLocationTracking();
+        setBgTrackingActive(started);
+      })();
+    } else {
+      stopBackgroundLocationTracking().then(() => setBgTrackingActive(false));
+    }
   }, [permission?.granted, isSharing, familyCode, deviceId, myName]);
 
   const toggleShare = async () => {

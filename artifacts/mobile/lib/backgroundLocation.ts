@@ -69,17 +69,19 @@ interface LocationTaskBody {
   error: TaskManager.TaskManagerError | null;
 }
 
-TaskManager.defineTask(TASK_NAME, async ({ data, error }: LocationTaskBody) => {
-  if (error) return;
-  if (data && data.locations && data.locations.length > 0) {
-    const loc = data.locations[data.locations.length - 1];
-    await uploadLocationInBackground(
-      loc.coords.latitude,
-      loc.coords.longitude,
-      loc.coords.accuracy
-    );
-  }
-});
+if (!TaskManager.isTaskDefined(TASK_NAME)) {
+  TaskManager.defineTask(TASK_NAME, async ({ data, error }: LocationTaskBody) => {
+    if (error) return;
+    if (data && data.locations && data.locations.length > 0) {
+      const loc = data.locations[data.locations.length - 1];
+      await uploadLocationInBackground(
+        loc.coords.latitude,
+        loc.coords.longitude,
+        loc.coords.accuracy
+      );
+    }
+  });
+}
 
 export async function saveBackgroundLocationConfig(
   familyCode: string,
