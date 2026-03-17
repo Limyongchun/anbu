@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Location from "expo-location";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Easing,
   Image,
   Platform,
   Pressable,
@@ -134,14 +135,16 @@ export default function ParentScreen() {
   const [curIdx, setCurIdx]         = useState(0);
   const [nextIdx, setNextIdx]       = useState<number | null>(null);
   const [isPaused, setIsPaused]     = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
+  const transitioningRef            = useRef(false);
 
-  const curY         = useRef(new Animated.Value(0)).current;
-  const nxtY         = useRef(new Animated.Value(height)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const progressRef  = useRef<Animated.CompositeAnimation | null>(null);
-  const touchStartY  = useRef(0);
-  const touchStartT  = useRef(0);
+  const fadeOut       = useRef(new Animated.Value(1)).current;
+  const fadeIn        = useRef(new Animated.Value(0)).current;
+  const scaleIn       = useRef(new Animated.Value(1.08)).current;
+  const progressAnim  = useRef(new Animated.Value(0)).current;
+  const progressRef   = useRef<Animated.CompositeAnimation | null>(null);
+  const touchStartY   = useRef(0);
+  const touchStartT   = useRef(0);
+  const EASE_SMOOTH   = Easing.bezier(0.4, 0, 0.2, 1);
 
   // ── 하트 ──
   const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
@@ -273,19 +276,21 @@ export default function ParentScreen() {
     if (currentLoc) await uploadLoc(currentLoc, next);
   };
 
-  const slides = buildSlides(msgs, t.parentDemoSlides as any[]);
+  const slides = useMemo(() => buildSlides(msgs, t.parentDemoSlides as any[]), [msgs, t.parentDemoSlides]);
   const total  = slides.length;
 
-  // ── 슬라이드 이동 ──
   const slideViewCountRef = useRef(0);
   const lastSlideLogRef = useRef(0);
 
-  const goTo = useCallback((targetIdx: number, dir: "up" | "down" = "up") => {
-    if (transitioning || total === 0) return;
+  const goTo = useCallback((targetIdx: number) => {
+    if (transitioningRef.current || total === 0) return;
     const safeIdx = ((targetIdx % total) + total) % total;
+    transitioningRef.current = true;
     setNextIdx(safeIdx);
-    setTransitioning(true);
-    nxtY.setValue(dir === "up" ? height : -height);
+
+    fadeOut.setValue(1);
+    fadeIn.setValue(0);
+    scaleIn.setValue(1.08);
     progressAnim.stopAnimation();
 
     slideViewCountRef.current += 1;
@@ -300,17 +305,21 @@ export default function ParentScreen() {
     }
 
     Animated.parallel([
-      Animated.timing(curY, { toValue: dir === "up" ? -height : height, duration: 480, useNativeDriver: false }),
-      Animated.timing(nxtY, { toValue: 0, duration: 480, useNativeDriver: false }),
+      Animated.timing(fadeOut, { toValue: 0, duration: 700, easing: EASE_SMOOTH, useNativeDriver: false }),
+      Animated.timing(fadeIn,  { toValue: 1, duration: 700, easing: EASE_SMOOTH, useNativeDriver: false }),
+      Animated.timing(scaleIn, { toValue: 1, duration: 900, easing: EASE_SMOOTH, useNativeDriver: false }),
     ]).start(() => {
-      setCurIdx(safeIdx); setNextIdx(null);
-      curY.setValue(0); nxtY.setValue(height);
-      setTransitioning(false);
+      setCurIdx(safeIdx);
+      setNextIdx(null);
+      fadeOut.setValue(1);
+      fadeIn.setValue(0);
+      scaleIn.setValue(1.08);
+      transitioningRef.current = false;
     });
-  }, [transitioning, total, curY, nxtY, progressAnim, slides, familyCode, deviceId, myName]);
+  }, [total, fadeOut, fadeIn, scaleIn, progressAnim, slides, familyCode, deviceId, myName]);
 
-  const goNext = useCallback(() => goTo(curIdx + 1, "up"),   [curIdx, goTo]);
-  const goPrev = useCallback(() => goTo(curIdx - 1, "down"), [curIdx, goTo]);
+  const goNext = useCallback(() => goTo(curIdx + 1), [curIdx, goTo]);
+  const goPrev = useCallback(() => goTo(curIdx - 1), [curIdx, goTo]);
 
   const startProgress = useCallback(() => {
     progressAnim.setValue(0);
@@ -321,10 +330,10 @@ export default function ParentScreen() {
   const stopProgress = useCallback(() => { progressRef.current?.stop(); }, []);
 
   useEffect(() => {
-    if (!isPaused && !transitioning && total > 0) startProgress();
+    if (!isPaused && total > 0) startProgress();
     else stopProgress();
     return stopProgress;
-  }, [isPaused, transitioning, curIdx, total]);
+  }, [isPaused, curIdx, total]);
 
   // ── 터치: 탭 → UI 토글 | 스와이프 → 슬라이드 이동 | 홀드 → 일시정지 ──
   const onTouchStart = (e: any) => {
@@ -393,11 +402,11 @@ export default function ParentScreen() {
             </View>
           ) : currentSlide ? (
             <>
-              <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: curY }] }]}>
+              <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: pendingSlide ? fadeOut : 1 }]}>
                 <SlideCard slide={currentSlide} />
               </Animated.View>
               {pendingSlide && (
-                <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: nxtY }] }]}>
+                <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeIn, transform: [{ scale: scaleIn }] }]}>
                   <SlideCard slide={pendingSlide} />
                 </Animated.View>
               )}
