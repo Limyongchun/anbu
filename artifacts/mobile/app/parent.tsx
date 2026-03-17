@@ -22,7 +22,6 @@ import {
   saveBackgroundLocationConfig,
   startBackgroundLocationTracking,
   stopBackgroundLocationTracking,
-  isBackgroundLocationRunning,
 } from "@/lib/backgroundLocation";
 
 function logActivity(familyCode: string | null, deviceId: string | null, parentName: string | null, type: string, detail?: string) {
@@ -184,7 +183,6 @@ export default function ParentScreen() {
   const [currentLoc, setCurrentLoc] = useState<Location.LocationObject | null>(null);
   const [address, setAddress]       = useState("");
   const [locUploading, setLocUploading] = useState(false);
-  const [bgTrackingActive, setBgTrackingActive] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
   const loadMsgs = useCallback(async () => {
@@ -258,11 +256,10 @@ export default function ParentScreen() {
     if (isSharing) {
       (async () => {
         await saveBackgroundLocationConfig(familyCode, deviceId, myName);
-        const started = await startBackgroundLocationTracking();
-        setBgTrackingActive(started);
+        await startBackgroundLocationTracking();
       })();
     } else {
-      stopBackgroundLocationTracking().then(() => setBgTrackingActive(false));
+      stopBackgroundLocationTracking();
     }
   }, [permission?.granted, isSharing, familyCode, deviceId, myName]);
 
