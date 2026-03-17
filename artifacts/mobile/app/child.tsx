@@ -29,8 +29,22 @@ import { api, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 const { width, height } = Dimensions.get("window");
 type Tab = "home" | "photo" | "map" | "alarm";
 
-const GIFT_ICONS = ["nutrition", "restaurant", "leaf", "flower", "cafe", "fitness"] as const;
-const GIFT_POPULAR = [true, false, true, false, false, true];
+const DS = {
+  bg: COLORS.background,
+  surface: COLORS.surface,
+  surfaceSoft: COLORS.surfaceSoft,
+  textPrimary: COLORS.textPrimary,
+  textSecondary: COLORS.textSecondary,
+  textTertiary: COLORS.textTertiary,
+  brand: COLORS.brandPrimary,
+  brandDeep: COLORS.brandDeep,
+  success: COLORS.success,
+  warning: COLORS.warning,
+  danger: COLORS.danger,
+  info: COLORS.info,
+  radius: { card: 16, cardLg: 20, pill: 999 },
+  space: { xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32 },
+};
 
 function formatTimeI18n(dateStr: string, t: any): string {
   const d = new Date(dateStr), now = new Date();
@@ -42,71 +56,54 @@ function formatTimeI18n(dateStr: string, t: any): string {
   return (t.timeDayAgo as string).replace("{d}", String(Math.floor(h / 24)));
 }
 
-// ─── 원형 아이콘 버튼 ─────────────────────────────────────────────────────────
-function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
-  icon: keyof typeof Ionicons.glyphMap; size?: number;
-  bg?: string; color?: string; onPress?: () => void; style?: object;
-}) {
-  return (
-    <Pressable onPress={onPress}
-      style={({ pressed }) => [{ width: 44, height: 44, borderRadius: 22, backgroundColor: bg ?? "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center", opacity: pressed ? 0.72 : 1 }, style]}>
-      <Ionicons name={icon} size={size} color={color ?? COLORS.white} />
-    </Pressable>
-  );
-}
-
-// ─── 상단 바 (로고 + 카테고리 탭) ───────────────────────────────────────────
-function TopBar({ tab, topInset }: { tab: Tab; topInset: number }) {
+function AppHeader({ topInset, isMap }: { topInset: number; isMap: boolean }) {
   const { isMasterChild } = useFamilyContext();
   const { t } = useLang();
-  const isMap = tab === "map";
   return (
-    <View style={[tb.wrap, {
-      paddingTop: topInset + 10,
-      backgroundColor: isMap ? "rgba(26,34,48,0.82)" : COLORS.bg,
-      borderBottomWidth: isMap ? 0 : 1,
-      borderBottomColor: COLORS.border,
+    <View style={[hdr.wrap, {
+      paddingTop: topInset + 12,
+      backgroundColor: isMap ? "rgba(28,36,48,0.88)" : DS.bg,
+      borderBottomWidth: isMap ? 0 : 0,
     }]}>
-      <Text style={[tb.logo, { color: isMap ? COLORS.white : COLORS.textDark }]}>A N B U</Text>
+      <Text style={[hdr.logo, { color: isMap ? "#fff" : DS.textPrimary }]}>A N B U</Text>
       <View style={{ flex: 1 }} />
       {isMasterChild && (
-        <View style={[tb.masterBadge, isMap && { backgroundColor: "rgba(212,242,0,0.18)", borderColor: "rgba(212,242,0,0.35)" }]}>
-          <Ionicons name="shield-checkmark" size={11} color={isMap ? COLORS.neon : COLORS.neonText} />
-          <Text style={[tb.masterText, isMap && { color: COLORS.neon }]}>{t.masterLabel}</Text>
+        <View style={[hdr.masterBadge, isMap && { backgroundColor: "rgba(215,255,0,0.18)", borderColor: "rgba(215,255,0,0.35)" }]}>
+          <Ionicons name="shield-checkmark" size={11} color={isMap ? DS.brand : DS.brandDeep} />
+          <Text style={[hdr.masterText, isMap && { color: DS.brand }]}>{t.masterLabel}</Text>
         </View>
       )}
     </View>
   );
 }
 
-// ─── 하단 탭 바 ───────────────────────────────────────────────────────────────
-const NAV_ITEM_DEFS = [
-  { id: "home",     iconOn: "home"          as const, iconOff: "home-outline"          as const, labelKey: "tabHome"     },
-  { id: "photo",    iconOn: "images"        as const, iconOff: "images-outline"        as const, labelKey: "tabPhoto"    },
-  { id: "map",      iconOn: "location"      as const, iconOff: "location-outline"      as const, labelKey: "tabMap"      },
-  { id: "alarm",    iconOn: "notifications" as const, iconOff: "notifications-outline" as const, labelKey: "tabAlarm"    },
+const NAV_ITEMS = [
+  { id: "home",     iconOn: "home"          as const, iconOff: "home-outline"          as const, labelKey: "tabHome" },
+  { id: "photo",    iconOn: "images"        as const, iconOff: "images-outline"        as const, labelKey: "tabPhoto" },
+  { id: "map",      iconOn: "location"      as const, iconOff: "location-outline"      as const, labelKey: "tabMap" },
+  { id: "alarm",    iconOn: "notifications" as const, iconOff: "notifications-outline" as const, labelKey: "tabAlarm" },
   { id: "settings", iconOn: "settings"      as const, iconOff: "settings-outline"      as const, labelKey: "tabSettings" },
 ] as const;
 
-function BottomNav({ tab, onTab, onSettings, bottomInset }: {
+function BottomTabBar({ tab, onTab, onSettings, bottomInset }: {
   tab: Tab; onTab: (t: Tab) => void; onSettings: () => void; bottomInset: number;
 }) {
   const { t } = useLang();
   return (
-    <View style={[bn.wrap, { paddingBottom: Math.max(bottomInset, 12) }]}>
-      {NAV_ITEM_DEFS.map(item => {
+    <View style={[nav.wrap, { paddingBottom: Math.max(bottomInset, 12) }]}>
+      {NAV_ITEMS.map(item => {
         const active = item.id !== "settings" && tab === (item.id as Tab);
         const onPress = item.id === "settings" ? onSettings : () => onTab(item.id as Tab);
         return (
-          <Pressable key={item.id} style={({ pressed }) => [bn.item, { opacity: pressed ? 0.65 : 1 }]} onPress={onPress}>
-            <View style={[bn.iconWrap, active && bn.iconWrapActive]}>
+          <Pressable key={item.id} style={({ pressed }) => [nav.item, { opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
+            <View style={[nav.iconCircle, active && nav.iconCircleActive]}>
               <Ionicons
                 name={active ? item.iconOn : item.iconOff}
-                size={22}
-                color={active ? COLORS.navPill : "#94a3b8"}
+                size={21}
+                color={active ? DS.brand : DS.textTertiary}
               />
             </View>
-            <Text style={[bn.label, active && bn.labelActive]}>{t[item.labelKey]}</Text>
+            <Text style={[nav.label, active && nav.labelActive]}>{t[item.labelKey]}</Text>
           </Pressable>
         );
       })}
@@ -114,15 +111,41 @@ function BottomNav({ tab, onTab, onSettings, bottomInset }: {
   );
 }
 
-// ─── 지도 화면 ────────────────────────────────────────────────────────────────
+function StatusChip({ level, label }: { level: "good" | "warn" | "alert" | "none"; label: string }) {
+  const colorMap = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary };
+  const bgMap = { good: "#DCFCE7", warn: "#FEF3C7", alert: "#FEE2E2", none: "#F1F5F9" };
+  const textMap = { good: "#16A34A", warn: "#D97706", alert: "#DC2626", none: "#64748B" };
+  return (
+    <View style={[chip.wrap, { backgroundColor: bgMap[level] }]}>
+      <View style={[chip.dot, { backgroundColor: colorMap[level] }]} />
+      <Text style={[chip.text, { color: textMap[level] }]}>{label}</Text>
+    </View>
+  );
+}
+
+function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
+  icon: keyof typeof Ionicons.glyphMap; size?: number;
+  bg?: string; color?: string; onPress?: () => void; style?: object;
+}) {
+  return (
+    <Pressable onPress={onPress}
+      style={({ pressed }) => [{ width: 44, height: 44, borderRadius: 22, backgroundColor: bg ?? "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center", opacity: pressed ? 0.72 : 1 }, style]}>
+      <Ionicons name={icon} size={size} color={color ?? "#fff"} />
+    </Pressable>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAP SCREEN (Forest style)
+// ═══════════════════════════════════════════════════════════════════════════════
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
   const { t } = useLang();
-  const [locs, setLocs]         = useState<LocationData[]>([]);
-  const [loading, setLoading]   = useState(false);
+  const [locs, setLocs] = useState<LocationData[]>([]);
+  const [loading, setLoading] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
 
-  const bannerY     = useRef(new Animated.Value(120)).current;
+  const bannerY = useRef(new Animated.Value(120)).current;
   const bannerAlpha = useRef(new Animated.Value(0)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -148,13 +171,13 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const centerLat = hasParents ? parentLocs.reduce((s, l) => s + l.latitude, 0) / parentLocs.length : 37.5665;
   const centerLon = hasParents ? parentLocs.reduce((s, l) => s + l.longitude, 0) / parentLocs.length : 126.978;
 
-  const PIN_COLORS = ["#4285F4", "#EA4335"];
+  const PIN_COLORS = ["#3B82F6", "#EC4899"];
 
   const openBannerFor = useCallback((idx: number) => {
     setSelectedIdx(idx);
     setShowBanner(true);
     Animated.parallel([
-      Animated.spring(bannerY,     { toValue: 0,   useNativeDriver: false, tension: 80, friction: 10 }),
+      Animated.spring(bannerY, { toValue: 0, useNativeDriver: false, tension: 80, friction: 10 }),
       Animated.timing(bannerAlpha, { toValue: 1, duration: 200, useNativeDriver: false }),
     ]).start();
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
@@ -164,8 +187,8 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const closeBanner = useCallback(() => {
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
     Animated.parallel([
-      Animated.timing(bannerY,     { toValue: 120, duration: 260, useNativeDriver: false }),
-      Animated.timing(bannerAlpha, { toValue: 0,   duration: 200, useNativeDriver: false }),
+      Animated.timing(bannerY, { toValue: 120, duration: 260, useNativeDriver: false }),
+      Animated.timing(bannerAlpha, { toValue: 0, duration: 200, useNativeDriver: false }),
     ]).start(() => setShowBanner(false));
   }, []);
 
@@ -221,7 +244,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 .pin-wrap{cursor:pointer;position:relative;width:22px;height:22px}
 .pin-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;animation:pulse 1.5s ease-out infinite}
 .pin-dot{width:22px;height:22px;border-radius:50%;border:3.5px solid #fff}
-.pin-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:#1a2230;color:#fff;font-size:11px;font-family:sans-serif;white-space:nowrap;padding:4px 10px;border-radius:12px;pointer-events:none;opacity:0;transition:opacity 0.2s}
+.pin-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:#1C2430;color:#fff;font-size:11px;font-family:sans-serif;white-space:nowrap;padding:4px 10px;border-radius:12px;pointer-events:none;opacity:0;transition:opacity 0.2s}
 .pin-wrap:hover .pin-label{opacity:1}
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0}}
 </style>
@@ -264,25 +287,25 @@ ${boundsJs}
       )}
 
       {!loading && !hasAnyParent && (
-        <View style={[mp.connectCard, { bottom: BOTTOM_SAFE + 16 }]}>
-          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(212,242,0,0.15)", alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="location-outline" size={18} color={COLORS.neon} />
+        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + 16 }]}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.blueSoft, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="location-outline" size={18} color={DS.info} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={mp.infoName}>{!familyCode ? t.mapNoFamily : t.mapWaiting}</Text>
-            <Text style={mp.infoAddr}>{!familyCode ? t.mapNoFamilyDesc : t.mapWaitingDesc}</Text>
+            <Text style={mp.panelName}>{!familyCode ? t.mapNoFamily : t.mapWaiting}</Text>
+            <Text style={mp.panelAddr}>{!familyCode ? t.mapNoFamilyDesc : t.mapWaitingDesc}</Text>
           </View>
           {!familyCode && (
-            <Pressable style={mp.connectBtn} onPress={() => router.push("/setup")}>
-              <Text style={mp.connectBtnText}>{t.mapConnect}</Text>
+            <Pressable style={mp.panelBtn} onPress={() => router.push("/setup")}>
+              <Text style={mp.panelBtnText}>{t.mapConnect}</Text>
             </Pressable>
           )}
         </View>
       )}
 
       {!loading && privacyParents.length > 0 && (
-        <View style={[mp.privacyCard, { bottom: BOTTOM_SAFE + (hasParents ? 80 : 16) }]}>
-          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(139,92,246,0.15)", alignItems: "center", justifyContent: "center" }}>
+        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + (hasParents ? 100 : 16), borderColor: "rgba(139,92,246,0.2)" }]}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.purpleSoft, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="eye-off" size={18} color="#8b5cf6" />
           </View>
           <View style={{ flex: 1, gap: 2 }}>
@@ -291,7 +314,7 @@ ${boundsJs}
               const isActive = mins < 10;
               return (
                 <View key={pp.deviceId} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View style={[mp.dot, { backgroundColor: isActive ? COLORS.neon : "#f59e0b" }]} />
+                  <View style={[mp.statusDot, { backgroundColor: isActive ? DS.success : DS.warning }]} />
                   <Text style={mp.privacyName}>{pp.memberName}</Text>
                   <Text style={mp.privacyStatus}>
                     {isActive ? t.mapPrivacyActive : `${t.mapPrivacyLastSeen} · ${(t.timeMinAgo as string).replace("{m}", String(mins))}`}
@@ -306,13 +329,13 @@ ${boundsJs}
 
       {loading && (
         <View style={{ position: "absolute", bottom: BOTTOM_SAFE + 60, left: 0, right: 0, alignItems: "center" }}>
-          <ActivityIndicator color={COLORS.neon} />
+          <ActivityIndicator color={DS.info} />
         </View>
       )}
 
       {!loading && hasParents && !showBanner && (
         <View style={[mp.hintPill, { bottom: BOTTOM_SAFE + 16 }]}>
-          <Ionicons name="location" size={13} color={COLORS.neon} />
+          <Ionicons name="location" size={13} color={DS.info} />
           <Text style={mp.hintText}>
             {parentLocs.length === 1
               ? `${parentLocs[0].memberName}${t.mapTapHint}`
@@ -324,30 +347,28 @@ ${boundsJs}
       {showBanner && bannerLoc && (
         <Animated.View style={[mp.banner, { bottom: BOTTOM_SAFE + 12, transform: [{ translateY: bannerY }], opacity: bannerAlpha }]}>
           <Pressable style={mp.bannerClose} onPress={closeBanner}>
-            <Ionicons name="close" size={14} color="rgba(255,255,255,0.5)" />
+            <Ionicons name="close" size={16} color={DS.textTertiary} />
           </Pressable>
-
-          <View style={{ flex: 1, gap: 3 }}>
+          <View style={{ flex: 1, gap: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <View style={[mp.dot, { backgroundColor: bannerIsRecent ? COLORS.neon : "#f59e0b" }]} />
-              <Text style={mp.bannerStatus}>{bannerIsRecent ? t.mapSafe : (t.timeMinAgo as string).replace("{m}", String(bannerMinsAgo))}</Text>
+              <View style={[mp.statusDot, { backgroundColor: bannerIsRecent ? DS.success : DS.warning }]} />
+              <Text style={mp.bannerStatusText}>{bannerIsRecent ? t.mapSafe : (t.timeMinAgo as string).replace("{m}", String(bannerMinsAgo))}</Text>
             </View>
             <Text style={mp.bannerName}>{bannerLoc.memberName}</Text>
             <Text style={mp.bannerAddr} numberOfLines={1}>
               {bannerLoc.address || `${bannerLoc.latitude.toFixed(4)}, ${bannerLoc.longitude.toFixed(4)}`}
             </Text>
           </View>
-
           <View style={mp.bannerActions}>
-            <CircleBtn icon="call"     size={15} bg="rgba(212,242,0,0.2)"   color={COLORS.neon}             style={mp.bannerBtn} onPress={() => Linking.openURL("tel:")} />
-            <CircleBtn icon="navigate" size={15} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.8)"  style={mp.bannerBtn} onPress={() => openMapsFor(bannerLoc)} />
-            <CircleBtn icon="refresh"  size={15} bg="rgba(255,255,255,0.07)" color="rgba(255,255,255,0.4)" style={mp.bannerBtn} onPress={() => { load(); closeBanner(); }} />
+            <CircleBtn icon="call" size={15} bg={DS.success + "20"} color={DS.success} style={mp.bannerBtn} onPress={() => Linking.openURL("tel:")} />
+            <CircleBtn icon="navigate" size={15} bg={DS.info + "20"} color={DS.info} style={mp.bannerBtn} onPress={() => openMapsFor(bannerLoc)} />
+            <CircleBtn icon="refresh" size={15} bg="rgba(0,0,0,0.06)" color={DS.textSecondary} style={mp.bannerBtn} onPress={() => { load(); closeBanner(); }} />
           </View>
         </Animated.View>
       )}
 
       {parentLocs.length > 1 && showBanner && (
-        <View style={[mp.parentTabs, { bottom: BOTTOM_SAFE + 90 }]}>
+        <View style={[mp.parentTabs, { bottom: BOTTOM_SAFE + 100 }]}>
           {parentLocs.map((pl, i) => (
             <Pressable
               key={pl.deviceId}
@@ -363,18 +384,18 @@ ${boundsJs}
   );
 }
 
-function PulsingPin({ color = "#4285F4" }: { color?: string } = {}) {
+function PulsingPin({ color = "#3B82F6" }: { color?: string } = {}) {
   const s = useRef(new Animated.Value(1)).current;
   const o = useRef(new Animated.Value(0.5)).current;
   useEffect(() => {
     const a = Animated.loop(Animated.sequence([
       Animated.parallel([
         Animated.timing(s, { toValue: 2.6, duration: 950, useNativeDriver: false }),
-        Animated.timing(o, { toValue: 0,   duration: 950, useNativeDriver: false }),
+        Animated.timing(o, { toValue: 0, duration: 950, useNativeDriver: false }),
       ]),
       Animated.parallel([
-        Animated.timing(s, { toValue: 1,   duration: 0,   useNativeDriver: false }),
-        Animated.timing(o, { toValue: 0.5, duration: 0,   useNativeDriver: false }),
+        Animated.timing(s, { toValue: 1, duration: 0, useNativeDriver: false }),
+        Animated.timing(o, { toValue: 0.5, duration: 0, useNativeDriver: false }),
       ]),
     ]));
     a.start(); return () => a.stop();
@@ -387,94 +408,26 @@ function PulsingPin({ color = "#4285F4" }: { color?: string } = {}) {
   );
 }
 
-// ─── 오늘 안부 상태창 ─────────────────────────────────────────────────────────
-function AnbuStatusWidget({ allFamilyCodes, deviceId, topBarH }: {
-  allFamilyCodes: string[]; deviceId: string; topBarH: number;
-}) {
-  const { t } = useLang();
-  const [todayMsgs, setTodayMsgs] = useState<FamilyMessage[]>([]);
-  const [collapsed, setCollapsed] = useState(false);
-
-  const loadToday = useCallback(async () => {
-    if (allFamilyCodes.length === 0) return;
-    try {
-      const results = await Promise.allSettled(allFamilyCodes.map(c => api.getMessages(c)));
-      const all: FamilyMessage[] = [];
-      results.forEach(r => { if (r.status === "fulfilled") all.push(...r.value); });
-      const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-      const mine = all.filter(m => m.deviceId === deviceId && new Date(m.createdAt).getTime() >= todayStart);
-      mine.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setTodayMsgs(mine);
-    } catch {}
-  }, [allFamilyCodes, deviceId]);
-
-  useEffect(() => {
-    loadToday();
-    const iv = setInterval(loadToday, 30000);
-    return () => clearInterval(iv);
-  }, [loadToday]);
-
-  if (allFamilyCodes.length === 0) return null;
-
-  const latest = todayMsgs[0];
-  const count  = todayMsgs.length;
-
-  const previewText = latest
-    ? (latest.text ? latest.text.slice(0, 36) + (latest.text.length > 36 ? "…" : "") : t.anbuPhotoLabel)
-    : t.todayAnbuNone;
-
-  return (
-    <Pressable
-      style={[sw.card, { top: topBarH + 8 }]}
-      onPress={() => setCollapsed(c => !c)}
-    >
-      <View style={sw.header}>
-        <View style={sw.dot} />
-        <Text style={sw.label}>{t.todayAnbu}</Text>
-        {count > 0 && (
-          <View style={sw.badge}>
-            <Text style={sw.badgeText}>{count}</Text>
-          </View>
-        )}
-        <View style={{ flex: 1 }} />
-        <Ionicons
-          name={collapsed ? "chevron-down" : "chevron-up"}
-          size={13}
-          color="rgba(255,255,255,0.35)"
-        />
-      </View>
-
-      {!collapsed && (
-        <View style={sw.body}>
-          <Text style={sw.preview} numberOfLines={2}>{previewText}</Text>
-          {count > 1 && (
-            <Text style={sw.more}>{(t.todayAnbuMore as string).replace("{n}", String(count - 1))}</Text>
-          )}
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
-// ─── 안부 화면 ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANBU SCREEN (Photo/Messages)
+// ═══════════════════════════════════════════════════════════════════════════════
 function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topBarH }: {
   familyCode: string | null; allFamilyCodes: string[]; myName: string | null; myRole: string | null; deviceId: string; topBarH: number;
 }) {
   const { t } = useLang();
   const [subView, setSubView] = useState<"messages" | "gallery">("messages");
-  const [text, setText]       = useState("");
-  const [photo, setPhoto]     = useState<string | null>(null);
-  const [msgs, setMsgs]       = useState<FamilyMessage[]>([]);
+  const [text, setText] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [msgs, setMsgs] = useState<FamilyMessage[]>([]);
   const [sending, setSending] = useState(false);
-  const [sent, setSent]       = useState(false);
+  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [viewerMid, setViewerMid] = useState<number | null>(null);
-  const [delId, setDelId]     = useState<number | null>(null);
+  const [delId, setDelId] = useState<number | null>(null);
   const [showCompose, setShowCompose] = useState(false);
   const photos = msgs.filter(m => !!m.photoData);
-  const THUMB  = (width - 52) / 3;
+  const THUMB = (width - 52) / 3;
 
   const load = useCallback(async () => {
     if (allFamilyCodes.length === 0) return;
@@ -551,7 +504,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
       <Modal visible={!!viewerUri} transparent animationType="fade" onRequestClose={() => { setViewerUri(null); setViewerMid(null); }}>
         <View style={ab.viewer}>
           <Pressable style={{ position: "absolute", top: 54, right: 20, zIndex: 10 }} onPress={() => { setViewerUri(null); setViewerMid(null); }}>
-            <Ionicons name="close-circle" size={36} color={COLORS.white} />
+            <Ionicons name="close-circle" size={36} color="#fff" />
           </Pressable>
           {viewerUri && <Image source={{ uri: viewerUri }} style={{ width: "100%", height: height * 0.7, borderRadius: 14 }} resizeMode="contain" />}
           {viewerMid !== null && msgs.find(m => m.id === viewerMid)?.deviceId === deviceId && (
@@ -565,11 +518,9 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
       <Modal visible={showCompose} transparent animationType="slide" onRequestClose={() => setShowCompose(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end" }}>
-          {/* 배경 탭 → 닫기 (sheet 내부 터치와 분리) */}
           <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowCompose(false)}>
             <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} />
           </Pressable>
-          {/* 시트 — 내부 터치가 배경 Pressable로 전파되지 않도록 Pressable로 감쌈 */}
           <Pressable onPress={() => {}} style={ab.sheet}>
             <View style={ab.handle} />
             <Text style={ab.sheetTitle}>{t.anbuCompose}</Text>
@@ -588,24 +539,24 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
               value={text}
               onChangeText={setText}
               placeholder={t.anbuPlaceholder}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={DS.textTertiary}
               multiline
               maxLength={200}
             />
             <View style={ab.sheetBar}>
               <Pressable style={ab.attachBtn} onPress={pickCamera}>
-                <Ionicons name="camera" size={18} color={COLORS.neonText} />
+                <Ionicons name="camera" size={18} color={DS.brandDeep} />
               </Pressable>
               <Pressable style={ab.attachBtn} onPress={pickLibrary}>
-                <Ionicons name="images" size={18} color={COLORS.neonText} />
+                <Ionicons name="images" size={18} color={DS.brandDeep} />
               </Pressable>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, marginLeft: 4 }}>{text.length}/200</Text>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, marginLeft: 4 }}>{text.length}/200</Text>
               <View style={{ flex: 1 }} />
               <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
                 style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
                 {sending
-                  ? <ActivityIndicator size="small" color={COLORS.neonText} />
-                  : <Ionicons name="send" size={17} color={COLORS.neonText} />}
+                  ? <ActivityIndicator size="small" color={DS.brandDeep} />
+                  : <Ionicons name="send" size={17} color={DS.brandDeep} />}
               </Pressable>
             </View>
           </Pressable>
@@ -613,10 +564,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
       </Modal>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-        <View style={ab.hdr}>
-          <View style={ab.pill}><Text style={ab.pillText}>{t.anbuLive}</Text></View>
-          <Text style={ab.bigTitle}>{t.anbuTitle}</Text>
-        </View>
+        <Text style={ab.screenTitle}>{t.anbuTitle}</Text>
 
         <View style={ab.seg}>
           {(["messages", "gallery"] as const).map(v => (
@@ -627,7 +575,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
         </View>
 
         {sent && (
-          <View style={ab.toast}><Ionicons name="checkmark-circle" size={14} color={COLORS.neonText} /><Text style={ab.toastText}>{t.anbuSentToast}</Text></View>
+          <View style={ab.toast}><Ionicons name="checkmark-circle" size={14} color={DS.success} /><Text style={ab.toastText}>{t.anbuSentToast}</Text></View>
         )}
 
         {!familyCode && (
@@ -639,64 +587,60 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
         {subView === "messages" && (
           <>
-            {loading && <ActivityIndicator color={COLORS.neon} style={{ marginVertical: 20 }} />}
+            {loading && <ActivityIndicator color={DS.info} style={{ marginVertical: 20 }} />}
             {!loading && msgs.length === 0 && familyCode && (
-              <View style={ab.empty}><Ionicons name="chatbubble-outline" size={32} color={COLORS.textMuted} /><Text style={ab.emptyText}>{t.anbuNoMessages}</Text></View>
+              <View style={ab.empty}><Ionicons name="chatbubble-outline" size={32} color={DS.textTertiary} /><Text style={ab.emptyText}>{t.anbuNoMessages}</Text></View>
             )}
-            {msgs.map((msg, idx) => {
-              const first = idx === 0;
-              return (
-                <View key={msg.id} style={[ab.card, first && ab.cardNeon]}>
-                  {first && <><View style={ab.deco1} /><View style={ab.deco2} /><View style={ab.deco3} /></>}
-                  <View style={ab.cardTop}>
-                    <View style={[ab.cardAvatar, first && ab.cardAvatarDark]}>
-                      <Ionicons name="person" size={13} color={first ? COLORS.neon : COLORS.white} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[ab.cardName, first && { color: COLORS.neonText }]}>{msg.fromName}</Text>
-                      <Text style={[ab.cardTime, first && { color: "rgba(26,37,53,0.55)" }]}>{formatTimeI18n(msg.createdAt, t)}</Text>
-                    </View>
-                    {msg.hearts > 0 && (
-                      <View style={ab.heartBadge}>
-                        <Ionicons name="heart" size={10} color={first ? COLORS.neonText : COLORS.coral} />
-                        <Text style={[ab.heartN, first && { color: COLORS.neonText }]}>{msg.hearts}</Text>
-                      </View>
-                    )}
-                    {msg.deviceId === deviceId && (
-                      <Pressable onPress={() => del(msg.id)} disabled={delId === msg.id} style={{ marginLeft: 6 }}>
-                        {delId === msg.id ? <ActivityIndicator size="small" color={first ? COLORS.neonText : "#ef4444"} /> : <Ionicons name="trash-outline" size={15} color={first ? COLORS.neonText : "#ef4444"} />}
-                      </Pressable>
-                    )}
+            {msgs.map((msg) => (
+              <View key={msg.id} style={ab.card}>
+                <View style={ab.cardTop}>
+                  <View style={ab.cardAvatar}>
+                    <Ionicons name="person" size={13} color={DS.info} />
                   </View>
-                  {!!msg.text && <Text style={[ab.cardText, first && { color: COLORS.neonText }]}>{msg.text}</Text>}
-                  {msg.photoData && (
-                    <Pressable onPress={() => { setViewerUri(msg.photoData!); setViewerMid(msg.id); }}>
-                      <Image source={{ uri: msg.photoData }} style={ab.cardPhoto} resizeMode="cover" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={ab.cardName}>{msg.fromName}</Text>
+                    <Text style={ab.cardTime}>{formatTimeI18n(msg.createdAt, t)}</Text>
+                  </View>
+                  {msg.hearts > 0 && (
+                    <View style={ab.heartBadge}>
+                      <Ionicons name="heart" size={10} color={COLORS.coral} />
+                      <Text style={ab.heartN}>{msg.hearts}</Text>
+                    </View>
+                  )}
+                  {msg.deviceId === deviceId && (
+                    <Pressable onPress={() => del(msg.id)} disabled={delId === msg.id} style={{ marginLeft: 6 }}>
+                      {delId === msg.id ? <ActivityIndicator size="small" color={DS.danger} /> : <Ionicons name="trash-outline" size={15} color={DS.danger} />}
                     </Pressable>
                   )}
                 </View>
-              );
-            })}
+                {!!msg.text && <Text style={ab.cardText}>{msg.text}</Text>}
+                {msg.photoData && (
+                  <Pressable onPress={() => { setViewerUri(msg.photoData!); setViewerMid(msg.id); }}>
+                    <Image source={{ uri: msg.photoData }} style={ab.cardPhoto} resizeMode="cover" />
+                  </Pressable>
+                )}
+              </View>
+            ))}
           </>
         )}
 
         {subView === "gallery" && (
           <>
-            {loading && <ActivityIndicator color={COLORS.neon} style={{ marginVertical: 24 }} />}
+            {loading && <ActivityIndicator color={DS.info} style={{ marginVertical: 24 }} />}
             {!loading && photos.length === 0 && (
-              <View style={ab.empty}><Ionicons name="images-outline" size={32} color={COLORS.textMuted} /><Text style={ab.emptyText}>{t.anbuNoPhotos}</Text></View>
+              <View style={ab.empty}><Ionicons name="images-outline" size={32} color={DS.textTertiary} /><Text style={ab.emptyText}>{t.anbuNoPhotos}</Text></View>
             )}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {photos.map(m => (
-                <View key={m.id} style={{ width: THUMB, height: THUMB, borderRadius: 16, overflow: "visible", position: "relative" }}>
-                  <Pressable onPress={() => { setViewerUri(m.photoData!); setViewerMid(m.id); }} style={{ flex: 1, borderRadius: 16, overflow: "hidden" }}>
+                <View key={m.id} style={{ width: THUMB, height: THUMB, borderRadius: DS.radius.card, overflow: "visible", position: "relative" }}>
+                  <Pressable onPress={() => { setViewerUri(m.photoData!); setViewerMid(m.id); }} style={{ flex: 1, borderRadius: DS.radius.card, overflow: "hidden" }}>
                     <Image source={{ uri: m.photoData! }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.38)", padding: 4, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}>
+                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.35)", padding: 4, borderBottomLeftRadius: DS.radius.card, borderBottomRightRadius: DS.radius.card }}>
                       <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: "#fff", textAlign: "center" }}>{formatTimeI18n(m.createdAt, t)}</Text>
                     </View>
                   </Pressable>
                   {m.deviceId === deviceId && (
-                    <Pressable style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: "#ef4444", alignItems: "center", justifyContent: "center", zIndex: 10 }} onPress={() => del(m.id)}>
+                    <Pressable style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: DS.danger, alignItems: "center", justifyContent: "center", zIndex: 10 }} onPress={() => del(m.id)}>
                       <Ionicons name="trash" size={11} color="#fff" />
                     </Pressable>
                   )}
@@ -709,14 +653,16 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
       {subView === "messages" && familyCode && (
         <Pressable style={ab.fab} onPress={() => setShowCompose(true)}>
-          <Ionicons name="add" size={26} color={COLORS.neonText} />
+          <Ionicons name="add" size={26} color={DS.brandDeep} />
         </Pressable>
       )}
     </>
   );
 }
 
-// ─── 자녀 대기방 (부모 미연결) ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// WAITING ROOM (child waiting for parent)
+// ═══════════════════════════════════════════════════════════════════════════════
 const QR_API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
   : "/api";
@@ -730,7 +676,7 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: COLORS.child.bg }}
+      style={{ flex: 1, backgroundColor: DS.bg }}
       contentContainerStyle={{ paddingTop: topBarH + 24, paddingBottom: bottomInset + 40, alignItems: "center", paddingHorizontal: 24 }}
       showsVerticalScrollIndicator={false}
     >
@@ -741,13 +687,8 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
       <Text style={wr.title}>{t.waitingTitle}</Text>
       <Text style={wr.sub}>{t.waitingSub}</Text>
 
-      {/* QR 코드 */}
       <View style={wr.qrWrap}>
-        <Image
-          source={{ uri: qrUri }}
-          style={{ width: 220, height: 220 }}
-          resizeMode="contain"
-        />
+        <Image source={{ uri: qrUri }} style={{ width: 220, height: 220 }} resizeMode="contain" />
       </View>
 
       <Text style={wr.codeLabel}>{t.waitingCodeLabel}</Text>
@@ -764,20 +705,20 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
 
       <View style={wr.infoCard}>
         <View style={wr.infoRow}>
-          <View style={[wr.infoIcon, { backgroundColor: "#eff6ff" }]}>
-            <Ionicons name="qr-code-outline" size={18} color="#3b82f6" />
+          <View style={[wr.infoIcon, { backgroundColor: COLORS.blueSoft }]}>
+            <Ionicons name="qr-code-outline" size={18} color={DS.info} />
           </View>
           <Text style={wr.infoText}>{t.waitingInfo1}</Text>
         </View>
         <View style={wr.infoRow}>
-          <View style={[wr.infoIcon, { backgroundColor: "#f0fdf4" }]}>
-            <Ionicons name="keypad-outline" size={18} color="#22c55e" />
+          <View style={[wr.infoIcon, { backgroundColor: COLORS.greenSoft }]}>
+            <Ionicons name="keypad-outline" size={18} color={DS.success} />
           </View>
           <Text style={wr.infoText}>{t.waitingInfo2}</Text>
         </View>
         <View style={wr.infoRow}>
-          <View style={[wr.infoIcon, { backgroundColor: "rgba(212,242,0,0.18)" }]}>
-            <Ionicons name="radio-outline" size={18} color="#84a800" />
+          <View style={[wr.infoIcon, { backgroundColor: COLORS.orangeSoft }]}>
+            <Ionicons name="radio-outline" size={18} color={DS.warning} />
           </View>
           <Text style={wr.infoText}>{t.waitingInfo3}</Text>
         </View>
@@ -786,7 +727,9 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
   );
 }
 
-// ─── 홈 대시보드 ──────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOME DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
 type ActivityItem = {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -810,14 +753,13 @@ function HomeScreen({
   const { t } = useLang();
   type ParentInfo = { name: string; photo: string | null; loc: LocationData | null; deviceId: string };
   const [parentInfos, setParentInfos] = useState<ParentInfo[]>([]);
-  const [messages, setMessages]   = useState<FamilyMessage[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [showAll, setShowAll]     = useState(false);
+  const [messages, setMessages] = useState<FamilyMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const [parentJoined, setParentJoined] = useState(false);
   const [parentChecked, setParentChecked] = useState(false);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
-  // ── 부모 연결 감지 (5초 폴링) ──
   useEffect(() => {
     if (!familyCode) { setParentChecked(true); return; }
     let cancelled = false;
@@ -889,7 +831,7 @@ function HomeScreen({
     return () => clearInterval(t);
   }, [load]);
 
-  const STATUS_COLOR = { good: "#22c55e", warn: "#f59e0b", alert: "#ef4444", none: "#94a3b8" } as const;
+  const STATUS_COLOR = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary } as const;
 
   const getParentStatus = (loc: LocationData | null) => {
     const minsAgo = loc ? Math.floor((Date.now() - new Date(loc.updatedAt).getTime()) / 60000) : null;
@@ -901,18 +843,18 @@ function HomeScreen({
       alert: { title: t.statusMsgAlertTitle, sub: (t.statusMsgAlertSub as string).replace("{h}", String(Math.floor((minsAgo ?? 0) / 60))) },
       none:  { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub },
     };
-    return { level, color, msg: msgs[level], minsAgo, isActive: level === "good" };
+    return { level: level as "good" | "warn" | "alert" | "none", color, msg: msgs[level], minsAgo, isActive: level === "good" };
   };
 
   const ACTIVITY_ICON_MAP: Record<string, { icon: keyof typeof Ionicons.glyphMap; iconColor: string; iconBg: string }> = {
     heart:      { icon: "heart",           iconColor: "#ec4899", iconBg: "#fdf2f8" },
-    view_slide: { icon: "eye",             iconColor: "#8b5cf6", iconBg: "#f5f3ff" },
-    location:   { icon: "location",        iconColor: "#3b82f6", iconBg: "#eff6ff" },
-    app_open:   { icon: "phone-portrait",  iconColor: "#22c55e", iconBg: "#f0fdf4" },
-    quiz:       { icon: "bulb",            iconColor: "#f59e0b", iconBg: "#fffbeb" },
+    view_slide: { icon: "eye",             iconColor: "#8b5cf6", iconBg: COLORS.purpleSoft },
+    location:   { icon: "location",        iconColor: DS.info,   iconBg: COLORS.blueSoft },
+    app_open:   { icon: "phone-portrait",  iconColor: DS.success, iconBg: COLORS.greenSoft },
+    quiz:       { icon: "bulb",            iconColor: DS.warning, iconBg: COLORS.orangeSoft },
     message:    { icon: "chatbubble",      iconColor: "#06b6d4", iconBg: "#ecfeff" },
   };
-  const DEFAULT_ICON = { icon: "ellipse" as keyof typeof Ionicons.glyphMap, iconColor: "#94a3b8", iconBg: "#f1f5f9" };
+  const DEFAULT_ICON = { icon: "ellipse" as keyof typeof Ionicons.glyphMap, iconColor: DS.textTertiary, iconBg: DS.surfaceSoft };
 
   const ACTIVITY_LABEL_MAP: Record<string, string> = {
     app_open:   t.parentLogAppOpen as string,
@@ -940,8 +882,6 @@ function HomeScreen({
     });
   }, [parentActivities, showAll, t]);
 
-  const greeting = t.homeParentActivity;
-
   const dailySummary = useMemo(() => {
     const counts: Record<string, number> = { walk: 0, photo: 0, rest: 0, location: 0 };
     parentActivities.forEach(a => {
@@ -951,104 +891,136 @@ function HomeScreen({
       else counts.walk++;
     });
     return [
-      { key: "walk", icon: "walk-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyWalk, count: counts.walk, color: "#22c55e" },
+      { key: "walk", icon: "walk-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyWalk, count: counts.walk, color: DS.success },
       { key: "photo", icon: "camera-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyPhoto, count: counts.photo, color: "#8b5cf6" },
-      { key: "rest", icon: "cafe-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyRest, count: counts.rest, color: "#f59e0b" },
-      { key: "location", icon: "navigate-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyLocation, count: counts.location, color: "#3b82f6" },
+      { key: "rest", icon: "cafe-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyRest, count: counts.rest, color: DS.warning },
+      { key: "location", icon: "navigate-outline" as keyof typeof Ionicons.glyphMap, label: t.parentDailyLocation, count: counts.location, color: DS.info },
     ];
   }, [parentActivities, t]);
 
-  // 가족 코드 없음 (회원가입 전 직접 접근)
   if (!familyCode) {
     return (
-      <View style={[{ flex: 1, backgroundColor: "#f4f6fb", paddingTop: topBarH }, hm.centerEmpty]}>
-        <View style={hm.emptyIcon}><Ionicons name="wifi-outline" size={28} color="#94a3b8" /></View>
+      <View style={[{ flex: 1, backgroundColor: DS.bg, paddingTop: topBarH }, hm.centerEmpty]}>
+        <View style={hm.emptyIconWrap}><Ionicons name="wifi-outline" size={28} color={DS.textTertiary} /></View>
         <Text style={hm.emptyTitle}>{t.homeNotConnected}</Text>
         <Text style={hm.emptySub}>{t.homeNotConnectedSub}</Text>
       </View>
     );
   }
 
-  // 첫 폴링 결과 도착 전 — 빈 화면 (깜빡임 방지)
   if (!parentChecked) {
-    return <View style={{ flex: 1, backgroundColor: COLORS.child.bg }} />;
+    return <View style={{ flex: 1, backgroundColor: DS.bg }} />;
   }
 
-  // 가족 코드 있지만 부모 미연결 → 대기방
   if (!parentJoined) {
     return <WaitingRoom familyCode={familyCode} topBarH={topBarH} bottomInset={bottomInset} />;
   }
 
-  // 부모 연결 완료 → 대시보드 (페이드인)
+  const todayMsgCount = messages.filter(m => {
+    const today = new Date();
+    return new Date(m.createdAt).getTime() >= new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  }).length;
+
   return (
     <Animated.View style={{ flex: 1, opacity: revealAnim }}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: "#f4f6fb" }}
+      style={{ flex: 1, backgroundColor: DS.bg }}
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* 인사말 */}
-      <Text style={hm.greeting}>{greeting}</Text>
+      <Text style={hm.greeting}>{t.homeParentActivity}</Text>
 
-      {/* ── 통합 부모 상태 카드 (부모별) ── */}
+      {/* Today Summary Card */}
+      <View style={hm.summaryCard}>
+        <View style={hm.summaryHeader}>
+          <Ionicons name="sunny-outline" size={18} color={DS.warning} />
+          <Text style={hm.summaryTitle}>{t.todayAnbu || "Today's Status"}</Text>
+        </View>
+        <View style={hm.summaryBody}>
+          <View style={hm.summaryStatRow}>
+            {parentInfos.map((p, i) => {
+              const ps = getParentStatus(p.loc);
+              return (
+                <View key={p.deviceId || i} style={hm.summaryStat}>
+                  <View style={[hm.summaryStatDot, { backgroundColor: ps.color }]} />
+                  <Text style={hm.summaryStatName} numberOfLines={1}>{p.name}</Text>
+                  <Text style={[hm.summaryStatLabel, { color: ps.color }]}>{ps.isActive ? t.parentStatusActive : t.parentStatusIdle}</Text>
+                </View>
+              );
+            })}
+          </View>
+          <View style={hm.summaryDivider} />
+          <View style={hm.summaryRow}>
+            <View style={hm.summaryItem}>
+              <Ionicons name="chatbubble-outline" size={14} color={DS.info} />
+              <Text style={hm.summaryValue}>{todayMsgCount}</Text>
+              <Text style={hm.summaryLabel}>{t.anbuSegMessages}</Text>
+            </View>
+            <View style={hm.summaryItem}>
+              <Ionicons name="footsteps-outline" size={14} color={DS.success} />
+              <Text style={hm.summaryValue}>{parentActivities.length}</Text>
+              <Text style={hm.summaryLabel}>{t.recentActivity}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Parent Cards (Runna style) */}
       {parentInfos.map((parent, idx) => {
         const ps = getParentStatus(parent.loc);
+        const indicatorColor = ps.color;
         return (
-          <View key={parent.deviceId || idx} style={hm.unifiedCard}>
-            <View style={[hm.ucStatusStripe, { backgroundColor: ps.color }]} />
-
-            <View style={hm.ucHeader}>
-              <View style={hm.ucAvatar}>
-                {parent.photo ? (
-                  <Image source={{ uri: parent.photo }} style={{ width: 60, height: 60, borderRadius: 30 }} />
-                ) : (
-                  <Ionicons name="person" size={30} color={idx === 0 ? "#3b82f6" : "#ec4899"} />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={hm.ucName}>{parent.name}</Text>
-                <View style={hm.ucStatusBadgeRow}>
-                  <View style={[hm.ucStatusBadge, { backgroundColor: ps.isActive ? "#dcfce7" : ps.level === "warn" ? "#fef3c7" : ps.level === "alert" ? "#fee2e2" : "#f1f5f9" }]}>
-                    <View style={[hm.ucStatusBadgeDot, { backgroundColor: ps.color }]} />
-                    <Text style={[hm.ucStatusBadgeText, { color: ps.isActive ? "#16a34a" : ps.level === "warn" ? "#d97706" : ps.level === "alert" ? "#dc2626" : "#64748b" }]}>
-                      {ps.isActive ? t.parentStatusActive : t.parentStatusIdle}
-                    </Text>
-                  </View>
-                  {parent.loc && (
-                    <Text style={hm.ucLastTime}>{t.lastActivity} {formatTimeI18n(parent.loc.updatedAt, t)}</Text>
+          <View key={parent.deviceId || idx} style={hm.parentCard}>
+            <View style={[hm.parentIndicator, { backgroundColor: indicatorColor }]} />
+            <View style={hm.parentContent}>
+              <View style={hm.parentHeader}>
+                <View style={[hm.parentAvatar, { backgroundColor: idx === 0 ? COLORS.blueSoft : "#FCE7F3" }]}>
+                  {parent.photo ? (
+                    <Image source={{ uri: parent.photo }} style={{ width: 52, height: 52, borderRadius: 26 }} />
+                  ) : (
+                    <Ionicons name="person" size={24} color={idx === 0 ? DS.info : "#EC4899"} />
                   )}
                 </View>
-              </View>
-            </View>
-
-            <View style={hm.ucEmotionBox}>
-              <Text style={hm.ucEmotionText}>{ps.msg.title}</Text>
-              <Text style={hm.ucEmotionSub}>{ps.msg.sub}</Text>
-            </View>
-
-            <View style={hm.ucDailyRow}>
-              {dailySummary.map(d => (
-                <View key={d.key} style={hm.ucDailyItem}>
-                  <View style={[hm.ucDailyIconBg, { backgroundColor: d.color + "18" }]}>
-                    <Ionicons name={d.icon} size={18} color={d.color} />
+                <View style={{ flex: 1 }}>
+                  <Text style={hm.parentName}>{parent.name}</Text>
+                  <View style={hm.parentStatusRow}>
+                    <StatusChip level={ps.level} label={ps.isActive ? t.parentStatusActive : t.parentStatusIdle} />
+                    {parent.loc && (
+                      <Text style={hm.parentLastTime}>{t.lastActivity} {formatTimeI18n(parent.loc.updatedAt, t)}</Text>
+                    )}
                   </View>
-                  <Text style={hm.ucDailyCount}>{d.count}</Text>
-                  <Text style={hm.ucDailyLabel}>{d.label}</Text>
                 </View>
-              ))}
+              </View>
+
+              <View style={hm.parentEmotionBox}>
+                <Text style={hm.parentEmotionText}>{ps.msg.title}</Text>
+                <Text style={hm.parentEmotionSub}>{ps.msg.sub}</Text>
+              </View>
+
+              <View style={hm.parentDailyRow}>
+                {dailySummary.map(d => (
+                  <View key={d.key} style={hm.parentDailyItem}>
+                    <View style={[hm.parentDailyIconBg, { backgroundColor: d.color + "18" }]}>
+                      <Ionicons name={d.icon} size={16} color={d.color} />
+                    </View>
+                    <Text style={hm.parentDailyCount}>{d.count}</Text>
+                    <Text style={hm.parentDailyLabel}>{d.label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
         );
       })}
 
-      {/* 최근 활동 */}
+      {/* Recent Activity */}
       <Text style={hm.sectionTitle}>{t.recentActivity}</Text>
       {loading ? (
-        <ActivityIndicator style={{ marginVertical: 20 }} color="#3b82f6" />
+        <ActivityIndicator style={{ marginVertical: 20 }} color={DS.info} />
       ) : activities.length === 0 ? (
         <View style={[hm.activityCard, { padding: 28, alignItems: "center", gap: 8 }]}>
-          <Ionicons name="time-outline" size={26} color="#cbd5e1" />
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: "#94a3b8" }}>{t.noActivityYet}</Text>
+          <Ionicons name="time-outline" size={26} color={DS.textTertiary} />
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary }}>{t.noActivityYet}</Text>
         </View>
       ) : (
         <View style={hm.activityCard}>
@@ -1072,19 +1044,23 @@ function HomeScreen({
           <Text style={hm.viewAllText}>{t.viewAllActivity}</Text>
         </Pressable>
       )}
-
     </ScrollView>
     </Animated.View>
   );
 }
 
-// ─── 알림 화면 ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTIFICATION SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
+type NotifFilter = "all" | "photo" | "location" | "alert";
+
 function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
   allFamilyCodes: string[]; topBarH: number; bottomInset: number;
 }) {
   const { t } = useLang();
   const [messages, setMessages] = useState<FamilyMessage[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<NotifFilter>("all");
 
   useEffect(() => {
     if (!allFamilyCodes.length) { setLoading(false); return; }
@@ -1096,37 +1072,65 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
       .finally(() => setLoading(false));
   }, [allFamilyCodes]);
 
+  const filters: { key: NotifFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: "all", label: t.notifFilterAll || "All", icon: "list-outline" },
+    { key: "photo", label: t.notifFilterPhoto || "Photo", icon: "image-outline" },
+    { key: "location", label: t.notifFilterLocation || "Location", icon: "location-outline" },
+    { key: "alert", label: t.notifFilterAlert || "Alert", icon: "warning-outline" },
+  ];
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return messages;
+    if (filter === "photo") return messages.filter(m => !!m.photoData);
+    if (filter === "location") return messages.filter(m => m.fromRole === "parent");
+    return messages.filter(m => m.hearts > 0);
+  }, [messages, filter]);
+
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: "#f4f6fb" }}
+      style={{ flex: 1, backgroundColor: DS.bg }}
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
       <Text style={hm.sectionTitle}>{t.notifTitle}</Text>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
+        {filters.map(f => (
+          <Pressable
+            key={f.key}
+            onPress={() => setFilter(f.key)}
+            style={[nf.chip, filter === f.key && nf.chipOn]}
+          >
+            <Ionicons name={f.icon} size={14} color={filter === f.key ? DS.brandDeep : DS.textSecondary} />
+            <Text style={[nf.chipText, filter === f.key && nf.chipTextOn]}>{f.label}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#3b82f6" />
-      ) : messages.length === 0 ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color={DS.info} />
+      ) : filtered.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 56 }}>
-          <View style={hm.emptyIcon}><Ionicons name="notifications-outline" size={28} color="#94a3b8" /></View>
+          <View style={hm.emptyIconWrap}><Ionicons name="notifications-outline" size={28} color={DS.textTertiary} /></View>
           <Text style={hm.emptyTitle}>{t.notifEmpty}</Text>
           <Text style={hm.emptySub}>{t.notifEmptySub}</Text>
         </View>
       ) : (
         <View style={hm.activityCard}>
-          {messages.slice(0, 30).map((m, i) => (
+          {filtered.slice(0, 30).map((m, i) => (
             <React.Fragment key={m.id}>
               {i > 0 && <View style={hm.activityDivider} />}
               <View style={hm.activityRow}>
-                <View style={[hm.activityIconBg, { backgroundColor: m.fromRole === "parent" ? "#eff6ff" : "#f0fdf4" }]}>
+                <View style={[hm.activityIconBg, { backgroundColor: m.fromRole === "parent" ? COLORS.blueSoft : COLORS.greenSoft }]}>
                   <Ionicons
                     name={m.photoData ? "image" : m.fromRole === "parent" ? "chatbubble" : "paper-plane"}
                     size={14}
-                    color={m.fromRole === "parent" ? "#3b82f6" : "#22c55e"}
+                    color={m.fromRole === "parent" ? DS.info : DS.success}
                   />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={hm.activityLabel}>{m.fromName}</Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: "#64748b" }} numberOfLines={1}>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary }} numberOfLines={1}>
                     {m.text || t.notifSentPhoto}
                   </Text>
                 </View>
@@ -1140,117 +1144,21 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
   );
 }
 
-// ─── 선물샵 화면 ──────────────────────────────────────────────────────────────
-type GiftItem = { id: number; name: string; price: string; category: string; icon: string; popular: boolean };
-
-function GiftScreen({ topBarH }: { topBarH: number }) {
-  const { t } = useLang();
-  const GIFTS: GiftItem[] = useMemo(() =>
-    (t.giftItems as any[]).map((g: any, i: number) => ({
-      id: i,
-      name: g.name,
-      price: g.price,
-      category: g.category,
-      icon: GIFT_ICONS[i] ?? "gift",
-      popular: GIFT_POPULAR[i] ?? false,
-    })),
-  [t.giftItems]);
-
-  const [sel, setSel]       = useState<GiftItem | null>(null);
-  const [bought, setBought] = useState<GiftItem | null>(null);
-  const [filter, setFilter] = useState("all");
-  const cats = [
-    { key: "all",    label: t.giftFilterAll },
-    { key: "food",   label: t.giftFilterFood },
-    { key: "health", label: t.giftFilterHealth },
-    { key: "flower", label: t.giftFilterFlower },
-  ];
-  const CAT_MAP: Record<string, string> = useMemo(() => {
-    const items = t.giftItems as any[];
-    const unique = [...new Set(items.map((g: any) => g.category))];
-    const keys = ["food", "health", "flower"];
-    const map: Record<string, string> = {};
-    unique.forEach((cat: string, i: number) => { map[keys[i] ?? cat] = cat; });
-    return map;
-  }, [t.giftItems]);
-  const filtered = filter === "all" ? GIFTS : GIFTS.filter(g => g.category === CAT_MAP[filter]);
-
-  return (
-    <>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-        <View style={gf.hdr}>
-          <View style={ab.pill}><Text style={ab.pillText}>{t.giftFilterAll}</Text></View>
-          <Text style={ab.bigTitle}>{t.giftShopTitle}</Text>
-        </View>
-
-        {bought && (
-          <View style={gf.success}><Ionicons name="checkmark-circle" size={16} color={COLORS.neonText} /><Text style={gf.successText}>{bought.name} {t.giftOrderDone}</Text></View>
-        )}
-
-        <View style={gf.filterRow}>
-          {cats.map(c => (
-            <Pressable key={c.key} onPress={() => setFilter(c.key)} style={[gf.chip, filter === c.key && gf.chipOn]}>
-              <Text style={[gf.chipText, filter === c.key && gf.chipTextOn]}>{c.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={gf.grid}>
-          {filtered.map((g, idx) => {
-            const first = idx === 0 && filter === "all";
-            return (
-              <Pressable key={g.id} style={({ pressed }) => [gf.card, first && gf.cardNeon, { opacity: pressed ? 0.9 : 1 }]} onPress={() => setSel(g)}>
-                {g.popular && <View style={gf.pop}><Text style={gf.popText}>{t.giftPopular}</Text></View>}
-                {first && <><View style={ab.deco1} /><View style={ab.deco2} /></>}
-                <View style={[gf.iconBg, first && { backgroundColor: "rgba(0,0,0,0.1)" }]}>
-                  <Ionicons name={g.icon as any} size={26} color={first ? COLORS.neonText : COLORS.neon} />
-                </View>
-                <Text style={[gf.name, first && { color: COLORS.neonText }]}>{g.name}</Text>
-                <Text style={[gf.price, first && { color: COLORS.neonText }]}>{g.price}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }} onPress={() => setSel(null)}>
-          <View style={ab.sheet}>
-            <View style={ab.handle} />
-            <View style={[gf.iconBg, { width: 70, height: 70, borderRadius: 22, marginBottom: 14, backgroundColor: COLORS.child.accentSoft }]}>
-              <Ionicons name={(sel?.icon ?? "gift") as any} size={32} color={COLORS.neonText} />
-            </View>
-            <Text style={gf.sheetTitle}>{sel?.name}</Text>
-            <Text style={gf.sheetPrice}>{sel?.price}</Text>
-            <Text style={gf.sheetDesc}>{t.giftSheetDesc}</Text>
-            <Pressable style={ab.sendBtn} onPress={() => { setBought(sel); setSel(null); }}>
-              <Ionicons name="gift" size={16} color={COLORS.neonText} />
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.neonText, marginLeft: 8 }}>{t.giftSendBtn} · {sel?.price}</Text>
-            </Pressable>
-            <Pressable style={{ marginTop: 12 }} onPress={() => setSel(null)}>
-              <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textMuted }}>{t.giftCancel}</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-    </>
-  );
-}
-
-// ─── 메인 ─────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN CHILD SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function ChildScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, myRole, deviceId, isMasterChild, childRole } = useFamilyContext();
   const [tab, setTab] = useState<Tab>("home");
 
-  const topInset    = Platform.OS === "web" ? 0 : insets.top;
+  const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
-  const TOP_H       = topInset + 60;
-  const isMap       = tab === "map";
+  const TOP_H = topInset + 56;
+  const isMap = tab === "map";
 
   return (
-    <View style={{ flex: 1, backgroundColor: isMap ? COLORS.mapBg : COLORS.bg }}>
-
+    <View style={{ flex: 1, backgroundColor: isMap ? DS.brandDeep : DS.bg }}>
       {tab === "home" && (
         <HomeScreen
           familyCode={familyCode}
@@ -1261,242 +1169,191 @@ export default function ChildScreen() {
           onGoToAnbu={() => setTab("photo")}
         />
       )}
-
       {tab === "photo" && (
         <AnbuScreen familyCode={familyCode} allFamilyCodes={allFamilyCodes} myName={myName} myRole={myRole} deviceId={deviceId} topBarH={TOP_H} />
       )}
-
       {isMap && (
         <View style={StyleSheet.absoluteFillObject}>
           <MapScreen familyCode={familyCode} bottomInset={bottomInset} />
         </View>
       )}
-
       {tab === "alarm" && (
         <NotificationScreen allFamilyCodes={allFamilyCodes} topBarH={TOP_H} bottomInset={bottomInset} />
       )}
 
-      {/* ══ 상단 바 — 항상 위에 ══ */}
-      <TopBar tab={tab} topInset={topInset} />
-
-      {/* ══ 하단 탭 바 ══ */}
-      <BottomNav
+      <AppHeader topInset={topInset} isMap={isMap} />
+      <BottomTabBar
         tab={tab}
         onTab={setTab}
         onSettings={() => router.push("/profile")}
         bottomInset={bottomInset}
       />
-
     </View>
   );
 }
 
-// ─── 스타일 ───────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// 하단 탭 바
-const bn = StyleSheet.create({
-  wrap:          { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e2e8f0", paddingTop: 8 },
-  item:          { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
-  iconWrap:      { width: 36, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 10 },
-  iconWrapActive:{ backgroundColor: "rgba(26,34,48,0.08)" },
-  label:         { fontFamily: "Inter_500Medium", fontSize: 10, color: "#94a3b8" },
-  labelActive:   { color: COLORS.navPill, fontFamily: "Inter_600SemiBold" },
+const hdr = StyleSheet.create({
+  wrap: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 20, paddingBottom: 12 },
+  logo: { fontFamily: "Inter_700Bold", fontSize: 18, letterSpacing: 3 },
+  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: DS.brand, borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "rgba(215,255,0,0.4)" },
+  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: DS.brandDeep, letterSpacing: 0.5 },
 });
 
-// 대기방
-const wr = StyleSheet.create({
-  badge:       { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(212,242,0,0.15)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50, marginBottom: 20, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
-  badgeDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
-  badgeText:   { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#84a800" },
-  title:       { fontFamily: "Inter_700Bold", fontSize: 30, color: COLORS.child.text, textAlign: "center", lineHeight: 38, marginBottom: 10 },
-  sub:         { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.child.textSub, textAlign: "center", lineHeight: 22, marginBottom: 32 },
-  qrWrap:      { width: 232, height: 232, backgroundColor: "#fff", borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", overflow: "hidden" },
-  qrNative:    { width: 200, height: 200, alignItems: "center", justifyContent: "center", backgroundColor: "#f5f8ff", borderRadius: 18 },
-  qrNativeText:{ fontFamily: "Inter_700Bold", fontSize: 28, color: COLORS.child.text, letterSpacing: 8 },
-  codeLabel:   { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textMuted, letterSpacing: 1, marginBottom: 10 },
-  codeRow:     { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 },
-  codePill:    { backgroundColor: COLORS.child.bgCard, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.child.bgCardBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  codeDigits:  { fontFamily: "Inter_700Bold", fontSize: 26, color: COLORS.child.text, letterSpacing: 4 },
-  codeSep:     { fontFamily: "Inter_700Bold", fontSize: 20, color: COLORS.child.textMuted },
-  infoCard:    { width: "100%", backgroundColor: COLORS.child.bgCard, borderRadius: 20, padding: 20, gap: 14, borderWidth: 1, borderColor: COLORS.child.bgCardBorder },
-  infoRow:     { flexDirection: "row", alignItems: "center", gap: 12 },
-  infoIcon:    { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  infoText:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, flex: 1 },
+const nav = StyleSheet.create({
+  wrap: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 400, flexDirection: "row", backgroundColor: DS.surface, paddingTop: 8, shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 8 },
+  item: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
+  iconCircle: { width: 36, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 10 },
+  iconCircleActive: { backgroundColor: DS.brandDeep + "0D" },
+  label: { fontFamily: "Inter_500Medium", fontSize: 10, color: DS.textTertiary },
+  labelActive: { color: DS.brandDeep, fontFamily: "Inter_600SemiBold" },
 });
 
-// 홈 대시보드
-const hm = StyleSheet.create({
-  centerEmpty:     { alignItems: "center", justifyContent: "center", flex: 1 },
-  greeting:        { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#64748b", marginHorizontal: 20, marginBottom: 10 },
-
-  unifiedCard:     { marginHorizontal: 16, marginBottom: 16, borderRadius: 24, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 5 },
-  ucStatusStripe:  { height: 4, width: "100%" },
-  ucHeader:        { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
-  ucAvatar:        { width: 64, height: 64, borderRadius: 32, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  ucName:          { fontFamily: "Inter_700Bold", fontSize: 20, color: "#1a2535" },
-  ucStatusBadgeRow:{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  ucStatusBadge:   { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  ucStatusBadgeDot:{ width: 7, height: 7, borderRadius: 4 },
-  ucStatusBadgeText:{ fontFamily: "Inter_600SemiBold", fontSize: 12 },
-  ucLastTime:      { fontFamily: "Inter_400Regular", fontSize: 11, color: "#94a3b8" },
-  ucEmotionBox:    { marginHorizontal: 20, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: "#f8fafc", borderRadius: 16, marginBottom: 16 },
-  ucEmotionText:   { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1a2535", marginBottom: 4, lineHeight: 24 },
-  ucEmotionSub:    { fontFamily: "Inter_400Regular", fontSize: 13, color: "#64748b", lineHeight: 18 },
-  ucDailyRow:      { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, paddingBottom: 20, paddingTop: 4 },
-  ucDailyItem:     { alignItems: "center", gap: 4 },
-  ucDailyIconBg:   { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  ucDailyCount:    { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1a2535" },
-  ucDailyLabel:    { fontFamily: "Inter_400Regular", fontSize: 11, color: "#94a3b8" },
-
-  sectionTitle:    { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1a2535", marginHorizontal: 20, marginTop: 6, marginBottom: 10 },
-  activityCard:    { marginHorizontal: 16, borderRadius: 20, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  activityRow:     { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7, paddingHorizontal: 14 },
-  activityDivider: { height: 1, backgroundColor: "#f1f5f9", marginHorizontal: 14 },
-  activityIconBg:  { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center" },
-  activityLabel:   { fontFamily: "Inter_500Medium", fontSize: 14, color: "#1e293b", flex: 1 },
-  activityTime:    { fontFamily: "Inter_400Regular", fontSize: 12, color: "#94a3b8" },
-  viewAllBtn:      { marginHorizontal: 16, marginTop: 10, borderRadius: 16, borderWidth: 1.5, borderColor: "#e2e8f0", paddingVertical: 14, alignItems: "center", backgroundColor: "#fff" },
-  viewAllText:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#475569" },
-  emptyIcon:       { width: 64, height: 64, borderRadius: 32, backgroundColor: "#f1f5f9", alignItems: "center", justifyContent: "center", marginBottom: 16 },
-  emptyTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1a2535", textAlign: "center" },
-  emptySub:        { fontFamily: "Inter_400Regular", fontSize: 14, color: "#94a3b8", textAlign: "center", marginTop: 6, lineHeight: 22 },
+const chip = StyleSheet.create({
+  wrap: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: DS.radius.pill },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  text: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
 });
 
-// 상단 바
-const tb = StyleSheet.create({
-  wrap:         { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 16, paddingBottom: 10 },
-  logo:         { fontFamily: "Inter_700Bold", fontSize: 19, color: COLORS.white, letterSpacing: 1 },
-  codeChip:     { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(212,242,0,0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.2)" },
-  codeText:     { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.neon, letterSpacing: 1 },
-  rightGroup:   { flexDirection: "row", alignItems: "center", gap: 8 },
-  tabRow:       { flexDirection: "row", gap: 4, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 50, padding: 3 },
-  tabRowLight:  { backgroundColor: "rgba(0,0,0,0.06)" },
-  tabChip:      { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50 },
-  tabChipOnDark:  { backgroundColor: COLORS.neon },
-  tabChipOnLight: { backgroundColor: COLORS.navPill },
-  tabText:      { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.55)" },
-  masterBadge:  { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: COLORS.neon, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, marginRight: 6, borderWidth: 1, borderColor: "rgba(212,242,0,0.4)" },
-  masterText:   { fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.neonText, letterSpacing: 0.5 },
+const nf = StyleSheet.create({
+  chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: DS.radius.pill, backgroundColor: DS.surface, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
+  chipOn: { backgroundColor: DS.brand, borderColor: "transparent" },
+  chipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: DS.textSecondary },
+  chipTextOn: { color: DS.brandDeep, fontFamily: "Inter_600SemiBold" },
 });
 
-// 지도
 const mp = StyleSheet.create({
-  // 상태 점
-  dot:            { width: 8, height: 8, borderRadius: 4 },
-
-  // 미연결 카드
-  connectCard:    { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(22,30,44,0.93)", borderRadius: 22, padding: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)" },
-  connectBtn:     { backgroundColor: COLORS.neon, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 50 },
-  connectBtnText: { fontFamily: "Inter_700Bold",   fontSize: 13, color: COLORS.neonText },
-  infoName:       { fontFamily: "Inter_700Bold",   fontSize: 15, color: COLORS.white, marginBottom: 2 },
-  infoAddr:       { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 16 },
-
-  // 힌트 필 (핀 클릭 유도)
-  hintPill:       { position: "absolute", left: 0, right: 0, alignItems: "center" },
-  hintText:       { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white, backgroundColor: "rgba(22,30,44,0.82)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50, overflow: "hidden" },
-
-  // 슬라이드업 배너
-  banner:         { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(20,28,42,0.96)", borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: "rgba(212,242,0,0.18)" },
-  bannerClose:    { position: "absolute", top: 10, right: 12, padding: 4 },
-  bannerStatus:   { fontFamily: "Inter_500Medium", fontSize: 11, color: "rgba(255,255,255,0.55)" },
-  bannerName:     { fontFamily: "Inter_700Bold",   fontSize: 16, color: COLORS.white },
-  bannerAddr:     { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.45)" },
-  bannerActions:  { flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 4 },
-  bannerBtn:      { width: 36, height: 36, borderRadius: 18 },
-
-  // Native 핀 힌트
-  pinHint:        { position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: "rgba(22,30,44,0.82)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7 },
-  pinHintText:    { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white },
-  privacyCard:    { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(20,28,42,0.92)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: "rgba(139,92,246,0.25)" },
-  privacyName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.white },
-  privacyStatus:  { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.5)" },
-  privacyLabel:   { fontFamily: "Inter_500Medium", fontSize: 11, color: "#8b5cf6", marginTop: 2 },
-  parentTabs:     { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 8, justifyContent: "center" },
-  parentTab:      { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(20,28,42,0.7)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "transparent" },
-  parentTabActive:{ borderColor: "rgba(212,242,0,0.5)", backgroundColor: "rgba(20,28,42,0.95)" },
-  parentTabDot:   { width: 8, height: 8, borderRadius: 4 },
-  parentTabText:  { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.6)" },
-  parentTabTextActive: { color: COLORS.white, fontFamily: "Inter_600SemiBold" },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  floatingPanel: { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  panelName: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary, marginBottom: 2 },
+  panelAddr: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary, lineHeight: 16 },
+  panelBtn: { backgroundColor: DS.brand, paddingHorizontal: 18, paddingVertical: 10, borderRadius: DS.radius.pill },
+  panelBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: DS.brandDeep },
+  hintPill: { position: "absolute", left: 0, right: 0, alignItems: "center" },
+  hintText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textPrimary, backgroundColor: DS.surface, paddingHorizontal: 14, paddingVertical: 8, borderRadius: DS.radius.pill, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  banner: { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, paddingVertical: 16, paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 8, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  bannerClose: { position: "absolute", top: 12, right: 14, padding: 4 },
+  bannerStatusText: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.textSecondary },
+  bannerName: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
+  bannerAddr: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
+  bannerActions: { flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 4 },
+  bannerBtn: { width: 36, height: 36, borderRadius: 18 },
+  pinHint: { position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: DS.surface, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 7, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  pinHintText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textPrimary },
+  privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
+  privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
+  privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: "#8b5cf6", marginTop: 2 },
+  parentTabs: { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 8, justifyContent: "center" },
+  parentTab: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.surface, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  parentTabActive: { borderColor: DS.info, backgroundColor: COLORS.blueSoft },
+  parentTabDot: { width: 8, height: 8, borderRadius: 4 },
+  parentTabText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textSecondary },
+  parentTabTextActive: { color: DS.info, fontFamily: "Inter_600SemiBold" },
 });
 
-// 오늘 안부 상태창
-const sw = StyleSheet.create({
-  card:    { position: "absolute", left: 16, right: 16, zIndex: 250, backgroundColor: "rgba(20,28,42,0.88)", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: "rgba(212,242,0,0.15)" },
-  header:  { flexDirection: "row", alignItems: "center", gap: 7 },
-  dot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.neon },
-  label:   { fontFamily: "Inter_700Bold", fontSize: 13, color: COLORS.white },
-  badge:   { backgroundColor: COLORS.neon, borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
-  badgeText: { fontFamily: "Inter_700Bold", fontSize: 11, color: COLORS.neonText },
-  body:    { marginTop: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", paddingTop: 10 },
-  preview: { fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 18 },
-  more:    { fontFamily: "Inter_500Medium", fontSize: 11, color: "rgba(212,242,0,0.6)", marginTop: 5 },
+const wr = StyleSheet.create({
+  badge: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: DS.brand + "22", paddingHorizontal: 14, paddingVertical: 7, borderRadius: DS.radius.pill, marginBottom: 20, borderWidth: 1, borderColor: DS.brand + "44" },
+  badgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: DS.brand },
+  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#6B8A00" },
+  title: { fontFamily: "Inter_700Bold", fontSize: 28, color: DS.textPrimary, textAlign: "center", lineHeight: 36, marginBottom: 10 },
+  sub: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 32 },
+  qrWrap: { width: 232, height: 232, backgroundColor: DS.surface, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", overflow: "hidden" },
+  codeLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, letterSpacing: 1, marginBottom: 10 },
+  codeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 },
+  codePill: { backgroundColor: DS.surface, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  codeDigits: { fontFamily: "Inter_700Bold", fontSize: 26, color: DS.textPrimary, letterSpacing: 4 },
+  codeSep: { fontFamily: "Inter_700Bold", fontSize: 20, color: DS.textTertiary },
+  infoCard: { width: "100%", backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 20, gap: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  infoIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  infoText: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textSecondary, flex: 1 },
 });
 
-// 안부
+const hm = StyleSheet.create({
+  centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
+  greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
+
+  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: DS.textPrimary },
+  summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
+  summaryStatRow: { flexDirection: "row", gap: 16, marginBottom: 12 },
+  summaryStat: { flexDirection: "row", alignItems: "center", gap: 6 },
+  summaryStatDot: { width: 8, height: 8, borderRadius: 4 },
+  summaryStatName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
+  summaryStatLabel: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  summaryDivider: { height: 1, backgroundColor: DS.surfaceSoft, marginBottom: 12 },
+  summaryRow: { flexDirection: "row", gap: 24 },
+  summaryItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
+  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
+
+  parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
+  parentContent: { flex: 1, padding: 18 },
+  parentHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
+  parentAvatar: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  parentName: { fontFamily: "Inter_700Bold", fontSize: 18, color: DS.textPrimary, marginBottom: 4 },
+  parentStatusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  parentLastTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary },
+  parentEmotionBox: { paddingVertical: 12, paddingHorizontal: 14, backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.card, marginBottom: 14 },
+  parentEmotionText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DS.textPrimary, marginBottom: 2, lineHeight: 22 },
+  parentEmotionSub: { fontFamily: "Inter_400Regular", fontSize: 13, color: DS.textSecondary, lineHeight: 18 },
+  parentDailyRow: { flexDirection: "row", justifyContent: "space-around" },
+  parentDailyItem: { alignItems: "center", gap: 4 },
+  parentDailyIconBg: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  parentDailyCount: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary },
+  parentDailyLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary },
+
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary, marginHorizontal: 20, marginTop: 8, marginBottom: 12 },
+  activityCard: { marginHorizontal: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)" },
+  activityRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 16 },
+  activityDivider: { height: 1, backgroundColor: DS.surfaceSoft, marginHorizontal: 16 },
+  activityIconBg: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  activityLabel: { fontFamily: "Inter_500Medium", fontSize: 14, color: DS.textPrimary, flex: 1 },
+  activityTime: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary },
+  viewAllBtn: { marginHorizontal: 16, marginTop: 10, borderRadius: DS.radius.card, borderWidth: 1.5, borderColor: DS.surfaceSoft, paddingVertical: 14, alignItems: "center", backgroundColor: DS.surface },
+  viewAllText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textSecondary },
+  emptyIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: DS.surfaceSoft, alignItems: "center", justifyContent: "center", marginBottom: 16 },
+  emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: DS.textPrimary, textAlign: "center" },
+  emptySub: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary, textAlign: "center", marginTop: 6, lineHeight: 22 },
+});
+
 const ab = StyleSheet.create({
-  viewer:       { flex: 1, backgroundColor: "rgba(0,0,0,0.96)", alignItems: "center", justifyContent: "center" },
-  viewerDel:    { position: "absolute", bottom: 56, flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(239,68,68,0.85)", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 18 },
-  sheet:        { backgroundColor: COLORS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, alignItems: "center", paddingBottom: 40 },
-  handle:       { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.12)", marginBottom: 18 },
-  sheetTitle:   { fontFamily: "Inter_700Bold",   fontSize: 17, color: COLORS.textDark, marginBottom: 16 },
-  input:        { width: "100%", backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: COLORS.textDark, minHeight: 80, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
-  sheetBar:     { width: "100%", flexDirection: "row", alignItems: "center", gap: 8 },
-  attachBtn:    { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.child.accentSoft, alignItems: "center", justifyContent: "center" },
-  sendBtn:      { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center" },
-  hdr:          { marginBottom: 20 },
-  pill:         { alignSelf: "flex-start", backgroundColor: COLORS.navPill, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 10 },
-  pillText:     { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.8)", letterSpacing: 0.5 },
-  bigTitle:     { fontFamily: "Inter_700Bold",   fontSize: 20, color: COLORS.textDark, lineHeight: 28 },
-  seg:          { flexDirection: "row", backgroundColor: COLORS.cardBg, borderRadius: 50, padding: 4, marginBottom: 16, alignSelf: "flex-start", borderWidth: 1, borderColor: COLORS.border },
-  segBtn:       { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 50 },
-  segBtnOn:     { backgroundColor: COLORS.navPill },
-  segText:      { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textMid },
-  segTextOn:    { color: COLORS.white, fontFamily: "Inter_600SemiBold" },
-  toast:        { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: COLORS.neon, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 9, marginBottom: 12, alignSelf: "flex-start" },
-  toastText:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.neonText },
-  connectCard:  { backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 24, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", gap: 14 },
-  connectTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.textMid, textAlign: "center", lineHeight: 22 },
-  connectBtn:   { backgroundColor: COLORS.neon, paddingHorizontal: 22, paddingVertical: 11, borderRadius: 50 },
-  connectBtnText:{ fontFamily: "Inter_700Bold",  fontSize: 14, color: COLORS.neonText },
-  empty:        { alignItems: "center", paddingVertical: 40, gap: 10 },
-  emptyText:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.textMuted },
-  card:         { backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
-  cardNeon:     { backgroundColor: COLORS.neon, borderColor: "transparent" },
-  deco1:        { position: "absolute", right: -30, top: -30, width: 130, height: 130, borderRadius: 65, borderWidth: 22, borderColor: "rgba(0,0,0,0.06)" },
-  deco2:        { position: "absolute", right: -70, top: -70, width: 210, height: 210, borderRadius: 105, borderWidth: 22, borderColor: "rgba(0,0,0,0.04)" },
-  deco3:        { position: "absolute", right: -110, top: -110, width: 290, height: 290, borderRadius: 145, borderWidth: 22, borderColor: "rgba(0,0,0,0.025)" },
-  cardTop:      { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
-  cardAvatar:   { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center" },
-  cardAvatarDark: { backgroundColor: "rgba(0,0,0,0.15)" },
-  cardName:     { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.textMid, marginBottom: 1 },
-  cardTime:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted },
-  heartBadge:   { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "rgba(0,0,0,0.07)", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
-  heartN:       { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.coral },
-  cardText:     { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.textDark, lineHeight: 22 },
-  cardPhoto:    { width: "100%", height: 180, borderRadius: 14, marginTop: 8 },
-  fab:          { position: "absolute", bottom: 90, right: 20, width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center", shadowColor: COLORS.neon, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 14, elevation: 10 },
+  viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.96)", alignItems: "center", justifyContent: "center" },
+  viewerDel: { position: "absolute", bottom: 56, flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(239,68,68,0.85)", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 18 },
+  sheet: { backgroundColor: DS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, alignItems: "center", paddingBottom: 40 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.1)", marginBottom: 18 },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: DS.textPrimary, marginBottom: 16 },
+  input: { width: "100%", backgroundColor: DS.surface, borderRadius: DS.radius.card, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: DS.textPrimary, minHeight: 80, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
+  sheetBar: { width: "100%", flexDirection: "row", alignItems: "center", gap: 8 },
+  attachBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: DS.surfaceSoft, alignItems: "center", justifyContent: "center" },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: DS.brand, alignItems: "center", justifyContent: "center" },
+  screenTitle: { fontFamily: "Inter_700Bold", fontSize: 24, color: DS.textPrimary, marginBottom: 16 },
+  seg: { flexDirection: "row", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.pill, padding: 4, marginBottom: 16, alignSelf: "flex-start" },
+  segBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: DS.radius.pill },
+  segBtnOn: { backgroundColor: DS.brandDeep },
+  segText: { fontFamily: "Inter_500Medium", fontSize: 14, color: DS.textSecondary },
+  segTextOn: { color: "#fff", fontFamily: "Inter_600SemiBold" },
+  toast: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: COLORS.greenSoft, borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 9, marginBottom: 12, alignSelf: "flex-start", borderWidth: 1, borderColor: DS.success + "33" },
+  toastText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.success },
+  connectCard: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 24, marginBottom: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", alignItems: "center", gap: 14 },
+  connectTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: DS.textSecondary, textAlign: "center", lineHeight: 22 },
+  connectBtn: { backgroundColor: DS.brand, paddingHorizontal: 22, paddingVertical: 11, borderRadius: DS.radius.pill },
+  connectBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: DS.brandDeep },
+  empty: { alignItems: "center", paddingVertical: 40, gap: 10 },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textTertiary },
+  card: { backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: "rgba(0,0,0,0.04)", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1 },
+  cardTop: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
+  cardAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.blueSoft, alignItems: "center", justifyContent: "center" },
+  cardName: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.textSecondary, marginBottom: 1 },
+  cardTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary },
+  heartBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#fdf2f8", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
+  heartN: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.coral },
+  cardText: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textPrimary, lineHeight: 22 },
+  cardPhoto: { width: "100%", height: 180, borderRadius: 14, marginTop: 8 },
+  fab: { position: "absolute", bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: DS.brand, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 10 },
 });
-
-// 선물샵
-const gf = StyleSheet.create({
-  hdr:          { marginBottom: 20 },
-  success:      { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: COLORS.neon, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 9, marginBottom: 14, alignSelf: "flex-start" },
-  successText:  { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.neonText },
-  filterRow:    { flexDirection: "row", gap: 8, marginBottom: 16 },
-  chip:         { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 50, backgroundColor: COLORS.cardBg, borderWidth: 1, borderColor: COLORS.border },
-  chipOn:       { backgroundColor: COLORS.navPill, borderColor: "transparent" },
-  chipText:     { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.textMid },
-  chipTextOn:   { color: COLORS.white, fontFamily: "Inter_600SemiBold" },
-  grid:         { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  card:         { width: (width - 52) / 2, backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 18, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", position: "relative", overflow: "hidden" },
-  cardNeon:     { backgroundColor: COLORS.neon, borderColor: "transparent" },
-  pop:          { position: "absolute", top: 11, right: 11, backgroundColor: COLORS.navPill, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
-  popText:      { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.white },
-  iconBg:       { width: 52, height: 52, borderRadius: 18, backgroundColor: "rgba(212,242,0,0.13)", alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  name:         { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.textDark, textAlign: "center", marginBottom: 4, lineHeight: 18 },
-  price:        { fontFamily: "Inter_700Bold",   fontSize: 14, color: COLORS.neon },
-  sheetTitle:   { fontFamily: "Inter_700Bold",   fontSize: 20, color: COLORS.textDark, textAlign: "center", marginBottom: 6 },
-  sheetPrice:   { fontFamily: "Inter_600SemiBold", fontSize: 22, color: COLORS.neonText, marginBottom: 12 },
-  sheetDesc:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.textMid, textAlign: "center", marginBottom: 24 },
-});
-

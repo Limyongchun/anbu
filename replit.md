@@ -95,6 +95,7 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 
 Expo React Native app called A N B U. Korean family safety app.
 
+- **Design System**: "Calm Premium" — KakaoBank/Runna/Stoic/Forest inspired; colors.ts defines base (#F5F7FA bg), brand (#D7FF00 lime), status (success/warning/danger/info), card accents (blueSoft/greenSoft/orangeSoft/purpleSoft); Runna-style left color indicator on parent cards; lime only for CTA/accent
 - **Two modes**: Parent (digital photo frame) and Child (home dashboard + 5-tab nav)
 - **Multi-child architecture**:
   - **Master child**: First child who creates the family group via `POST /api/family/create` → `childRole = "master"`

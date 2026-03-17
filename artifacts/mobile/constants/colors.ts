@@ -1,30 +1,51 @@
 const COLORS = {
-  // ── Airly-inspired palette ──────────────────────────────────────────────────
-  // Map / dark slate
+  // ── Base ──
+  background: "#F5F7FA",
+  surface: "#FFFFFF",
+  surfaceSoft: "#F1F4F8",
+
+  // ── Text ──
+  textPrimary: "#142033",
+  textSecondary: "#6E7A8A",
+  textTertiary: "#9AA6B2",
+
+  // ── Brand ──
+  brandPrimary: "#D7FF00",
+  brandDeep: "#1C2430",
+
+  // ── Status ──
+  success: "#22C55E",
+  warning: "#F59E0B",
+  danger: "#EF4444",
+  info: "#3B82F6",
+
+  // ── Card Accent (Runna style) ──
+  blueSoft: "#E8F1FF",
+  greenSoft: "#EAF7EE",
+  orangeSoft: "#FFF4E6",
+  purpleSoft: "#F3E8FF",
+
+  // ── Backward compat aliases (used by parent.tsx, profile.tsx, etc.) ──
   mapBg:    "#252f3e",
   mapCard:  "#1e2838",
-  navPill:  "#1a2230",
+  navPill:  "#1C2430",
 
-  // Light info screens
-  bg:       "#eef1f6",
-  cardBg:   "#ffffff",
+  bg:       "#F5F7FA",
+  cardBg:   "#FFFFFF",
   border:   "rgba(0,0,0,0.06)",
 
-  // Accent — neon lime
-  neon:     "#d4f200",
-  neonDim:  "rgba(212,242,0,0.18)",
-  neonText: "#1a2535",
+  neon:     "#D7FF00",
+  neonDim:  "rgba(215,255,0,0.18)",
+  neonText: "#1C2430",
 
-  // Typography
-  textDark:  "#1a2535",
-  textMid:   "#5c6878",
-  textMuted: "#9aa5b8",
-  white:     "#ffffff",
+  textDark:  "#142033",
+  textMid:   "#6E7A8A",
+  textMuted: "#9AA6B2",
+  white:     "#FFFFFF",
+  black:     "#000000",
 
-  // Legacy (used in parent screen accents)
   coral: "#e8856a",
 
-  // Keep for context compat
   parent: {
     bg:           "#252f3e",
     bgCard:       "rgba(255,255,255,0.06)",
@@ -32,29 +53,27 @@ const COLORS = {
     text:         "#e8eef5",
     textSub:      "#8899aa",
     textMuted:    "#5c6878",
-    accent:       "#d4f200",
-    accentSoft:   "rgba(212,242,0,0.15)",
+    accent:       "#D7FF00",
+    accentSoft:   "rgba(215,255,0,0.15)",
     heart:        "#e8856a",
   },
   child: {
-    bg:           "#eef1f6",
-    bgCard:       "#ffffff",
+    bg:           "#F5F7FA",
+    bgCard:       "#FFFFFF",
     bgCardBorder: "rgba(0,0,0,0.06)",
-    text:         "#1a2535",
-    textSub:      "#5c6878",
-    textMuted:    "#9aa5b8",
-    accent:       "#d4f200",
-    accentSoft:   "rgba(212,242,0,0.18)",
-    tabActive:    "#1a2535",
-    tabInactive:  "#9aa5b8",
+    text:         "#142033",
+    textSub:      "#6E7A8A",
+    textMuted:    "#9AA6B2",
+    accent:       "#D7FF00",
+    accentSoft:   "rgba(215,255,0,0.18)",
+    tabActive:    "#142033",
+    tabInactive:  "#9AA6B2",
   },
   splash: {
-    bg1: "#1a2535",
+    bg1: "#1C2430",
     bg2: "#252f3e",
     bg3: "#1e2838",
   },
-  white:  "#ffffff",
-  black:  "#000000",
 };
 
 export default COLORS;
