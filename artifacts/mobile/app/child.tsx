@@ -1279,7 +1279,7 @@ const hm = StyleSheet.create({
 
   summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: "#fadea6", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: DS.textPrimary },
+  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#000000" },
   summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
   summaryStatRow: { flexDirection: "row", gap: 16, marginBottom: 12 },
   summaryStat: { flexDirection: "row", alignItems: "center", gap: 6 },
