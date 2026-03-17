@@ -464,7 +464,7 @@ export default function ProfileScreen() {
       message: t.disconnectMsg,
       onConfirm: async () => {
         await disconnect();
-        router.replace("/setup");
+        router.replace("/");
       },
     });
   };
