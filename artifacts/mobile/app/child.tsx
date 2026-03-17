@@ -1285,7 +1285,7 @@ const hm = StyleSheet.create({
   summaryStat: { flexDirection: "row", alignItems: "center", gap: 6 },
   summaryStatDot: { width: 8, height: 8, borderRadius: 4 },
   summaryStatName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
-  summaryStatLabel: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  summaryStatLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: "#000000" },
   summaryDivider: { height: 1, backgroundColor: DS.surfaceSoft, marginBottom: 12 },
   summaryRow: { flexDirection: "row", gap: 24 },
   summaryItem: { flexDirection: "row", alignItems: "center", gap: 6 },
