@@ -37,28 +37,6 @@ type ChildMember = {
 const APP_VERSION = "1.0.0";
 const SUPPORT_EMAIL = "support@dugo.app";
 
-const FAQ_LIST = [
-  {
-    q: "가족 코드는 어떻게 사용하나요?",
-    a: "가족 연결 화면에서 6자리 코드를 생성하거나 입력하면 부모님과 자녀가 연결됩니다. 코드는 마이페이지에서 언제든지 확인할 수 있어요.",
-  },
-  {
-    q: "위치가 업데이트 되지 않아요",
-    a: "앱이 포그라운드 상태일 때 위치가 공유됩니다. 설정 → 개인정보 보호 → 위치 서비스에서 DUGO의 권한을 '앱 사용 중'으로 설정해 주세요.",
-  },
-  {
-    q: "안부 사진이 전송되지 않아요",
-    a: "사진 크기가 너무 크거나 인터넷 연결이 불안정할 수 있어요. 사진을 줄이거나 Wi-Fi 환경에서 다시 시도해 보세요.",
-  },
-  {
-    q: "가족 연결을 해제하면 데이터가 삭제되나요?",
-    a: "연결 해제 시 이 기기의 연결 정보만 삭제됩니다. 서버에 저장된 메시지와 위치 기록은 유지됩니다.",
-  },
-  {
-    q: "자녀/부모님 역할을 바꿀 수 있나요?",
-    a: "역할 변경은 현재 지원되지 않습니다. 가족 연결을 해제한 뒤 다시 연결하면 역할을 새로 선택할 수 있어요.",
-  },
-];
 
 function SectionHeader({ title }: { title: string }) {
   return <Text style={s.sectionHeader}>{title}</Text>;
@@ -198,7 +176,7 @@ export default function ProfileScreen() {
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("권한 필요", "사진 라이브러리 접근 권한이 필요합니다.");
+      Alert.alert(t.permissionNeeded, t.photoPermissionMsg);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -260,8 +238,8 @@ export default function ProfileScreen() {
   const handleRemoveChild = (child: ChildMember) => {
     if (!familyCode || !deviceId) return;
     setConfirmModal({
-      title: "추가 자녀 삭제",
-      message: `${child.memberName}을(를) 가족에서 삭제하시겠습니까?\n\n삭제된 자녀는 더 이상 가족에 접근할 수 없습니다.`,
+      title: t.removeSubChildTitle,
+      message: t.removeSubChildMsg.replace("{name}", child.memberName),
       onConfirm: async () => {
         await api.removeFamilyMember(familyCode, child.deviceId, deviceId);
         reloadChildren();
@@ -300,7 +278,7 @@ export default function ProfileScreen() {
     const code = addParentCode.trim().toUpperCase();
     if (!code || !myName || !myRole) return;
     if (allFamilyCodes.includes(code)) {
-      setAddParentError("이미 연결된 가족 코드입니다.");
+      setAddParentError(t.alreadyLinkedCode);
       return;
     }
     setAddingParent(true); setAddParentError("");
@@ -310,7 +288,7 @@ export default function ProfileScreen() {
       setShowAddParentSheet(false);
       setAddParentCode("");
     } catch {
-      setAddParentError("코드를 확인해주세요. 가족방이 존재하지 않을 수 있어요.");
+      setAddParentError(t.errorCodeCheck);
     } finally {
       setAddingParent(false);
     }
@@ -360,7 +338,7 @@ export default function ProfileScreen() {
       setShowJoinSheet(false);
       router.replace(joinRole === "parent" ? "/parent" : "/child");
     } catch {
-      setJoinError("코드를 확인해주세요. 가족방이 존재하지 않을 수 있어요.");
+      setJoinError(t.errorCodeCheck);
     } finally {
       setJoining(false);
     }
@@ -374,7 +352,7 @@ export default function ProfileScreen() {
       const group = await api.createFamily(deviceId, name, createRole);
       setCreatedCode(group.code);
     } catch {
-      setCreateError("가족방 만들기에 실패했습니다. 다시 시도해주세요.");
+      setCreateError(t.errorCreateRoom);
     } finally {
       setCreating(false);
     }
@@ -400,7 +378,7 @@ export default function ProfileScreen() {
   const roleLabel = myRole === "parent"
     ? t.roleParentLabel
     : myRole === "child"
-      ? (isMasterChild ? "마스터 자녀" : "추가 자녀")
+      ? (isMasterChild ? t.masterChild : t.subChild)
       : "-";
   const roleColor = myRole === "parent" ? "#6c63ff" : myRole === "child" ? COLORS.neon : "#aaa";
   const roleTextColor = myRole === "parent" ? "#fff" : myRole === "child" ? COLORS.neonText : "#fff";
@@ -438,8 +416,9 @@ export default function ProfileScreen() {
   };
 
   const openEmail = () => {
+    const body = t.emailBody.replace("{deviceId}", shortId).replace("{version}", APP_VERSION);
     Linking.openURL(
-      `mailto:${SUPPORT_EMAIL}?subject=DUGO 문의&body=기기 ID: ${shortId}%0A앱 버전: ${APP_VERSION}%0A%0A문의 내용:`
+      `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t.emailSubject)}&body=${encodeURIComponent(body)}`
     );
   };
 
@@ -483,7 +462,7 @@ export default function ProfileScreen() {
         {/* ── 마스터 코드 (마스터 자녀만) ── */}
         {myRole === "child" && isMasterChild && isConnected && familyCode && (
           <>
-            <SectionHeader title="마스터 코드" />
+            <SectionHeader title={t.masterCode} />
             <View style={s.card}>
               <View style={{ padding: 16, paddingBottom: 12 }}>
                 <View style={s.childCodeDisplay}>
@@ -496,7 +475,7 @@ export default function ProfileScreen() {
                 <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
                   <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
                   <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
-                    {childCodeCopied ? "복사됨!" : "코드 복사"}
+                    {childCodeCopied ? t.copied : t.copy}
                   </Text>
                 </Pressable>
               </View>
@@ -596,15 +575,14 @@ export default function ProfileScreen() {
         {/* ── 자녀 관리 (자녀 전체 표시, 마스터/서브 공통) ── */}
         {myRole === "child" && isConnected && (
           <>
-            <SectionHeader title="자녀 관리" />
+            <SectionHeader title={t.childMgmt} />
             <View style={s.card}>
-              {/* 코드 공유 — 마스터/서브 모두 동일하게 표시 */}
               <View style={s.childMgmtShareBlock}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
-                  <Text style={s.childMgmtTitle}>추가 자녀 초대</Text>
+                  <Text style={s.childMgmtTitle}>{t.inviteSubChild}</Text>
                 </View>
-                <Text style={s.childMgmtHint}>추가 자녀도 마스터 코드를 활용해 접속 하시면 됩니다.{"\n"}마스터 아이디당 10명의 자녀까지 가능합니다.</Text>
+                <Text style={s.childMgmtHint}>{t.inviteSubChildHint}</Text>
               </View>
 
               {/* 자녀 목록 — 마스터/서브 모두 동일하게 표시 */}
@@ -617,13 +595,13 @@ export default function ProfileScreen() {
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={s.childRowName}>{child.memberName}</Text>
-                        <Text style={s.childRowSub}>{child.childRole === "master" ? "마스터 자녀" : "추가 자녀 · 요금 발생"}</Text>
+                        <Text style={s.childRowSub}>{child.childRole === "master" ? t.masterChild : t.subChild}</Text>
                       </View>
                       {child.childRole === "master" && (
-                        <View style={s.masterBadge}><Text style={s.masterBadgeText}>마스터</Text></View>
+                        <View style={s.masterBadge}><Text style={s.masterBadgeText}>{t.masterBadge}</Text></View>
                       )}
                       {child.childRole === "sub" && (
-                        <View style={s.subBadge}><Text style={s.subBadgeText}>추가</Text></View>
+                        <View style={s.subBadge}><Text style={s.subBadgeText}>{t.subBadge}</Text></View>
                       )}
                       {isMasterChild && child.childRole === "sub" && (
                         <Pressable
@@ -676,17 +654,14 @@ export default function ProfileScreen() {
             icon="chatbubble-ellipses-outline"
             label={t.labelGuide}
             value={t.labelGuideVal}
-            onPress={() => Alert.alert(
-              "앱 사용 가이드",
-              "1. 가족 연결 — 부모님이 코드를 만들고 자녀에게 공유\n2. 위치 공유 — 부모님 화면에서 자동으로 GPS 공유\n3. 안부 보내기 — 자녀가 사진·메시지를 부모님께 전송\n4. 하트 — 부모님이 안부에 하트를 눌러 확인 표시"
-            )}
+            onPress={() => Alert.alert(t.appGuideTitle, t.appGuideContent)}
           />
         </View>
 
         {/* ── 자주 묻는 질문 ── */}
         <SectionHeader title={t.sectionFaq} />
         <View style={s.card}>
-          {FAQ_LIST.map((faq, i) => (
+          {t.faq.map((faq, i) => (
             <View key={i}>
               {i > 0 && <Divider />}
               <Pressable style={s.faqQ} onPress={() => setShowFaq(showFaq === i ? null : i)}>
@@ -715,16 +690,13 @@ export default function ProfileScreen() {
           <InfoRow
             icon="document-text-outline"
             label={t.labelPrivacy}
-            onPress={() => Alert.alert(
-              "개인정보처리방침",
-              "DUGO는 다음 정보를 수집합니다:\n\n• 위치 정보 — 가족 위치 공유 목적\n• 사진 — 안부 메시지 전송 목적\n• 기기 식별자 — 가족 코드 연결 목적\n\n수집된 정보는 서비스 제공 외 다른 목적으로 사용되지 않으며, 제3자에게 제공되지 않습니다.\n\n문의: " + SUPPORT_EMAIL
-            )}
+            onPress={() => Alert.alert(t.privacyTitle, t.privacyContent + SUPPORT_EMAIL)}
           />
           <Divider />
           <InfoRow
             icon="star-outline"
-            label="앱 평가하기"
-            onPress={() => Alert.alert("감사합니다!", "앱 스토어 출시 후 평가가 가능해요 ⭐")}
+            label={t.rateApp}
+            onPress={() => Alert.alert(t.rateAppThanks, t.rateAppMsg)}
           />
         </View>
 
@@ -742,7 +714,7 @@ export default function ProfileScreen() {
         )}
 
 
-        <Text style={s.bottomNote}>DUGO — 부모님과 자녀를 잇는 안전 연결</Text>
+        <Text style={s.bottomNote}>{t.bottomNote}</Text>
       </ScrollView>
 
       {/* ── 이름 수정 모달 ── */}
@@ -782,9 +754,9 @@ export default function ProfileScreen() {
           </Pressable>
           <Pressable onPress={() => {}} style={s.bigSheet}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>부모님 추가하기</Text>
-            <Text style={s.sheetSub}>부모님이 공유한 6자리 코드를 입력하세요</Text>
-            <Text style={s.fieldLabel}>가족 코드</Text>
+            <Text style={s.sheetTitle}>{t.addParentTitle}</Text>
+            <Text style={s.sheetSub}>{t.addParentSub}</Text>
+            <Text style={s.fieldLabel}>{t.familyCodeLabel}</Text>
             <TextInput
               style={[s.sheetInput, s.codeInputStyle]}
               value={addParentCode}
@@ -803,7 +775,7 @@ export default function ProfileScreen() {
             >
               {addingParent
                 ? <ActivityIndicator color={COLORS.white} size="small" />
-                : <Text style={s.saveBtnText}>부모님 추가하기</Text>}
+                : <Text style={s.saveBtnText}>{t.addParentBtn}</Text>}
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
@@ -817,13 +789,12 @@ export default function ProfileScreen() {
           </Pressable>
           <Pressable onPress={() => {}} style={s.bigSheet}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>코드로 가족 연결</Text>
-            <Text style={s.sheetSub}>가족이 공유한 6자리 코드를 입력하세요</Text>
+            <Text style={s.sheetTitle}>{t.joinConnectTitle}</Text>
+            <Text style={s.sheetSub}>{t.joinConnectSub}</Text>
 
-            {/* 역할 선택 */}
-            <Text style={s.fieldLabel}>나는</Text>
+            <Text style={s.fieldLabel}>{t.iAm}</Text>
             <View style={s.roleRow}>
-              {([["parent", "부모님"], ["child", "자녀"]] as [FamilyRole, string][]).map(([r, label]) => (
+              {([["parent", t.roleParent], ["child", t.roleChild]] as [FamilyRole, string][]).map(([r, label]) => (
                 <Pressable
                   key={r}
                   style={[s.roleChip, joinRole === r && s.roleChipActive]}
@@ -834,20 +805,18 @@ export default function ProfileScreen() {
               ))}
             </View>
 
-            {/* 이름 */}
-            <Text style={s.fieldLabel}>이름</Text>
+            <Text style={s.fieldLabel}>{t.nameLabel}</Text>
             <TextInput
               style={s.sheetInput}
               value={joinName}
               onChangeText={setJoinName}
-              placeholder="가족에게 표시될 이름"
+              placeholder={t.nameDisplayPlaceholder}
               placeholderTextColor={COLORS.textMuted}
               maxLength={20}
               autoFocus={false}
             />
 
-            {/* 코드 */}
-            <Text style={s.fieldLabel}>가족 코드</Text>
+            <Text style={s.fieldLabel}>{t.familyCodeLabel}</Text>
             <TextInput
               style={[s.sheetInput, s.codeInputStyle]}
               value={joinCode}
@@ -868,7 +837,7 @@ export default function ProfileScreen() {
               {joining ? (
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={s.saveBtnText}>연결하기</Text>
+                <Text style={s.saveBtnText}>{t.connectBtn}</Text>
               )}
             </Pressable>
           </Pressable>
@@ -889,30 +858,30 @@ export default function ProfileScreen() {
                 <View style={{ alignItems: "center", marginBottom: 8 }}>
                   <Ionicons name="checkmark-circle" size={52} color="#4ade80" />
                 </View>
-                <Text style={[s.sheetTitle, { textAlign: "center" }]}>가족방이 만들어졌어요!</Text>
-                <Text style={[s.sheetSub, { textAlign: "center" }]}>아래 코드를 가족에게 공유해주세요</Text>
+                <Text style={[s.sheetTitle, { textAlign: "center" }]}>{t.roomCreated}</Text>
+                <Text style={[s.sheetSub, { textAlign: "center" }]}>{t.roomCreatedSub}</Text>
                 <View style={s.createdCodeBox}>
                   <Text style={s.createdCodeText}>{createdCode}</Text>
                 </View>
                 <Pressable style={[s.copyBtn, createCodeCopied && s.copyBtnDone, { marginBottom: 16 }]} onPress={copyCreatedCode}>
                   <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={16} color={createCodeCopied ? COLORS.neonText : COLORS.navPill} />
                   <Text style={[s.copyBtnText, createCodeCopied && { color: COLORS.neonText }]}>
-                    {createCodeCopied ? "복사됨!" : "코드 복사"}
+                    {createCodeCopied ? t.copied : t.copy}
                   </Text>
                 </Pressable>
                 <Pressable style={s.saveBtn} onPress={handleCompleteCreate}>
-                  <Text style={s.saveBtnText}>시작하기</Text>
+                  <Text style={s.saveBtnText}>{t.start}</Text>
                 </Pressable>
               </>
             ) : (
               /* ── 입력 폼 ── */
               <>
-                <Text style={s.sheetTitle}>새 가족방 만들기</Text>
-                <Text style={s.sheetSub}>새 방을 만들고 코드를 가족과 공유해요</Text>
+                <Text style={s.sheetTitle}>{t.createRoomTitle}</Text>
+                <Text style={s.sheetSub}>{t.createRoomSub}</Text>
 
-                <Text style={s.fieldLabel}>나는</Text>
+                <Text style={s.fieldLabel}>{t.iAm}</Text>
                 <View style={s.roleRow}>
-                  {([["parent", "부모님"], ["child", "자녀"]] as [FamilyRole, string][]).map(([r, label]) => (
+                  {([["parent", t.roleParent], ["child", t.roleChild]] as [FamilyRole, string][]).map(([r, label]) => (
                     <Pressable
                       key={r}
                       style={[s.roleChip, createRole === r && s.roleChipActive]}
@@ -923,12 +892,12 @@ export default function ProfileScreen() {
                   ))}
                 </View>
 
-                <Text style={s.fieldLabel}>이름</Text>
+                <Text style={s.fieldLabel}>{t.nameLabel}</Text>
                 <TextInput
                   style={s.sheetInput}
                   value={createName}
                   onChangeText={setCreateName}
-                  placeholder="가족에게 표시될 이름"
+                  placeholder={t.nameDisplayPlaceholder}
                   placeholderTextColor={COLORS.textMuted}
                   maxLength={20}
                   autoFocus={false}
@@ -944,7 +913,7 @@ export default function ProfileScreen() {
                   {creating ? (
                     <ActivityIndicator color={COLORS.white} size="small" />
                   ) : (
-                    <Text style={s.saveBtnText}>가족방 만들기</Text>
+                    <Text style={s.saveBtnText}>{t.createRoomBtn}</Text>
                   )}
                 </Pressable>
               </>
