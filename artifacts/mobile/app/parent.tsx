@@ -492,7 +492,7 @@ export default function ParentScreen() {
         </Animated.View>
 
         {/* ── 일시정지 표시 ── */}
-        {isPaused && !transitioning && (
+        {isPaused && !transitioningRef.current && (
           <View style={ps.pauseOverlay} pointerEvents="none">
             <View style={ps.pauseBadge}>
               <Ionicons name="pause" size={12} color="rgba(255,255,255,0.9)" />
