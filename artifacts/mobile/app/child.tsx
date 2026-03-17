@@ -120,8 +120,8 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const [locs, setLocs]         = useState<LocationData[]>([]);
   const [loading, setLoading]   = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
 
-  // 배너 슬라이드 애니메이션
   const bannerY     = useRef(new Animated.Value(120)).current;
   const bannerAlpha = useRef(new Animated.Value(0)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,19 +139,23 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     return () => clearInterval(iv);
   }, [familyCode, load]);
 
-  const parentLoc = locs.find(l => l.role === "parent" && l.isSharing) ?? null;
-  const { latitude: lat = 37.5665, longitude: lon = 126.978 } = parentLoc ?? {};
+  const parentLocs = locs.filter(l => l.role === "parent" && l.isSharing);
+  const hasParents = parentLocs.length > 0;
+  const activeLoc = parentLocs[selectedIdx] ?? parentLocs[0] ?? null;
+  const centerLat = hasParents ? parentLocs.reduce((s, l) => s + l.latitude, 0) / parentLocs.length : 37.5665;
+  const centerLon = hasParents ? parentLocs.reduce((s, l) => s + l.longitude, 0) / parentLocs.length : 126.978;
 
-  // 배너 열기/닫기
-  const openBanner = useCallback(() => {
+  const PIN_COLORS = ["#4285F4", "#EA4335"];
+
+  const openBannerFor = useCallback((idx: number) => {
+    setSelectedIdx(idx);
     setShowBanner(true);
     Animated.parallel([
       Animated.spring(bannerY,     { toValue: 0,   useNativeDriver: false, tension: 80, friction: 10 }),
       Animated.timing(bannerAlpha, { toValue: 1, duration: 200, useNativeDriver: false }),
     ]).start();
-    // 6초 후 자동 닫기
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
-    dismissTimer.current = setTimeout(closeBanner, 6000);
+    dismissTimer.current = setTimeout(closeBanner, 8000);
   }, []);
 
   const closeBanner = useCallback(() => {
@@ -162,35 +166,47 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     ]).start(() => setShowBanner(false));
   }, []);
 
-  // web: Leaflet 마커 클릭 → postMessage → 배너 표시
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const handler = (e: MessageEvent) => {
-      if (e.data === "markerClick") parentLoc ? openBanner() : null;
+      if (typeof e.data === "string" && e.data.startsWith("markerClick:")) {
+        const idx = parseInt(e.data.split(":")[1], 10);
+        if (!isNaN(idx) && idx < parentLocs.length) openBannerFor(idx);
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [parentLoc, openBanner]);
+  }, [parentLocs.length, openBannerFor]);
 
-  const openMaps = () => {
+  const openMapsFor = (loc: LocationData) => {
+    const { latitude: la, longitude: lo } = loc;
     const url = Platform.OS === "ios"
-      ? `maps://maps.apple.com/maps?q=${lat},${lon}`
+      ? `maps://maps.apple.com/maps?q=${la},${lo}`
       : Platform.OS === "android"
-      ? `geo:${lat},${lon}?q=${lat},${lon}`
-      : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+      ? `geo:${la},${lo}?q=${la},${lo}`
+      : `https://www.google.com/maps/search/?api=1&query=${la},${lo}`;
     Linking.openURL(url).catch(() =>
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`));
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${la},${lo}`));
   };
-
-  const minsAgo = parentLoc
-    ? Math.floor((Date.now() - new Date(parentLoc.updatedAt).getTime()) / 60000)
-    : 0;
-  const isRecent = minsAgo < 5;
 
   const TAB_BAR_H = 58 + Math.max(bottomInset, 12);
   const BOTTOM_SAFE = TAB_BAR_H;
 
-  // Leaflet + CartoDB Voyager — 마커 클릭 시 postMessage 전송
+  const markersJs = parentLocs.map((pl, i) => {
+    const c = PIN_COLORS[i % PIN_COLORS.length];
+    return `
+(function(){
+  var pinHtml='<div class="pin-wrap"><div class="pin-ring" style="background:${c.replace("#", "rgba(")
+    .replace(/(..)(..)(..)/, (_, r: string, g: string, b: string) => `${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)}`)},0.25)"></div><div class="pin-dot" style="background:${c}; box-shadow:0 2px 12px ${c}99"></div><div class="pin-label">${pl.memberName}</div></div>';
+  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
+  m.on('click',function(){window.parent.postMessage('markerClick:${i}','*');});
+})();`;
+  }).join("\n");
+
+  const boundsJs = parentLocs.length > 1
+    ? `map.fitBounds([${parentLocs.map(p => `[${p.latitude},${p.longitude}]`).join(",")}],{padding:[60,60]});`
+    : "";
+
   const mapHtml = `<!DOCTYPE html><html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -200,32 +216,31 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 #map{width:100vw;height:100vh}
 .leaflet-control-attribution{display:none}
 .pin-wrap{cursor:pointer;position:relative;width:22px;height:22px}
-.pin-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;background:rgba(66,133,244,0.2);border-radius:50%;animation:pulse 1.5s ease-out infinite}
-.pin-dot{width:22px;height:22px;background:#4285F4;border-radius:50%;border:3.5px solid #fff;box-shadow:0 2px 12px rgba(66,133,244,0.6)}
+.pin-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;animation:pulse 1.5s ease-out infinite}
+.pin-dot{width:22px;height:22px;border-radius:50%;border:3.5px solid #fff}
 .pin-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:#1a2230;color:#fff;font-size:11px;font-family:sans-serif;white-space:nowrap;padding:4px 10px;border-radius:12px;pointer-events:none;opacity:0;transition:opacity 0.2s}
 .pin-wrap:hover .pin-label{opacity:1}
 @keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0}}
 </style>
 </head><body><div id="map"></div><script>
-var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${lat},${lon}],16);
+var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${centerLat},${centerLon}],16);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
-${parentLoc ? `
-var pinHtml='<div class="pin-wrap"><div class="pin-ring"></div><div class="pin-dot"></div><div class="pin-label">${t.mapTapLabel}</div></div>';
-var marker=L.marker([${lat},${lon}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
-marker.on('click',function(){window.parent.postMessage('markerClick','*');});
-` : ""}
+${markersJs}
+${boundsJs}
 </script></body></html>`;
+
+  const bannerLoc = activeLoc;
+  const bannerMinsAgo = bannerLoc ? Math.floor((Date.now() - new Date(bannerLoc.updatedAt).getTime()) / 60000) : 0;
+  const bannerIsRecent = bannerMinsAgo < 5;
 
   return (
     <View style={StyleSheet.absoluteFillObject}>
-      {/* ── Leaflet 지도 ── */}
       {Platform.OS === "web" ? (
         <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
           {/* @ts-ignore */}
           <iframe srcDoc={mapHtml} style={{ width: "100%", height: "100%", border: "none" }} title={t.mapIframeTitle as string} />
         </View>
       ) : (
-        // Native 폴백 지도
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#e8e6e1" }]}>
           {Array.from({ length: 8 }).map((_, i) => (
             <View key={`r${i}`} style={{ position: "absolute", left: 0, right: 0, top: `${12 + i * 11}%` as any, height: i % 3 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
@@ -233,20 +248,19 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
           {Array.from({ length: 6 }).map((_, i) => (
             <View key={`c${i}`} style={{ position: "absolute", top: 0, bottom: 0, left: `${10 + i * 16}%` as any, width: i % 2 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
           ))}
-          {parentLoc && (
-            <Pressable style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}
-              onPress={openBanner}>
-              <PulsingPin />
+          {parentLocs.map((pl, i) => (
+            <Pressable key={pl.deviceId} style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}
+              onPress={() => openBannerFor(i)}>
+              <PulsingPin color={PIN_COLORS[i % PIN_COLORS.length]} />
               <View style={mp.pinHint}>
-                <Text style={mp.pinHintText}>{t.mapTapLabel}</Text>
+                <Text style={mp.pinHintText}>{pl.memberName}</Text>
               </View>
             </Pressable>
-          )}
+          ))}
         </View>
       )}
 
-      {/* ── 연결 안내 카드 (미연결 상태) ── */}
-      {!loading && !parentLoc && (
+      {!loading && !hasParents && (
         <View style={[mp.connectCard, { bottom: BOTTOM_SAFE + 16 }]}>
           <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(212,242,0,0.15)", alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="location-outline" size={18} color={COLORS.neon} />
@@ -263,54 +277,66 @@ marker.on('click',function(){window.parent.postMessage('markerClick','*');});
         </View>
       )}
 
-      {/* ── 로딩 ── */}
       {loading && (
         <View style={{ position: "absolute", bottom: BOTTOM_SAFE + 60, left: 0, right: 0, alignItems: "center" }}>
           <ActivityIndicator color={COLORS.neon} />
         </View>
       )}
 
-      {/* ── 위치 핀 클릭 힌트 (연결됐을 때) ── */}
-      {!loading && parentLoc && !showBanner && (
+      {!loading && hasParents && !showBanner && (
         <View style={[mp.hintPill, { bottom: BOTTOM_SAFE + 16 }]}>
           <Ionicons name="location" size={13} color={COLORS.neon} />
-          <Text style={mp.hintText}>{parentLoc.memberName}{t.mapTapHint}</Text>
+          <Text style={mp.hintText}>
+            {parentLocs.length === 1
+              ? `${parentLocs[0].memberName}${t.mapTapHint}`
+              : `${parentLocs.map(p => p.memberName).join(", ")}${t.mapTapHint}`}
+          </Text>
         </View>
       )}
 
-      {/* ── 슬라이드업 배너 ── */}
-      {showBanner && parentLoc && (
+      {showBanner && bannerLoc && (
         <Animated.View style={[mp.banner, { bottom: BOTTOM_SAFE + 12, transform: [{ translateY: bannerY }], opacity: bannerAlpha }]}>
-          {/* 닫기 버튼 */}
           <Pressable style={mp.bannerClose} onPress={closeBanner}>
             <Ionicons name="close" size={14} color="rgba(255,255,255,0.5)" />
           </Pressable>
 
-          {/* 왼쪽: 상태 + 이름 + 주소 */}
           <View style={{ flex: 1, gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <View style={[mp.dot, { backgroundColor: isRecent ? COLORS.neon : "#f59e0b" }]} />
-              <Text style={mp.bannerStatus}>{isRecent ? t.mapSafe : (t.timeMinAgo as string).replace("{m}", String(minsAgo))}</Text>
+              <View style={[mp.dot, { backgroundColor: bannerIsRecent ? COLORS.neon : "#f59e0b" }]} />
+              <Text style={mp.bannerStatus}>{bannerIsRecent ? t.mapSafe : (t.timeMinAgo as string).replace("{m}", String(bannerMinsAgo))}</Text>
             </View>
-            <Text style={mp.bannerName}>{parentLoc.memberName}</Text>
+            <Text style={mp.bannerName}>{bannerLoc.memberName}</Text>
             <Text style={mp.bannerAddr} numberOfLines={1}>
-              {parentLoc.address || `${lat.toFixed(4)}, ${lon.toFixed(4)}`}
+              {bannerLoc.address || `${bannerLoc.latitude.toFixed(4)}, ${bannerLoc.longitude.toFixed(4)}`}
             </Text>
           </View>
 
-          {/* 오른쪽: 액션 아이콘 가로 배열 */}
           <View style={mp.bannerActions}>
             <CircleBtn icon="call"     size={15} bg="rgba(212,242,0,0.2)"   color={COLORS.neon}             style={mp.bannerBtn} onPress={() => Linking.openURL("tel:")} />
-            <CircleBtn icon="navigate" size={15} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.8)"  style={mp.bannerBtn} onPress={openMaps} />
+            <CircleBtn icon="navigate" size={15} bg="rgba(255,255,255,0.1)" color="rgba(255,255,255,0.8)"  style={mp.bannerBtn} onPress={() => openMapsFor(bannerLoc)} />
             <CircleBtn icon="refresh"  size={15} bg="rgba(255,255,255,0.07)" color="rgba(255,255,255,0.4)" style={mp.bannerBtn} onPress={() => { load(); closeBanner(); }} />
           </View>
         </Animated.View>
+      )}
+
+      {parentLocs.length > 1 && showBanner && (
+        <View style={[mp.parentTabs, { bottom: BOTTOM_SAFE + 90 }]}>
+          {parentLocs.map((pl, i) => (
+            <Pressable
+              key={pl.deviceId}
+              style={[mp.parentTab, selectedIdx === i && mp.parentTabActive]}
+              onPress={() => openBannerFor(i)}>
+              <View style={[mp.parentTabDot, { backgroundColor: PIN_COLORS[i % PIN_COLORS.length] }]} />
+              <Text style={[mp.parentTabText, selectedIdx === i && mp.parentTabTextActive]}>{pl.memberName}</Text>
+            </Pressable>
+          ))}
+        </View>
       )}
     </View>
   );
 }
 
-function PulsingPin() {
+function PulsingPin({ color = "#4285F4" }: { color?: string } = {}) {
   const s = useRef(new Animated.Value(1)).current;
   const o = useRef(new Animated.Value(0.5)).current;
   useEffect(() => {
@@ -328,8 +354,8 @@ function PulsingPin() {
   }, []);
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
-      <Animated.View style={{ position: "absolute", width: 34, height: 34, borderRadius: 17, backgroundColor: "#4285F4", transform: [{ scale: s }], opacity: o }} />
-      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#4285F4", borderWidth: 3, borderColor: "#fff" }} />
+      <Animated.View style={{ position: "absolute", width: 34, height: 34, borderRadius: 17, backgroundColor: color, transform: [{ scale: s }], opacity: o }} />
+      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: color, borderWidth: 3, borderColor: "#fff" }} />
     </View>
   );
 }
@@ -1332,6 +1358,12 @@ const mp = StyleSheet.create({
   // Native 핀 힌트
   pinHint:        { position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: "rgba(22,30,44,0.82)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7 },
   pinHintText:    { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white },
+  parentTabs:     { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 8, justifyContent: "center" },
+  parentTab:      { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(20,28,42,0.7)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "transparent" },
+  parentTabActive:{ borderColor: "rgba(212,242,0,0.5)", backgroundColor: "rgba(20,28,42,0.95)" },
+  parentTabDot:   { width: 8, height: 8, borderRadius: 4 },
+  parentTabText:  { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.6)" },
+  parentTabTextActive: { color: COLORS.white, fontFamily: "Inter_600SemiBold" },
 });
 
 // 오늘 안부 상태창
