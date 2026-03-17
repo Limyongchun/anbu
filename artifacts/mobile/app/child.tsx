@@ -998,15 +998,12 @@ function HomeScreen({
             <View style={[hm.ucStatusStripe, { backgroundColor: ps.color }]} />
 
             <View style={hm.ucHeader}>
-              <View style={hm.ucAvatarWrap}>
-                <View style={hm.ucAvatar}>
-                  {parent.photo ? (
-                    <Image source={{ uri: parent.photo }} style={{ width: 60, height: 60, borderRadius: 30 }} />
-                  ) : (
-                    <Ionicons name="person" size={30} color={idx === 0 ? "#3b82f6" : "#ec4899"} />
-                  )}
-                </View>
-                <View style={[hm.ucOnlineDot, { backgroundColor: ps.color }]} />
+              <View style={hm.ucAvatar}>
+                {parent.photo ? (
+                  <Image source={{ uri: parent.photo }} style={{ width: 60, height: 60, borderRadius: 30 }} />
+                ) : (
+                  <Ionicons name="person" size={30} color={idx === 0 ? "#3b82f6" : "#ec4899"} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={hm.ucName}>{parent.name}</Text>
@@ -1335,9 +1332,7 @@ const hm = StyleSheet.create({
   unifiedCard:     { marginHorizontal: 16, marginBottom: 16, borderRadius: 24, backgroundColor: "#fff", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 5 },
   ucStatusStripe:  { height: 4, width: "100%" },
   ucHeader:        { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
-  ucAvatarWrap:    { width: 64, height: 64, position: "relative" },
   ucAvatar:        { width: 64, height: 64, borderRadius: 32, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  ucOnlineDot:     { position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, borderColor: "#fff" },
   ucName:          { fontFamily: "Inter_700Bold", fontSize: 20, color: "#1a2535" },
   ucStatusBadgeRow:{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   ucStatusBadge:   { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
