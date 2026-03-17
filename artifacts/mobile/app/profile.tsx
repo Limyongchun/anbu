@@ -570,7 +570,7 @@ export default function ProfileScreen() {
                   ))}
                 </View>
                 <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
-                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={15} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={14} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
                   <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
                     {childCodeCopied ? t.copied : t.copy}
                   </Text>
@@ -629,7 +629,7 @@ export default function ProfileScreen() {
                 </View>
                 <Text style={s.codeHint}>{t.codeShareHint}</Text>
                 <Pressable style={[s.copyBtn, codeCopied && s.copyBtnDone]} onPress={copyCode}>
-                  <Ionicons name={codeCopied ? "checkmark" : "copy-outline"} size={16} color={codeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Ionicons name={codeCopied ? "checkmark" : "copy-outline"} size={14} color={codeCopied ? COLORS.neonText : COLORS.navPill} />
                   <Text style={[s.copyBtnText, codeCopied && { color: COLORS.neonText }]}>
                     {codeCopied ? t.copied : t.copy}
                   </Text>
@@ -995,7 +995,7 @@ export default function ProfileScreen() {
                   <Text style={s.createdCodeText}>{createdCode}</Text>
                 </View>
                 <Pressable style={[s.copyBtn, createCodeCopied && s.copyBtnDone, { marginBottom: 16 }]} onPress={copyCreatedCode}>
-                  <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={16} color={createCodeCopied ? COLORS.neonText : COLORS.navPill} />
+                  <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={14} color={createCodeCopied ? COLORS.neonText : COLORS.navPill} />
                   <Text style={[s.copyBtnText, createCodeCopied && { color: COLORS.neonText }]}>
                     {createCodeCopied ? t.copied : t.copy}
                   </Text>
@@ -1123,9 +1123,9 @@ const s = StyleSheet.create({
   codeCell:     { width: 44, height: 52, borderRadius: 12, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
   codeCellText: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.neon, letterSpacing: 2 },
   codeHint:     { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, textAlign: "center", marginBottom: 14 },
-  copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginHorizontal: 16, marginBottom: 16, paddingVertical: 12, borderRadius: 50, backgroundColor: "rgba(26,34,48,0.07)" },
+  copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(26,34,48,0.07)" },
   copyBtnDone:  { backgroundColor: COLORS.neon },
-  copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.navPill },
+  copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.navPill },
 
   connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
   connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.neonText },
