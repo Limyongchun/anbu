@@ -976,6 +976,25 @@ function HomeScreen({
         
       </View>
 
+      {/* Anbu Interpretation Card */}
+      {(() => {
+        const totalActs = parentActivities.length;
+        const totalLoc = parentActivityStats.reduce((s, p) => s + p.locCount, 0);
+        const totalTouch = parentActivityStats.reduce((s, p) => s + p.touchCount, 0);
+        const level = (totalLoc >= 2 && totalTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
+        const emoji = level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : "💌";
+        const msg = level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : t.anbuCheck;
+        const sub = level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : t.anbuCheckSub;
+        const accentColor = level === "safe" ? DS.success : level === "quiet" ? DS.warning : DS.info;
+        return (
+          <View style={hm.interpretCard}>
+            <Text style={hm.interpretLabel}>{t.anbuInterpretLabel}</Text>
+            <Text style={hm.interpretMsg}>{emoji} {msg}</Text>
+            <Text style={[hm.interpretSub, { color: accentColor }]}>{sub}</Text>
+          </View>
+        );
+      })()}
+
       {/* Recent Activity */}
       <Text style={hm.sectionTitle}>{t.recentActivity}</Text>
       {loading ? (
@@ -1252,6 +1271,10 @@ const hm = StyleSheet.create({
   parentStatsLastTime: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   parentStatsCountText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary, marginTop: 4 },
   summaryExpandRow: { alignItems: "center", paddingBottom: 10, paddingTop: 2 },
+  interpretCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, padding: 16, borderWidth: 1, borderColor: DS.border },
+  interpretLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: DS.textTertiary, marginBottom: 6, letterSpacing: 0.5 },
+  interpretMsg: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DS.textPrimary, lineHeight: 22, marginBottom: 4 },
+  interpretSub: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
 
   parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
