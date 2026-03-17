@@ -137,14 +137,13 @@ export default function ParentScreen() {
   const [isPaused, setIsPaused]     = useState(false);
   const transitioningRef            = useRef(false);
 
-  const fadeOut       = useRef(new Animated.Value(1)).current;
-  const fadeIn        = useRef(new Animated.Value(0)).current;
-  const scaleIn       = useRef(new Animated.Value(1.08)).current;
-  const progressAnim  = useRef(new Animated.Value(0)).current;
-  const progressRef   = useRef<Animated.CompositeAnimation | null>(null);
-  const touchStartY   = useRef(0);
-  const touchStartT   = useRef(0);
-  const EASE_SMOOTH   = Easing.bezier(0.4, 0, 0.2, 1);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const overlayScale   = useRef(new Animated.Value(1.05)).current;
+  const progressAnim   = useRef(new Animated.Value(0)).current;
+  const progressRef    = useRef<Animated.CompositeAnimation | null>(null);
+  const touchStartY    = useRef(0);
+  const touchStartT    = useRef(0);
+  const EASE_SMOOTH    = Easing.bezier(0.4, 0, 0.2, 1);
 
   // ── 하트 ──
   const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
@@ -188,12 +187,19 @@ export default function ParentScreen() {
   const [locUploading, setLocUploading] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
+  const pendingMsgsRef = useRef<FamilyMessage[] | null>(null);
+
   const loadMsgs = useCallback(async () => {
     if (allFamilyCodes.length === 0) return;
     try {
       const results = await Promise.all(allFamilyCodes.map(code => api.getMessages(code).catch(() => [] as FamilyMessage[])));
       const merged = results.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setMsgs(merged);
+      if (transitioningRef.current) {
+        pendingMsgsRef.current = merged;
+      } else {
+        setMsgs(merged);
+        pendingMsgsRef.current = null;
+      }
     } catch {}
   }, [allFamilyCodes]);
 
@@ -286,11 +292,10 @@ export default function ParentScreen() {
     if (transitioningRef.current || total === 0) return;
     const safeIdx = ((targetIdx % total) + total) % total;
     transitioningRef.current = true;
-    setNextIdx(safeIdx);
 
-    fadeOut.setValue(1);
-    fadeIn.setValue(0);
-    scaleIn.setValue(1.08);
+    overlayOpacity.setValue(0);
+    overlayScale.setValue(1.05);
+    setNextIdx(safeIdx);
     progressAnim.stopAnimation();
 
     slideViewCountRef.current += 1;
@@ -305,18 +310,18 @@ export default function ParentScreen() {
     }
 
     Animated.parallel([
-      Animated.timing(fadeOut, { toValue: 0, duration: 700, easing: EASE_SMOOTH, useNativeDriver: false }),
-      Animated.timing(fadeIn,  { toValue: 1, duration: 700, easing: EASE_SMOOTH, useNativeDriver: false }),
-      Animated.timing(scaleIn, { toValue: 1, duration: 900, easing: EASE_SMOOTH, useNativeDriver: false }),
+      Animated.timing(overlayOpacity, { toValue: 1, duration: 800, easing: EASE_SMOOTH, useNativeDriver: false }),
+      Animated.timing(overlayScale,   { toValue: 1, duration: 1000, easing: EASE_SMOOTH, useNativeDriver: false }),
     ]).start(() => {
       setCurIdx(safeIdx);
       setNextIdx(null);
-      fadeOut.setValue(1);
-      fadeIn.setValue(0);
-      scaleIn.setValue(1.08);
       transitioningRef.current = false;
+      if (pendingMsgsRef.current) {
+        setMsgs(pendingMsgsRef.current);
+        pendingMsgsRef.current = null;
+      }
     });
-  }, [total, fadeOut, fadeIn, scaleIn, progressAnim, slides, familyCode, deviceId, myName]);
+  }, [total, overlayOpacity, overlayScale, progressAnim, slides, familyCode, deviceId, myName]);
 
   const goNext = useCallback(() => goTo(curIdx + 1), [curIdx, goTo]);
   const goPrev = useCallback(() => goTo(curIdx - 1), [curIdx, goTo]);
@@ -402,11 +407,11 @@ export default function ParentScreen() {
             </View>
           ) : currentSlide ? (
             <>
-              <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: pendingSlide ? fadeOut : 1 }]}>
+              <View style={StyleSheet.absoluteFillObject}>
                 <SlideCard slide={currentSlide} />
-              </Animated.View>
+              </View>
               {pendingSlide && (
-                <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeIn, transform: [{ scale: scaleIn }] }]}>
+                <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: overlayOpacity, transform: [{ scale: overlayScale }] }]}>
                   <SlideCard slide={pendingSlide} />
                 </Animated.View>
               )}
