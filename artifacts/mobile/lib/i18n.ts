@@ -240,7 +240,7 @@ const translations = {
 
     // ── 안부 화면 (AnbuScreen) ──
     anbuLive: "실시간",
-    anbuTitle: "안부\n메시지",
+    anbuTitle: "사진과 메세지를 등록하시면\n부모님께 내용이 전송됩니다.",
     anbuSegMessages: "메시지",
     anbuSegGallery: "갤러리",
     anbuSentToast: "부모님께 전송됐어요",
@@ -590,7 +590,7 @@ const translations = {
     contactMessage: "Message",
     contactVideo: "Video Call",
     anbuLive: "Live",
-    anbuTitle: "Family\nUpdates",
+    anbuTitle: "Register photos and messages\nto send them to your parents.",
     anbuSegMessages: "Messages",
     anbuSegGallery: "Gallery",
     anbuSentToast: "Sent to parents",
@@ -927,7 +927,7 @@ const translations = {
     contactMessage: "メッセージ",
     contactVideo: "ビデオ通話",
     anbuLive: "リアルタイム",
-    anbuTitle: "近況\nメッセージ",
+    anbuTitle: "写真やメッセージを登録すると\n親に内容が送信されます。",
     anbuSegMessages: "メッセージ",
     anbuSegGallery: "ギャラリー",
     anbuSentToast: "親に送信されました",

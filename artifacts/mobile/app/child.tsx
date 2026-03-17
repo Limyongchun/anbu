@@ -1446,7 +1446,7 @@ const ab = StyleSheet.create({
   hdr:          { marginBottom: 20 },
   pill:         { alignSelf: "flex-start", backgroundColor: COLORS.navPill, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 10 },
   pillText:     { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.8)", letterSpacing: 0.5 },
-  bigTitle:     { fontFamily: "Inter_700Bold",   fontSize: 36, color: COLORS.textDark, lineHeight: 42 },
+  bigTitle:     { fontFamily: "Inter_700Bold",   fontSize: 20, color: COLORS.textDark, lineHeight: 28 },
   seg:          { flexDirection: "row", backgroundColor: COLORS.cardBg, borderRadius: 50, padding: 4, marginBottom: 16, alignSelf: "flex-start", borderWidth: 1, borderColor: COLORS.border },
   segBtn:       { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 50 },
   segBtnOn:     { backgroundColor: COLORS.navPill },
