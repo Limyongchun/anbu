@@ -973,9 +973,7 @@ function HomeScreen({
             })}
           </View>
         </View>
-        <View style={hm.summaryExpandRow}>
-          <Ionicons name="chevron-down" size={18} color={DS.textTertiary} />
-        </View>
+        
       </View>
 
       {/* Recent Activity */}
