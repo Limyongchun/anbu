@@ -905,14 +905,14 @@ function HomeScreen({
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(breatheAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        Animated.timing(breatheAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
+        Animated.timing(breatheAnim, { toValue: 1, duration: 2500, useNativeDriver: true }),
+        Animated.timing(breatheAnim, { toValue: 0, duration: 2500, useNativeDriver: true }),
       ])
     ).start();
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 3000, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 3000, useNativeDriver: false }),
       ])
     ).start();
   }, []);
