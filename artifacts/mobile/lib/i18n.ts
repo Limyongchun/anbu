@@ -92,6 +92,12 @@ const translations = {
     mapTapHint:       "의 위치 아이콘을 탭하세요",
     mapTapLabel:      "탭하여 정보 보기",
     mapSafe:          "안전 · 실시간",
+    mapPrivacyMode:   "프라이버시 모드",
+    mapPrivacyDesc:   "부모님이 프라이버시 모드를 활성화했습니다.\n정확한 위치 대신 마지막 활동 상태만 표시됩니다.",
+    mapPrivacyActive: "활동 중",
+    mapPrivacyLastSeen: "마지막 활동",
+    privacyModeLabel: "프라이버시 모드",
+    privacyModeDesc:  "위치를 자녀에게 숨기고 활동 상태만 공유합니다",
 
     // ── 알림 탭 ──
     alarmTitle:       "알림",
@@ -437,6 +443,12 @@ const translations = {
     mapTapHint:       "'s location icon",
     mapTapLabel:      "Tap for info",
     mapSafe:          "Safe · Live",
+    mapPrivacyMode:   "Privacy Mode",
+    mapPrivacyDesc:   "Parent has enabled privacy mode.\nOnly activity status is shown instead of exact location.",
+    mapPrivacyActive: "Active",
+    mapPrivacyLastSeen: "Last seen",
+    privacyModeLabel: "Privacy Mode",
+    privacyModeDesc:  "Hide location from children, share activity status only",
 
     alarmTitle:       "Alerts",
     alarmEmpty:       "No alerts",
@@ -758,6 +770,12 @@ const translations = {
     mapTapHint:       "の位置アイコンをタップ",
     mapTapLabel:      "タップして情報を見る",
     mapSafe:          "安全 · リアルタイム",
+    mapPrivacyMode:   "プライバシーモード",
+    mapPrivacyDesc:   "親がプライバシーモードを有効にしました。\n正確な位置ではなく、最後の活動状態のみ表示されます。",
+    mapPrivacyActive: "活動中",
+    mapPrivacyLastSeen: "最後の活動",
+    privacyModeLabel: "プライバシーモード",
+    privacyModeDesc:  "子どもに位置を隠し、活動状態のみ共有します",
 
     alarmTitle:       "通知",
     alarmEmpty:       "通知がありません",

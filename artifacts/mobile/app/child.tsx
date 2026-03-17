@@ -139,8 +139,11 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     return () => clearInterval(iv);
   }, [familyCode, load]);
 
-  const parentLocs = locs.filter(l => l.role === "parent" && l.isSharing);
+  const allParentLocs = locs.filter(l => l.role === "parent" && l.isSharing);
+  const parentLocs = allParentLocs.filter(l => !l.privacyMode);
+  const privacyParents = allParentLocs.filter(l => l.privacyMode);
   const hasParents = parentLocs.length > 0;
+  const hasAnyParent = allParentLocs.length > 0;
   const activeLoc = parentLocs[selectedIdx] ?? parentLocs[0] ?? null;
   const centerLat = hasParents ? parentLocs.reduce((s, l) => s + l.latitude, 0) / parentLocs.length : 37.5665;
   const centerLon = hasParents ? parentLocs.reduce((s, l) => s + l.longitude, 0) / parentLocs.length : 126.978;
@@ -260,7 +263,7 @@ ${boundsJs}
         </View>
       )}
 
-      {!loading && !hasParents && (
+      {!loading && !hasAnyParent && (
         <View style={[mp.connectCard, { bottom: BOTTOM_SAFE + 16 }]}>
           <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(212,242,0,0.15)", alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="location-outline" size={18} color={COLORS.neon} />
@@ -274,6 +277,30 @@ ${boundsJs}
               <Text style={mp.connectBtnText}>{t.mapConnect}</Text>
             </Pressable>
           )}
+        </View>
+      )}
+
+      {!loading && privacyParents.length > 0 && (
+        <View style={[mp.privacyCard, { bottom: BOTTOM_SAFE + (hasParents ? 80 : 16) }]}>
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(139,92,246,0.15)", alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="eye-off" size={18} color="#8b5cf6" />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            {privacyParents.map(pp => {
+              const mins = Math.floor((Date.now() - new Date(pp.updatedAt).getTime()) / 60000);
+              const isActive = mins < 10;
+              return (
+                <View key={pp.deviceId} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={[mp.dot, { backgroundColor: isActive ? COLORS.neon : "#f59e0b" }]} />
+                  <Text style={mp.privacyName}>{pp.memberName}</Text>
+                  <Text style={mp.privacyStatus}>
+                    {isActive ? t.mapPrivacyActive : `${t.mapPrivacyLastSeen} · ${(t.timeMinAgo as string).replace("{m}", String(mins))}`}
+                  </Text>
+                </View>
+              );
+            })}
+            <Text style={mp.privacyLabel}>{t.mapPrivacyMode}</Text>
+          </View>
         </View>
       )}
 
@@ -1358,6 +1385,10 @@ const mp = StyleSheet.create({
   // Native 핀 힌트
   pinHint:        { position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: "rgba(22,30,44,0.82)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7 },
   pinHintText:    { fontFamily: "Inter_500Medium", fontSize: 12, color: COLORS.white },
+  privacyCard:    { position: "absolute", left: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(20,28,42,0.92)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: "rgba(139,92,246,0.25)" },
+  privacyName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.white },
+  privacyStatus:  { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.5)" },
+  privacyLabel:   { fontFamily: "Inter_500Medium", fontSize: 11, color: "#8b5cf6", marginTop: 2 },
   parentTabs:     { position: "absolute", left: 14, right: 14, flexDirection: "row", gap: 8, justifyContent: "center" },
   parentTab:      { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(20,28,42,0.7)", borderRadius: 50, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "transparent" },
   parentTabActive:{ borderColor: "rgba(212,242,0,0.5)", backgroundColor: "rgba(20,28,42,0.95)" },

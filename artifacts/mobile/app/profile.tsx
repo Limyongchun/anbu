@@ -15,6 +15,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -138,8 +139,10 @@ export default function ProfileScreen() {
   const [childCodeCopied, setChildCodeCopied] = useState(false);
   const [parentNamesByCode, setParentNamesByCode] = useState<Record<string, string>>({});
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   const PHOTO_KEY = deviceId ? `profile_photo_${deviceId}` : "";
+  const PRIVACY_KEY = deviceId ? `privacy_mode_${deviceId}` : "";
 
   useEffect(() => {
     if (!PHOTO_KEY) { setProfilePhoto(null); return; }
@@ -234,6 +237,47 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => { reloadChildren(); loadParentNames(); }, [myRole, familyCode, allFamilyCodes.length]);
+
+  useEffect(() => {
+    if (myRole !== "parent" || !deviceId) return;
+    let cancelled = false;
+    (async () => {
+      if (familyCode) {
+        try {
+          const data = await api.getFamily(familyCode);
+          const me = (data.members ?? []).find((m: { deviceId: string }) => m.deviceId === deviceId);
+          if (me && !cancelled) {
+            setPrivacyMode(!!me.privacyMode);
+            if (PRIVACY_KEY) await AsyncStorage.setItem(PRIVACY_KEY, String(!!me.privacyMode)).catch(() => {});
+            return;
+          }
+        } catch {}
+      }
+      if (PRIVACY_KEY) {
+        const val = await AsyncStorage.getItem(PRIVACY_KEY).catch(() => null);
+        if (!cancelled) setPrivacyMode(val === "true");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [myRole, deviceId, familyCode]);
+
+  const togglePrivacyMode = async () => {
+    const prev = privacyMode;
+    const newVal = !prev;
+    setPrivacyMode(newVal);
+    if (PRIVACY_KEY) await AsyncStorage.setItem(PRIVACY_KEY, String(newVal)).catch(() => {});
+    if (familyCode && deviceId) {
+      try {
+        await api.setPrivacyMode(familyCode, deviceId, newVal);
+        if (allFamilyCodes.length > 1) {
+          await Promise.all(allFamilyCodes.filter(c => c !== familyCode).map(c => api.setPrivacyMode(c, deviceId, newVal)));
+        }
+      } catch {
+        setPrivacyMode(prev);
+        if (PRIVACY_KEY) await AsyncStorage.setItem(PRIVACY_KEY, String(prev)).catch(() => {});
+      }
+    }
+  };
 
   const handleRemoveChild = (child: ChildMember) => {
     if (!familyCode || !deviceId) return;
@@ -620,6 +664,30 @@ export default function ProfileScreen() {
           </>
         )}
 
+        {/* ── 프라이버시 모드 (부모만) ── */}
+        {myRole === "parent" && isConnected && (
+          <>
+            <SectionHeader title={t.privacyModeLabel} />
+            <View style={s.card}>
+              <View style={s.privacyRow}>
+                <View style={s.privacyIconWrap}>
+                  <Ionicons name="eye-off" size={18} color="#8b5cf6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.privacyTitle}>{t.privacyModeLabel}</Text>
+                  <Text style={s.privacyDesc}>{t.privacyModeDesc}</Text>
+                </View>
+                <Switch
+                  value={privacyMode}
+                  onValueChange={togglePrivacyMode}
+                  trackColor={{ false: "#e2e8f0", true: "#8b5cf6" }}
+                  thumbColor={privacyMode ? "#fff" : "#fff"}
+                />
+              </View>
+            </View>
+          </>
+        )}
+
         {/* ── 계정 정보 ── */}
         <SectionHeader title={t.sectionAccount} />
         <View style={s.card}>
@@ -974,6 +1042,10 @@ const s = StyleSheet.create({
   editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.navPill },
 
   sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.textMid, letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  privacyRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
+  privacyIconWrap: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(139,92,246,0.1)", alignItems: "center", justifyContent: "center" },
+  privacyTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.textDark, marginBottom: 2 },
+  privacyDesc:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, lineHeight: 16 },
 
   card:         { backgroundColor: COLORS.white, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 },
 

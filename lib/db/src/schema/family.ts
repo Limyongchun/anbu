@@ -14,6 +14,7 @@ export const familyMembersTable = pgTable("family_members", {
   role: text("role").notNull(),
   childRole: text("child_role"),
   photoData: text("photo_data"),
+  privacyMode: boolean("privacy_mode").notNull().default(false),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 

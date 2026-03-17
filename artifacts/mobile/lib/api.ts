@@ -42,6 +42,7 @@ export interface LocationData {
   accuracy?: number;
   battery?: number;
   isSharing: boolean;
+  privacyMode?: boolean;
   updatedAt: string;
 }
 
@@ -93,6 +94,13 @@ export const api = {
 
   getAllLocations: (code: string): Promise<LocationData[]> =>
     request(`/family/${code}/locations`),
+
+  setPrivacyMode: (code: string, deviceId: string, privacyMode: boolean): Promise<{ success: boolean; privacyMode: boolean }> =>
+    request(`/family/${code}/member/${deviceId}/privacy`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ privacyMode }),
+    }),
 
   getMessages: (code: string): Promise<FamilyMessage[]> =>
     request(`/family/${code}/messages`),

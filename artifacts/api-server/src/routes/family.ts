@@ -227,14 +227,18 @@ router.get("/family/:code/locations", async (req, res) => {
       db.select().from(familyMembersTable)
         .where(eq(familyMembersTable.familyCode, code)),
     ]);
-    const roleByDeviceId = new Map(members.map(m => [m.deviceId, m.role]));
+    const memberMap = new Map(members.map(m => [m.deviceId, m]));
     const seen = new Set<string>();
     const unique = locs.filter(l => { if (seen.has(l.deviceId)) return false; seen.add(l.deviceId); return true; });
-    return res.json(unique.map(l => ({
-      ...l,
-      role: roleByDeviceId.get(l.deviceId) || "unknown",
-      updatedAt: l.updatedAt.toISOString(),
-    })));
+    return res.json(unique.map(l => {
+      const member = memberMap.get(l.deviceId);
+      return {
+        ...l,
+        role: member?.role || "unknown",
+        privacyMode: member?.privacyMode ?? false,
+        updatedAt: l.updatedAt.toISOString(),
+      };
+    }));
   } catch (e) {
     return res.status(500).json({ error: "Failed to get locations" });
   }
@@ -321,6 +325,28 @@ router.delete("/family/:code/messages/:messageId", async (req, res) => {
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ error: "Failed to delete message" });
+  }
+});
+
+// PATCH /api/family/:code/member/:deviceId/privacy
+router.patch("/family/:code/member/:deviceId/privacy", async (req, res) => {
+  try {
+    const { code, deviceId } = req.params;
+    const { privacyMode } = req.body;
+    if (typeof privacyMode !== "boolean") return res.status(400).json({ error: "privacyMode (boolean) required" });
+    const member = await db.select().from(familyMembersTable)
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)))
+      .then(r => r[0]);
+    if (!member) return res.status(404).json({ error: "Member not found" });
+    if (member.role !== "parent") return res.status(403).json({ error: "Only parents can toggle privacy mode" });
+    const [updated] = await db.update(familyMembersTable)
+      .set({ privacyMode })
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)))
+      .returning();
+    return res.json({ success: true, privacyMode: updated!.privacyMode });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Failed to update privacy mode" });
   }
 });
 
