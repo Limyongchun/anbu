@@ -240,11 +240,14 @@ export default function ParentScreen() {
 
   useEffect(() => {
     if (!permission) return;
-    if (!permission.granted) { requestPermission(); return; }
+    if (!permission.granted) {
+      requestPermission().catch(() => {});
+      return;
+    }
     if (isSharing) {
       Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
         .then(l => { setCurrentLoc(l); uploadLoc(l, true); }).catch(() => {});
-      startWatch();
+      startWatch().catch(() => {});
     } else if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; }
     return () => { if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; } };
   }, [permission?.granted, isSharing]);
@@ -255,11 +258,13 @@ export default function ParentScreen() {
 
     if (isSharing) {
       (async () => {
-        await saveBackgroundLocationConfig(familyCode, deviceId, myName, lang);
-        await startBackgroundLocationTracking();
+        try {
+          await saveBackgroundLocationConfig(familyCode, deviceId, myName, lang);
+          await startBackgroundLocationTracking();
+        } catch {}
       })();
     } else {
-      stopBackgroundLocationTracking();
+      stopBackgroundLocationTracking().catch(() => {});
     }
   }, [permission?.granted, isSharing, familyCode, deviceId, myName]);
 
