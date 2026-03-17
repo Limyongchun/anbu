@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -20,8 +21,6 @@ const LANG_OPTIONS: { id: Lang; label: string }[] = [
   { id: "ja", label: "日本語" },
 ];
 
-const LANG_EMOJI: Record<Lang, string> = { ko: "\uD83C\uDDF0\uD83C\uDDF7", en: "\uD83C\uDDFA\uD83C\uDDF8", ja: "\uD83C\uDDEF\uD83C\uDDF5" };
-
 function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
   const [open, setOpen] = useState(false);
   const current = LANG_OPTIONS.find((o) => o.id === lang)!;
@@ -33,7 +32,7 @@ function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
         style={({ pressed }) => [st.langBtn, { opacity: pressed ? 0.8 : 1 }]}
         onPress={() => setOpen(!open)}
       >
-        <Text style={{ fontSize: 16 }}>{LANG_EMOJI[lang]}</Text>
+        <Ionicons name="globe-outline" size={16} color="rgba(255,255,255,0.6)" />
         <Text style={st.langBtnText}>{current.label}</Text>
         <Text style={st.langArrow}>{open ? "\u25B2" : "\u25BC"}</Text>
       </Pressable>
@@ -43,7 +42,7 @@ function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
           style={({ pressed }) => [st.langBtn, st.langBtnOther, { opacity: pressed ? 0.7 : 1 }]}
           onPress={() => { setLang(opt.id); setOpen(false); }}
         >
-          <Text style={{ fontSize: 16 }}>{LANG_EMOJI[opt.id]}</Text>
+          <Ionicons name="globe-outline" size={16} color="rgba(255,255,255,0.4)" />
           <Text style={st.langBtnOtherText}>{opt.label}</Text>
         </Pressable>
       ))}

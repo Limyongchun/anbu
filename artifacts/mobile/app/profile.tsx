@@ -82,10 +82,10 @@ function Divider() {
   return <View style={s.divider} />;
 }
 
-const LANG_MAP: Record<Lang, { emoji: string; label: string }> = {
-  ko: { emoji: "\uD83C\uDDF0\uD83C\uDDF7", label: "\uD55C\uAD6D\uC5B4" },
-  en: { emoji: "\uD83C\uDDFA\uD83C\uDDF8", label: "English" },
-  ja: { emoji: "\uD83C\uDDEF\uD83C\uDDF5", label: "\u65E5\u672C\u8A9E" },
+const LANG_MAP: Record<Lang, { label: string }> = {
+  ko: { label: "\uD55C\uAD6D\uC5B4" },
+  en: { label: "English" },
+  ja: { label: "\u65E5\u672C\u8A9E" },
 };
 
 function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
@@ -100,7 +100,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
         onPress={() => setOpen(!open)}
       >
         <View style={s.rowIcon}>
-          <Text style={{ fontSize: 18 }}>{current.emoji}</Text>
+          <Ionicons name="globe-outline" size={18} color={COLORS.navPill} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.rowLabel}>{current.label}</Text>
@@ -117,7 +117,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
               onPress={() => { setLang(id); setOpen(false); }}
             >
               <View style={s.rowIcon}>
-                <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
+                <Ionicons name="globe-outline" size={18} color={COLORS.textMuted} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.rowLabel}>{opt.label}</Text>
