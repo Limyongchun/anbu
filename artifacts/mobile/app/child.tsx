@@ -1241,7 +1241,7 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 14, marginTop: 2 },
+  summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 3, marginTop: 2 },
   summaryTitleText: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#FFFFFF" },
   summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", borderWidth: 1, borderColor: DS.border },
   summaryBody: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
