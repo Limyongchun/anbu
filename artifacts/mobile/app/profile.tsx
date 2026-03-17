@@ -345,7 +345,6 @@ export default function ProfileScreen() {
   };
 
   const handleRemoveFamily = (code: string) => {
-    const pName = parentNamesByCode[code] ?? t.parentN;
     setConfirmModal({
       title: t.removeParent,
       message: t.removeParentMsg as string,
@@ -356,7 +355,29 @@ export default function ProfileScreen() {
             await api.removeFamilyMember(code, parentDid, deviceId);
           } catch {}
         }
-        if (code !== familyCode) {
+        if (code === familyCode) {
+          if (allFamilyCodes.length > 1) {
+            const nextCode = allFamilyCodes.find(c => c !== code);
+            if (nextCode && deviceId) {
+              await api.leaveFamily(code, deviceId).catch(() => {});
+              await disconnect();
+              const familyData = await api.getFamily(nextCode).catch(() => null);
+              const me = familyData?.members?.find((m: { deviceId: string }) => m.deviceId === deviceId);
+              if (me) {
+                await connect(nextCode, me.memberName, me.role as "parent" | "child");
+                for (const extra of allFamilyCodes.filter(c => c !== code && c !== nextCode)) {
+                  await addExtraFamily(extra);
+                }
+              }
+            }
+          } else {
+            if (deviceId) await api.leaveFamily(code, deviceId).catch(() => {});
+            await disconnect();
+            router.replace("/");
+            return;
+          }
+        } else {
+          if (deviceId) await api.leaveFamily(code, deviceId).catch(() => {});
           await removeExtraFamily(code);
         }
         loadParentNames();
@@ -463,6 +484,11 @@ export default function ProfileScreen() {
       title: t.disconnectTitle,
       message: t.disconnectMsg,
       onConfirm: async () => {
+        if (deviceId) {
+          await Promise.all(
+            allFamilyCodes.map(code => api.leaveFamily(code, deviceId).catch(() => {}))
+          );
+        }
         await disconnect();
         router.replace("/");
       },

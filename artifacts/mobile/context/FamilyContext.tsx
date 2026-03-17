@@ -206,12 +206,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const disconnect = async () => {
-    const { deviceId: did, allFamilyCodes: codes } = state;
-    if (did && codes.length > 0) {
-      await Promise.all(
-        codes.map((code) => api.leaveFamily(code, did).catch(() => {})),
-      );
-    }
     await Promise.all([
       AsyncStorage.removeItem(STORAGE_KEYS.familyCode),
       AsyncStorage.removeItem(STORAGE_KEYS.extraCodes),
