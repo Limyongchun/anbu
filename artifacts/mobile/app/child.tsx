@@ -983,20 +983,25 @@ function HomeScreen({
             {parentActivityStats.map((ps, i) => {
               const status = getParentStatus(ps.loc);
               const isActive = status.level === "good";
-              const isLongIdle = !isActive && ps.lastMinsAgo !== null && ps.lastMinsAgo >= 720;
+              const nowHr = new Date().getHours();
+              const isNightTime = nowHr >= 22 || nowHr < 7;
+              const isResting = !isActive && isNightTime;
+              const isLongIdle = !isActive && !isResting && ps.lastMinsAgo !== null && ps.lastMinsAgo >= 720;
               const activityText = ps.lastMinsAgo !== null
                 ? (t.summaryActivityDetected as string).replace("{m}", String(ps.lastMinsAgo))
                 : (t.summaryNoActivity as string);
-              const badgeScale = !isActive ? breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) : undefined;
-              const badgeOpacity = !isActive ? breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.7, 1] }) : undefined;
+              const badgeScale = (!isActive && !isResting) ? breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) : undefined;
+              const badgeOpacity = (!isActive && !isResting) ? breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.7, 1] }) : undefined;
+              const badgeColor = isActive ? DS.success : isResting ? "#6B7280" : DS.danger;
+              const badgeText = isActive ? t.parentStatusActive : isResting ? t.parentStatusResting : t.parentStatusIdle;
               return (
                 <React.Fragment key={ps.deviceId || i}>
                   {i > 0 && <View style={hm.parentStatsVerticalLine} />}
                   <View style={hm.parentStatsCol}>
                     <Text style={hm.parentStatsName} numberOfLines={1}>{ps.name}</Text>
-                    {isActive ? (
-                      <View style={[hm.statusBadge, { backgroundColor: DS.success }]}>
-                        <Text style={hm.statusBadgeText}>{t.parentStatusActive}</Text>
+                    {(isActive || isResting) ? (
+                      <View style={[hm.statusBadge, { backgroundColor: badgeColor }]}>
+                        <Text style={hm.statusBadgeText}>{badgeText}</Text>
                       </View>
                     ) : (
                       <Animated.View style={[hm.statusBadge, { backgroundColor: DS.danger, transform: [{ scale: badgeScale! }], opacity: badgeOpacity }]}>
