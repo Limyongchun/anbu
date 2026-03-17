@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
-import { api, FamilyMessage, LocationData, SubscriptionInfo, MySubscriptionStatus, ParentActivityLog } from "@/lib/api";
+import { api, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 
 const { width, height } = Dimensions.get("window");
 type Tab = "홈" | "사진" | "위치" | "알림";
@@ -1136,142 +1136,6 @@ function GiftScreen({ topBarH }: { topBarH: number }) {
   );
 }
 
-// ─── 결제 모달 (마스터 자녀 전용) ──────────────────────────────────────────────
-function PaymentModal({
-  visible,
-  pendingSubs,
-  onConfirm,
-  onDismiss,
-}: {
-  visible: boolean;
-  pendingSubs: SubscriptionInfo[];
-  onConfirm: (subDeviceId: string) => void;
-  onDismiss: () => void;
-}) {
-  const [paying, setPaying] = useState(false);
-  const [currentIdx, setCurrentIdx] = useState(0);
-
-  useEffect(() => { if (visible) { setCurrentIdx(0); setPaying(false); } }, [visible]);
-
-  if (!visible || pendingSubs.length === 0) return null;
-  const sub = pendingSubs[currentIdx];
-
-  const handlePay = async () => {
-    setPaying(true);
-    try {
-      await onConfirm(sub.subDeviceId);
-      if (currentIdx < pendingSubs.length - 1) {
-        setCurrentIdx(i => i + 1);
-      } else {
-        onDismiss();
-      }
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={pm.overlay}>
-        <View style={pm.card}>
-          <View style={pm.iconRow}>
-            <View style={pm.iconCircle}>
-              <Ionicons name="card-outline" size={32} color={COLORS.neonText} />
-            </View>
-          </View>
-          <Text style={pm.title}>추가 자녀 구독 결제</Text>
-          <Text style={pm.desc}>
-            <Text style={pm.nameHighlight}>{sub.subMemberName}</Text>
-            {" "}이(가) 가족에 참여했습니다.{"\n"}추가 자녀 월 구독료를 결제해 주세요.
-          </Text>
-
-          <View style={pm.amountBox}>
-            <Text style={pm.amountLabel}>월 구독료</Text>
-            <Text style={pm.amountValue}>{sub.amountKrw.toLocaleString()}원</Text>
-          </View>
-
-          {pendingSubs.length > 1 && (
-            <Text style={pm.counter}>{currentIdx + 1} / {pendingSubs.length}건</Text>
-          )}
-
-          <Pressable
-            style={[pm.payBtn, paying && { opacity: 0.6 }]}
-            onPress={handlePay}
-            disabled={paying}
-          >
-            {paying
-              ? <ActivityIndicator color={COLORS.neonText} />
-              : <Text style={pm.payBtnText}>결제하기</Text>
-            }
-          </Pressable>
-
-          <Text style={pm.notice}>결제가 완료되기 전까지 추가 자녀는 앱을 사용할 수 없습니다</Text>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const pm = StyleSheet.create({
-  overlay:      { flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "center", alignItems: "center", padding: 24 },
-  card:         { backgroundColor: "#fff", borderRadius: 20, padding: 28, width: "100%", maxWidth: 360, alignItems: "center" },
-  iconRow:      { marginBottom: 16 },
-  iconCircle:   { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.neon, justifyContent: "center", alignItems: "center" },
-  title:        { fontSize: 18, fontWeight: "700", color: "#1a2535", marginBottom: 10, textAlign: "center" },
-  desc:         { fontSize: 14, color: "#475569", textAlign: "center", lineHeight: 22, marginBottom: 20 },
-  nameHighlight:{ fontWeight: "700", color: COLORS.neonText },
-  amountBox:    { backgroundColor: "#f0f9e8", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", marginBottom: 20, width: "100%" },
-  amountLabel:  { fontSize: 12, color: "#64748b", marginBottom: 4 },
-  amountValue:  { fontSize: 28, fontWeight: "800", color: "#1a2535" },
-  counter:      { fontSize: 12, color: "#94a3b8", marginBottom: 12 },
-  payBtn:       { backgroundColor: COLORS.neon, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, width: "100%", alignItems: "center", marginBottom: 14 },
-  payBtnText:   { fontSize: 16, fontWeight: "700", color: COLORS.neonText },
-  notice:       { fontSize: 11, color: "#94a3b8", textAlign: "center" },
-});
-
-// ─── 서브 자녀 결제 대기 화면 ─────────────────────────────────────────────────
-function SubPaymentWaitScreen({ myName }: { myName: string }) {
-  const spinAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinAnim, { toValue: 1, duration: 2000, useNativeDriver: false })
-    ).start();
-  }, []);
-
-  const rotate = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-
-  return (
-    <View style={spw.container}>
-      <Animated.View style={[spw.spinnerCircle, { transform: [{ rotate }] }]}>
-        <Ionicons name="card-outline" size={36} color={COLORS.neon} />
-      </Animated.View>
-      <Text style={spw.title}>결제 완료 대기 중</Text>
-      <Text style={spw.desc}>
-        보호자(마스터 자녀)가{"\n"}월 구독료 결제를 완료하면{"\n"}앱을 사용할 수 있어요
-      </Text>
-      <View style={spw.infoBox}>
-        <Text style={spw.infoLabel}>참여 자녀</Text>
-        <Text style={spw.infoValue}>{myName}</Text>
-        <Text style={spw.infoLabel}>월 구독료</Text>
-        <Text style={spw.infoValue}>1,000원</Text>
-      </View>
-      <Text style={spw.waitNote}>자동으로 확인합니다 — 잠시만 기다려 주세요</Text>
-    </View>
-  );
-}
-
-const spw = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: COLORS.bg, justifyContent: "center", alignItems: "center", padding: 32 },
-  spinnerCircle:{ width: 88, height: 88, borderRadius: 44, backgroundColor: COLORS.neonText, justifyContent: "center", alignItems: "center", marginBottom: 28 },
-  title:        { fontSize: 20, fontWeight: "800", color: "#1a2535", marginBottom: 12, textAlign: "center" },
-  desc:         { fontSize: 15, color: "#475569", textAlign: "center", lineHeight: 24, marginBottom: 28 },
-  infoBox:      { backgroundColor: "#fff", borderRadius: 14, padding: 20, width: "100%", maxWidth: 280, marginBottom: 24 },
-  infoLabel:    { fontSize: 11, color: "#94a3b8", marginTop: 8 },
-  infoValue:    { fontSize: 16, fontWeight: "700", color: "#1a2535" },
-  waitNote:     { fontSize: 12, color: "#94a3b8", textAlign: "center" },
-});
-
 // ─── 메인 ─────────────────────────────────────────────────────────────────────
 export default function ChildScreen() {
   const insets = useSafeAreaInsets();
@@ -1283,68 +1147,8 @@ export default function ChildScreen() {
   const TOP_H       = topInset + 60;
   const isMap       = tab === "위치";
 
-  const isSub = childRole === "sub";
-
-  const [pendingSubs, setPendingSubs]         = useState<SubscriptionInfo[]>([]);
-  const [showPayModal, setShowPayModal]       = useState(false);
-  const [mySubStatus, setMySubStatus]         = useState<"none" | "pending" | "paid">("none");
-  const [payChecked, setPayChecked]           = useState(false);
-
-  const pollMasterPayment = useCallback(async () => {
-    if (!familyCode || !isMasterChild) return;
-    try {
-      const data = await api.getSubscriptions(familyCode);
-      const pending = (data.subscriptions ?? []).filter(s => s.paymentStatus === "pending");
-      setPendingSubs(pending);
-      setShowPayModal(pending.length > 0);
-    } catch {}
-  }, [familyCode, isMasterChild]);
-
-  const pollSubPayment = useCallback(async () => {
-    if (!familyCode || !deviceId || !isSub) return;
-    try {
-      const data = await api.getMySubscription(familyCode, deviceId);
-      setMySubStatus(data.status ?? "none");
-    } catch {}
-    setPayChecked(true);
-  }, [familyCode, deviceId, isSub]);
-
-  useEffect(() => {
-    if (!familyCode) return;
-    if (isMasterChild) {
-      pollMasterPayment();
-      const t = setInterval(pollMasterPayment, 5000);
-      return () => clearInterval(t);
-    }
-    if (isSub) {
-      pollSubPayment();
-      const t = setInterval(pollSubPayment, 5000);
-      return () => clearInterval(t);
-    }
-  }, [familyCode, isMasterChild, isSub, pollMasterPayment, pollSubPayment]);
-
-  const handleConfirmPayment = async (subDeviceId: string) => {
-    if (!familyCode) return;
-    await api.confirmPayment(familyCode, subDeviceId);
-    await pollMasterPayment();
-  };
-
-  if (isSub && payChecked && mySubStatus === "pending") {
-    return <SubPaymentWaitScreen myName={myName ?? "자녀"} />;
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: isMap ? COLORS.mapBg : COLORS.bg }}>
-
-      {/* ── 마스터 자녀 결제 모달 ── */}
-      {isMasterChild && (
-        <PaymentModal
-          visible={showPayModal}
-          pendingSubs={pendingSubs}
-          onConfirm={handleConfirmPayment}
-          onDismiss={() => setShowPayModal(false)}
-        />
-      )}
 
       {/* ── 홈 ── */}
       {tab === "홈" && (

@@ -122,15 +122,6 @@ export const api = {
       body: JSON.stringify({ requestorDeviceId }),
     }),
 
-  getSubscriptions: (code: string): Promise<{ subscriptions: SubscriptionInfo[] }> =>
-    request(`/family/${code}/subscription`),
-
-  getMySubscription: (code: string, deviceId: string): Promise<MySubscriptionStatus> =>
-    request(`/family/${code}/subscription/device/${encodeURIComponent(deviceId)}`),
-
-  confirmPayment: (code: string, subDeviceId: string): Promise<{ success: boolean; paymentStatus: string }> =>
-    request(`/family/${code}/subscription/${encodeURIComponent(subDeviceId)}/confirm`, { method: "POST" }),
-
   updateMemberPhoto: (code: string, deviceId: string, photoData: string): Promise<{ success: boolean }> =>
     request(`/family/${code}/member/${encodeURIComponent(deviceId)}/photo`, {
       method: "PATCH",
@@ -163,21 +154,3 @@ export interface ParentActivityLog {
   createdAt: string;
 }
 
-export interface SubscriptionInfo {
-  id: number;
-  familyCode: string;
-  subDeviceId: string;
-  subMemberName: string;
-  paymentStatus: string;
-  amountKrw: number;
-  createdAt: string;
-  paidAt: string | null;
-}
-
-export interface MySubscriptionStatus {
-  status: "none" | "pending" | "paid";
-  amountKrw?: number;
-  subMemberName?: string;
-  createdAt?: string;
-  paidAt?: string | null;
-}

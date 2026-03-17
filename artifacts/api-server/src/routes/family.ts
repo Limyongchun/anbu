@@ -5,7 +5,6 @@ import {
   familyMembersTable,
   familyLocationsTable,
   familyMessagesTable,
-  familySubscriptionsTable,
   parentActivityLogsTable,
 } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -115,19 +114,6 @@ router.post("/family/join", async (req, res) => {
     } else {
       [member] = await db.insert(familyMembersTable).values({ familyCode: code, deviceId, memberName, role, childRole }).returning();
 
-      if (childRole === "sub") {
-        const existing = await db.select().from(familySubscriptionsTable)
-          .where(and(eq(familySubscriptionsTable.familyCode, code), eq(familySubscriptionsTable.subDeviceId, deviceId)));
-        if (existing.length === 0) {
-          await db.insert(familySubscriptionsTable).values({
-            familyCode: code,
-            subDeviceId: deviceId,
-            subMemberName: memberName,
-            paymentStatus: "pending",
-            amountKrw: 1000,
-          });
-        }
-      }
     }
     return res.json({ ...serializeMember(member), childRole });
   } catch (e) {
@@ -154,74 +140,10 @@ router.delete("/family/:code/member/:memberDeviceId", async (req, res) => {
     await db.delete(familyMembersTable)
       .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, memberDeviceId)));
 
-    await db.delete(familySubscriptionsTable)
-      .where(and(eq(familySubscriptionsTable.familyCode, code), eq(familySubscriptionsTable.subDeviceId, memberDeviceId)));
-
     return res.json({ success: true });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to remove member" });
-  }
-});
-
-// GET /api/family/:code/subscription — 가족 결제 상태 조회
-router.get("/family/:code/subscription", async (req, res) => {
-  try {
-    const { code } = req.params;
-    const subs = await db.select().from(familySubscriptionsTable)
-      .where(eq(familySubscriptionsTable.familyCode, code))
-      .orderBy(desc(familySubscriptionsTable.createdAt));
-    return res.json({ subscriptions: subs.map(s => ({
-      ...s,
-      createdAt: s.createdAt.toISOString(),
-      paidAt: s.paidAt ? s.paidAt.toISOString() : null,
-    })) });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "Failed to fetch subscriptions" });
-  }
-});
-
-// GET /api/family/:code/subscription/device/:deviceId — 특정 서브 자녀의 결제 상태 조회
-router.get("/family/:code/subscription/device/:deviceId", async (req, res) => {
-  try {
-    const { code, deviceId } = req.params;
-    const [sub] = await db.select().from(familySubscriptionsTable)
-      .where(and(
-        eq(familySubscriptionsTable.familyCode, code),
-        eq(familySubscriptionsTable.subDeviceId, deviceId),
-      ));
-    if (!sub) return res.json({ status: "none" });
-    return res.json({
-      status: sub.paymentStatus,
-      amountKrw: sub.amountKrw,
-      subMemberName: sub.subMemberName,
-      createdAt: sub.createdAt.toISOString(),
-      paidAt: sub.paidAt ? sub.paidAt.toISOString() : null,
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "Failed to fetch subscription" });
-  }
-});
-
-// POST /api/family/:code/subscription/:subDeviceId/confirm — 결제 확인 (마스터 자녀가 호출)
-router.post("/family/:code/subscription/:subDeviceId/confirm", async (req, res) => {
-  try {
-    const { code, subDeviceId } = req.params;
-    const [updated] = await db.update(familySubscriptionsTable)
-      .set({ paymentStatus: "paid", paidAt: new Date() })
-      .where(and(
-        eq(familySubscriptionsTable.familyCode, code),
-        eq(familySubscriptionsTable.subDeviceId, subDeviceId),
-        eq(familySubscriptionsTable.paymentStatus, "pending"),
-      ))
-      .returning();
-    if (!updated) return res.status(404).json({ error: "No pending subscription found" });
-    return res.json({ success: true, paymentStatus: "paid" });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "Failed to confirm payment" });
   }
 });
 

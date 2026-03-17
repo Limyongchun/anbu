@@ -10,15 +10,13 @@ function decodeJwtExp(token: string): number | null {
   } catch { return null; }
 }
 
-type Tab = "dashboard" | "families" | "members" | "subscriptions";
+type Tab = "dashboard" | "families" | "members";
 
 interface Stats {
   families: number;
   members: number;
   parents: number;
   children: number;
-  pendingSubscriptions: number;
-  paidSubscriptions: number;
 }
 
 interface FamilyRow {
@@ -37,17 +35,6 @@ interface MemberRow {
   role: string;
   childRole: string | null;
   joinedAt: string;
-}
-
-interface SubscriptionRow {
-  id: number;
-  familyCode: string;
-  subDeviceId: string;
-  subMemberName: string;
-  paymentStatus: string;
-  amountKrw: number;
-  createdAt: string;
-  paidAt: string | null;
 }
 
 function useApi(token: string) {
@@ -148,8 +135,6 @@ function DashboardTab({ api }: { api: ReturnType<typeof useApi> }) {
         <StatCard label="Total Members" value={stats.members} />
         <StatCard label="Parents" value={stats.parents} />
         <StatCard label="Children" value={stats.children} />
-        <StatCard label="Pending Payments" value={stats.pendingSubscriptions} accent />
-        <StatCard label="Paid Subscriptions" value={stats.paidSubscriptions} />
       </div>
     </div>
   );
@@ -262,61 +247,6 @@ function MembersTab({ api }: { api: ReturnType<typeof useApi> }) {
   );
 }
 
-function SubscriptionsTab({ api }: { api: ReturnType<typeof useApi> }) {
-  const [subs, setSubs] = useState<SubscriptionRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    api.get("/admin/subscriptions").then(d => { setSubs(d.subscriptions || []); setLoading(false); });
-  }, [api]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const confirmPayment = async (id: number) => {
-    await api.post(`/admin/subscriptions/${id}/confirm`);
-    load();
-  };
-
-  if (loading) return <p style={{ color: "#8899aa" }}>Loading...</p>;
-
-  return (
-    <div>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>Subscriptions ({subs.length})</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid #1e2d3d" }}>
-            <Th>Family</Th><Th>Member</Th><Th>Amount</Th><Th>Status</Th><Th>Created</Th><Th>Paid At</Th><Th>Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {subs.map(s => (
-            <tr key={s.id} style={{ borderBottom: "1px solid #1e2d3d" }}>
-              <Td><span style={{ fontFamily: "monospace" }}>{s.familyCode}</span></Td>
-              <Td>{s.subMemberName}</Td>
-              <Td>{s.amountKrw.toLocaleString()} KRW</Td>
-              <Td><StatusBadge status={s.paymentStatus} /></Td>
-              <Td>{new Date(s.createdAt).toLocaleDateString("ko-KR")}</Td>
-              <Td>{s.paidAt ? new Date(s.paidAt).toLocaleDateString("ko-KR") : "-"}</Td>
-              <Td>
-                {s.paymentStatus === "pending" && (
-                  <button
-                    onClick={() => confirmPayment(s.id)}
-                    style={{ padding: "4px 12px", background: "#d4f200", color: "#1a2535", border: "none", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer" }}
-                  >
-                    Confirm
-                  </button>
-                )}
-              </Td>
-            </tr>
-          ))}
-          {subs.length === 0 && <tr><Td colSpan={7}>No subscriptions found</Td></tr>}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function Th({ children }: { children: React.ReactNode }) {
   return <th style={{ textAlign: "left", padding: "10px 12px", color: "#8899aa", fontSize: 12, fontWeight: 500, textTransform: "uppercase" }}>{children}</th>;
 }
@@ -338,19 +268,6 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const isPaid = status === "paid";
-  return (
-    <span style={{
-      display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 500,
-      background: isPaid ? "rgba(74,222,128,0.15)" : "rgba(251,191,36,0.15)",
-      color: isPaid ? "#4ade80" : "#fbbf24",
-    }}>
-      {status}
-    </span>
-  );
-}
-
 function DangerBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -366,7 +283,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
   { key: "families", label: "Families" },
   { key: "members", label: "Members" },
-  { key: "subscriptions", label: "Subscriptions" },
 ];
 
 function App() {
@@ -419,7 +335,6 @@ function App() {
         {tab === "dashboard" && <DashboardTab api={api} />}
         {tab === "families" && <FamiliesTab api={api} />}
         {tab === "members" && <MembersTab api={api} />}
-        {tab === "subscriptions" && <SubscriptionsTab api={api} />}
       </main>
     </div>
   );

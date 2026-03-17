@@ -100,7 +100,7 @@ Expo React Native app called A N B U. Korean family safety app.
   - **Master child**: First child who creates the family group via `POST /api/family/create` → `childRole = "master"`
   - **Sub children**: Additional children who join via `POST /api/family/join` using master's family code → `childRole = "sub"`
   - **Parent limit**: Max 2 parents per family (`MAX_PARENTS = 2`)
-  - **Child limit**: Max 10 children per family (`MAX_CHILDREN = 10`); 2nd+ child incurs extra charge (UI indicator)
+  - **Child limit**: Max 10 children per family (`MAX_CHILDREN = 10`)
   - **Master-only features**: disconnect from parent, child management section in profile
   - Sub children see all other features but cannot disconnect or manage children
 - **Screens**:
@@ -123,10 +123,9 @@ Expo React Native app called A N B U. Korean family safety app.
 React + Vite admin dashboard for A N B U. Dark-themed management UI at `/admin/`.
 
 - **Login**: Password-based auth via `POST /api/admin/login` → JWT token stored in `sessionStorage`
-- **Dashboard tab**: Stats overview (families, members, parents, children, pending/paid subscriptions)
+- **Dashboard tab**: Stats overview (families, members, parents, children)
 - **Families tab**: List all family codes with member counts, delete families
 - **Members tab**: List all members with search, delete members
-- **Subscriptions tab**: List subscriptions, confirm pending payments
 - **API routes**: `artifacts/api-server/src/routes/admin.ts` — JWT-protected admin endpoints
 - **Env vars**: `ADMIN_PASSWORD` (required), `JWT_SECRET` (required) — admin is disabled if either is missing
 - **Packages**: `jsonwebtoken` + `@types/jsonwebtoken` in api-server

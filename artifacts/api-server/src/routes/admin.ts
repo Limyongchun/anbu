@@ -4,9 +4,8 @@ import { db } from "@workspace/db";
 import {
   familyGroupsTable,
   familyMembersTable,
-  familySubscriptionsTable,
 } from "@workspace/db/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -51,15 +50,11 @@ router.get("/admin/stats", adminAuth, async (_req: Request, res: Response) => {
     const [memberCount] = await db.select({ count: sql<number>`count(*)` }).from(familyMembersTable);
     const [parentCount] = await db.select({ count: sql<number>`count(*)` }).from(familyMembersTable).where(eq(familyMembersTable.role, "parent"));
     const [childCount] = await db.select({ count: sql<number>`count(*)` }).from(familyMembersTable).where(eq(familyMembersTable.role, "child"));
-    const [pendingSubs] = await db.select({ count: sql<number>`count(*)` }).from(familySubscriptionsTable).where(eq(familySubscriptionsTable.paymentStatus, "pending"));
-    const [paidSubs] = await db.select({ count: sql<number>`count(*)` }).from(familySubscriptionsTable).where(eq(familySubscriptionsTable.paymentStatus, "paid"));
     return res.json({
       families: Number(familyCount.count),
       members: Number(memberCount.count),
       parents: Number(parentCount.count),
       children: Number(childCount.count),
-      pendingSubscriptions: Number(pendingSubs.count),
-      paidSubscriptions: Number(paidSubs.count),
     });
   } catch (e) {
     return res.status(500).json({ error: "Failed to get stats" });
@@ -94,12 +89,10 @@ router.get("/admin/families/:code", adminAuth, async (req: Request, res: Respons
     const [group] = await db.select().from(familyGroupsTable).where(eq(familyGroupsTable.code, code));
     if (!group) return res.status(404).json({ error: "Family not found" });
     const members = await db.select().from(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
-    const subs = await db.select().from(familySubscriptionsTable).where(eq(familySubscriptionsTable.familyCode, code));
     return res.json({
       code: group.code,
       createdAt: group.createdAt.toISOString(),
       members: members.map(m => ({ ...m, joinedAt: m.joinedAt.toISOString(), photoData: undefined })),
-      subscriptions: subs.map(s => ({ ...s, createdAt: s.createdAt.toISOString(), paidAt: s.paidAt?.toISOString() ?? null })),
     });
   } catch (e) {
     return res.status(500).json({ error: "Failed to get family detail" });
@@ -109,7 +102,6 @@ router.get("/admin/families/:code", adminAuth, async (req: Request, res: Respons
 router.delete("/admin/families/:code", adminAuth, async (req: Request, res: Response) => {
   try {
     const { code } = req.params;
-    await db.delete(familySubscriptionsTable).where(eq(familySubscriptionsTable.familyCode, code));
     await db.delete(familyMembersTable).where(eq(familyMembersTable.familyCode, code));
     await db.delete(familyGroupsTable).where(eq(familyGroupsTable.code, code));
     return res.json({ success: true });
@@ -134,42 +126,10 @@ router.delete("/admin/members/:id", adminAuth, async (req: Request, res: Respons
     const id = parseInt(req.params.id);
     const [member] = await db.select().from(familyMembersTable).where(eq(familyMembersTable.id, id));
     if (!member) return res.status(404).json({ error: "Member not found" });
-    await db.delete(familySubscriptionsTable).where(
-      and(eq(familySubscriptionsTable.familyCode, member.familyCode), eq(familySubscriptionsTable.subDeviceId, member.deviceId))
-    );
     await db.delete(familyMembersTable).where(eq(familyMembersTable.id, id));
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ error: "Failed to delete member" });
-  }
-});
-
-router.get("/admin/subscriptions", adminAuth, async (_req: Request, res: Response) => {
-  try {
-    const subs = await db.select().from(familySubscriptionsTable).orderBy(desc(familySubscriptionsTable.createdAt));
-    return res.json({
-      subscriptions: subs.map(s => ({
-        ...s,
-        createdAt: s.createdAt.toISOString(),
-        paidAt: s.paidAt?.toISOString() ?? null,
-      })),
-    });
-  } catch (e) {
-    return res.status(500).json({ error: "Failed to get subscriptions" });
-  }
-});
-
-router.post("/admin/subscriptions/:id/confirm", adminAuth, async (req: Request, res: Response) => {
-  try {
-    const id = parseInt(req.params.id);
-    const [updated] = await db.update(familySubscriptionsTable)
-      .set({ paymentStatus: "paid", paidAt: new Date() })
-      .where(and(eq(familySubscriptionsTable.id, id), eq(familySubscriptionsTable.paymentStatus, "pending")))
-      .returning();
-    if (!updated) return res.status(404).json({ error: "No pending subscription found" });
-    return res.json({ success: true });
-  } catch (e) {
-    return res.status(500).json({ error: "Failed to confirm subscription" });
   }
 });
 
