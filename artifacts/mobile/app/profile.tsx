@@ -82,10 +82,10 @@ function Divider() {
   return <View style={s.divider} />;
 }
 
-const LANG_MAP: Record<Lang, { label: string }> = {
-  ko: { label: "\uD55C\uAD6D\uC5B4" },
-  en: { label: "English" },
-  ja: { label: "\u65E5\u672C\u8A9E" },
+const LANG_MAP: Record<Lang, { label: string; code: string }> = {
+  ko: { label: "\uD55C\uAD6D\uC5B4", code: "KO" },
+  en: { label: "English", code: "EN" },
+  ja: { label: "\u65E5\u672C\u8A9E", code: "JA" },
 };
 
 function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
@@ -100,7 +100,9 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
         onPress={() => setOpen(!open)}
       >
         <View style={s.rowIcon}>
-          <Ionicons name="globe-outline" size={18} color={COLORS.navPill} />
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.neonText }}>{current.code}</Text>
+          </View>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.rowLabel}>{current.label}</Text>
@@ -117,7 +119,9 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
               onPress={() => { setLang(id); setOpen(false); }}
             >
               <View style={s.rowIcon}>
-                <Ionicons name="globe-outline" size={18} color={COLORS.textMuted} />
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.textMuted }}>{opt.code}</Text>
+                </View>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.rowLabel}>{opt.label}</Text>

@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -15,10 +14,10 @@ import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
 import { Lang } from "@/lib/i18n";
 
-const LANG_OPTIONS: { id: Lang; label: string }[] = [
-  { id: "ko", label: "한국어" },
-  { id: "en", label: "English" },
-  { id: "ja", label: "日本語" },
+const LANG_OPTIONS: { id: Lang; label: string; code: string }[] = [
+  { id: "ko", label: "한국어", code: "KO" },
+  { id: "en", label: "English", code: "EN" },
+  { id: "ja", label: "日本語", code: "JA" },
 ];
 
 function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
@@ -32,7 +31,7 @@ function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
         style={({ pressed }) => [st.langBtn, { opacity: pressed ? 0.8 : 1 }]}
         onPress={() => setOpen(!open)}
       >
-        <Ionicons name="globe-outline" size={16} color="rgba(255,255,255,0.6)" />
+        <View style={st.langCode}><Text style={st.langCodeText}>{current.code}</Text></View>
         <Text style={st.langBtnText}>{current.label}</Text>
         <Text style={st.langArrow}>{open ? "\u25B2" : "\u25BC"}</Text>
       </Pressable>
@@ -42,7 +41,7 @@ function LangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
           style={({ pressed }) => [st.langBtn, st.langBtnOther, { opacity: pressed ? 0.7 : 1 }]}
           onPress={() => { setLang(opt.id); setOpen(false); }}
         >
-          <Ionicons name="globe-outline" size={16} color="rgba(255,255,255,0.4)" />
+          <View style={[st.langCode, { opacity: 0.6 }]}><Text style={st.langCodeText}>{opt.code}</Text></View>
           <Text style={st.langBtnOtherText}>{opt.label}</Text>
         </Pressable>
       ))}
@@ -124,4 +123,6 @@ const st = StyleSheet.create({
   langArrow:         { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.4)", marginLeft: 2 },
   langBtnOther:      { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" },
   langBtnOtherText:  { fontFamily: "Inter_500Medium", fontSize: 14, color: "rgba(255,255,255,0.55)" },
+  langCode:          { width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center" as const, justifyContent: "center" as const },
+  langCodeText:      { fontFamily: "Inter_700Bold", fontSize: 9, color: "rgba(255,255,255,0.7)", letterSpacing: 0.5 },
 });
