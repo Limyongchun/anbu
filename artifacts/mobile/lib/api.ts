@@ -124,6 +124,12 @@ export const api = {
   deleteMessage: (code: string, messageId: number, deviceId: string): Promise<{ success: boolean }> =>
     request(`/family/${code}/messages/${messageId}?deviceId=${encodeURIComponent(deviceId)}`, { method: "DELETE" }),
 
+  leaveFamily: (code: string, deviceId: string): Promise<{ success: boolean }> =>
+    request(`/family/${code}/leave`, {
+      method: "POST",
+      body: JSON.stringify({ deviceId }),
+    }),
+
   removeFamilyMember: (code: string, memberDeviceId: string, requestorDeviceId: string): Promise<{ success: boolean }> =>
     request(`/family/${code}/member/${encodeURIComponent(memberDeviceId)}`, {
       method: "DELETE",

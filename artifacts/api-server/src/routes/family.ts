@@ -122,6 +122,26 @@ router.post("/family/join", async (req, res) => {
   }
 });
 
+// POST /api/family/:code/leave — 본인이 가족에서 탈퇴
+router.post("/family/:code/leave", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: "deviceId required" });
+    const member = await db.select().from(familyMembersTable)
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)))
+      .then(r => r[0]);
+    if (!member) return res.status(404).json({ error: "Member not found" });
+    if (member.childRole === "master") return res.status(400).json({ error: "Master child cannot leave" });
+    await db.delete(familyMembersTable)
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)));
+    return res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Failed to leave family" });
+  }
+});
+
 // DELETE /api/family/:code/member/:memberDeviceId — 마스터 자녀가 서브 자녀 삭제
 router.delete("/family/:code/member/:memberDeviceId", async (req, res) => {
   try {

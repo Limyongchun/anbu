@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import api from "@/lib/api";
 
 export type FamilyRole = "parent" | "child";
 export type ChildRole = "master" | "sub" | null;
@@ -160,6 +161,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeExtraFamily = async (code: string) => {
+    if (state.deviceId) {
+      await api.leaveFamily(code, state.deviceId).catch(() => {});
+    }
     const extrasRaw = await AsyncStorage.getItem(STORAGE_KEYS.extraCodes);
     let extras: string[] = [];
     try { extras = extrasRaw ? JSON.parse(extrasRaw) : []; } catch {}
@@ -177,6 +181,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const disconnect = async () => {
+    const { deviceId: did, allFamilyCodes: codes } = state;
+    if (did && codes.length > 0) {
+      await Promise.all(
+        codes.map(code => api.leaveFamily(code, did).catch(() => {}))
+      );
+    }
     await Promise.all([
       AsyncStorage.removeItem(STORAGE_KEYS.familyCode),
       AsyncStorage.removeItem(STORAGE_KEYS.extraCodes),
