@@ -1,0 +1,259 @@
+[부모 슬라이딩 영역 사진 꿈벅임 수정 핵심 작업 지시서]
+
+문제 원인
+현재 구조는 슬라이드 전환 시
+1) currentSlide를 먼저 보여주고
+2) pendingSlide를 overlay로 위에 올린 뒤
+3) 애니메이션 종료 후 pendingSlide를 제거하고
+4) 다시 currentSlide를 next 이미지로 교체하는 방식입니다.
+
+이 구조 때문에 사용자는 자연스럽게 넘어가는 것처럼 보여도,
+실제로는 "위 레이어 이미지 제거 → 아래 레이어 이미지 재렌더"가 발생하여
+원격 이미지(photoData)에서 깜빡임(꿈벅임)이 생깁니다.
+
+특히 아래 구조가 핵심 원인입니다.
+
+<View style={StyleSheet.absoluteFillObject}>
+  <SlideCard slide={currentSlide} />
+</View>
+
+{pendingSlide && (
+  <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: overlayOpacity, transform: [{ scale: overlayScale }] }]}>
+    <SlideCard slide={pendingSlide} />
+  </Animated.View>
+)}
+
+또한 현재 Animated.timing에서 opacity / scale 애니메이션에 useNativeDriver: false를 쓰고 있어
+JS 스레드 부하 시 더 버벅이거나 깜빡이는 체감이 커질 수 있습니다.
+
+--------------------------------------------------
+수정 목표
+--------------------------------------------------
+
+부모 화면의 슬라이드 전환을
+"overlay를 잠깐 올렸다 제거하는 구조"에서
+"front/back 두 레이어를 항상 유지하고 opacity만 교체하는 구조"로 변경합니다.
+
+즉,
+- 이미지 레이어 2개를 고정 유지
+- 다음 슬라이드가 준비되면 back layer에 먼저 렌더
+- opacity crossfade만 수행
+- 애니메이션 종료 후 front/back 역할만 교체
+- 레이어 자체를 제거하지 않음
+
+이 방식으로 사진 깜빡임을 제거합니다.
+
+--------------------------------------------------
+반드시 수정해야 할 핵심 사항
+--------------------------------------------------
+
+1. currentSlide / pendingSlide 조건부 overlay 구조 제거
+- pendingSlide를 잠깐 렌더 후 제거하는 현재 방식 삭제
+- frontSlide / backSlide 두 개를 항상 렌더하는 구조로 변경
+- overlay Animated.View를 제거하는 방식 금지
+
+2. 사진 슬라이드는 별도 컴포넌트로 분리
+- SlideCard 안에서 모든 타입(msg/demo/text)을 한 번에 처리하지 말고
+- photo slide는 PhotoSlide 컴포넌트로 분리
+- text/demo slide는 기존 SlideCard를 사용해도 됨
+- 특히 photoData가 있는 경우는 이미지 전환 안정성이 최우선
+
+3. 가능하면 react-native 기본 Image 대신 expo-image 사용
+- 원격 이미지 캐시와 전환 안정성 향상 목적
+- source={{ uri: msg.photoData }} 구조 유지 가능
+- contentFit="cover" 사용
+- crossfade를 직접 구현할 경우 transition={0}으로 설정
+- cachePolicy="memory-disk" 적용
+
+4. 다음 사진 prefetch 추가
+- 현재 인덱스 기준 다음 슬라이드가 photoData면 미리 prefetch
+- 슬라이드 전환 전에 이미지가 캐시되도록 처리
+
+5. opacity / scale 애니메이션은 useNativeDriver: true로 변경
+- overlayOpacity, overlayScale 같은 값은 native driver 사용 가능
+- topBarAnim / bottomBarAnim translateY도 true 적용 가능 여부 검토
+- color / width 등 native driver 불가 항목은 제외
+
+6. 10초마다 msgs 전체 교체 시 현재 보고 있는 슬라이드 유지 로직 추가
+- 현재 보고 있는 msg.id를 기억
+- 새 메시지 배열을 받아도 동일 id가 존재하면 해당 index로 curIdx 보정
+- 지금 보고 있는 사진이 갑자기 다른 사진으로 바뀌지 않게 유지
+
+--------------------------------------------------
+구조 변경 방향
+--------------------------------------------------
+
+기존 구조
+- currentSlide 1장
+- pendingSlide 있을 때만 위에 overlay 추가
+- 전환 끝나면 pendingSlide 제거
+- currentSlide 갱신
+
+변경 구조
+- frontSlide: 현재 보이는 슬라이드
+- backSlide: 다음에 보일 슬라이드
+- 둘 다 항상 absoluteFillObject로 유지
+- frontOpacity / backOpacity로 교차 전환
+- 전환 완료 후 "front에 현재 슬라이드 반영"하고 back은 다음 대기 상태로 유지
+- 화면상 이미지 컴포넌트를 제거하지 않음
+
+--------------------------------------------------
+구현 지시 예시
+--------------------------------------------------
+
+상태 예시
+- visibleIdx
+- incomingIdx
+- frontOpacity
+- backOpacity
+- isFrontActive (현재 front가 위인지 여부)
+- currentMsgIdRef (현재 보고 있는 msg id 기억)
+
+전환 흐름 예시
+1) 다음 슬라이드 index 계산
+2) back layer에 next slide 먼저 세팅
+3) backOpacity 0 -> 1
+4) frontOpacity 1 -> 0
+5) 애니메이션 종료
+6) visibleIdx 갱신
+7) front/back 역할 스위칭
+8) opacity 원위치
+9) 레이어 제거 없음
+
+--------------------------------------------------
+중요: 현재 코드에서 특히 손봐야 할 부분
+--------------------------------------------------
+
+A. goTo 함수
+현재는 setNextIdx(safeIdx) 후 overlayOpacity 애니메이션이 끝나면
+setCurIdx(safeIdx), setNextIdx(null) 을 호출하고 있음.
+이 구조를 front/back 스왑 방식으로 변경해야 함.
+
+즉, 아래 흐름 제거:
+- setNextIdx(...)
+- pendingSlide 렌더
+- setCurIdx(...)
+- setNextIdx(null)
+
+대신:
+- next slide를 back layer에 넣기
+- crossfade
+- 완료 후 active layer 스왑
+
+B. 렌더부
+현재:
+<View>
+  <SlideCard slide={currentSlide} />
+</View>
+{pendingSlide && <Animated.View><SlideCard slide={pendingSlide} /></Animated.View>}
+
+이 부분을
+항상 2개 레이어를 유지하는 구조로 변경
+
+예시 개념:
+<Animated.View style={{ opacity: frontOpacity }}>
+  <RenderSlide slide={frontSlide} />
+</Animated.View>
+
+<Animated.View style={{ opacity: backOpacity }}>
+  <RenderSlide slide={backSlide} />
+</Animated.View>
+
+C. photoData 렌더링
+현재:
+<Image source={{ uri: msg.photoData }} ... />
+
+권장:
+import { Image } from "expo-image";
+
+<Image
+  source={{ uri: msg.photoData }}
+  style={StyleSheet.absoluteFillObject}
+  contentFit="cover"
+  transition={0}
+  cachePolicy="memory-disk"
+/>
+
+D. 다음 이미지 prefetch
+curIdx 변경 시 다음 슬라이드가 photoData면 미리 prefetch
+
+예시 개념:
+useEffect(() => {
+  const next = slides[(curIdx + 1) % slides.length];
+  if (next?.kind === "msg" && next.msg.photoData) {
+    Image.prefetch(next.msg.photoData);
+  }
+}, [curIdx, slides]);
+
+E. native driver 변경
+현재 false로 된 부분 중 opacity / transform은 true로 변경
+
+예시:
+Animated.timing(overlayOpacity, {
+  toValue: 1,
+  duration: 800,
+  easing: Easing.bezier(0.4, 0, 0.2, 1),
+  useNativeDriver: true,
+})
+
+Animated.timing(overlayScale, {
+  toValue: 1,
+  duration: 1000,
+  easing: Easing.bezier(0.4, 0, 0.2, 1),
+  useNativeDriver: true,
+})
+
+--------------------------------------------------
+추가 보정
+--------------------------------------------------
+
+1. slideArea 배경색 유지
+로딩 중 흰색 번쩍임이 보이지 않도록
+배경은 계속 #000 또는 매우 어두운 톤 유지
+
+2. 프로그레스 바는 현 구조 유지 가능
+단, width 애니메이션은 native driver 불가이므로 그대로 둘 수 있음
+
+3. msgs 갱신 로직 보완
+서버에서 새로운 메시지 배열을 받아도
+현재 보고 있는 msg.id를 찾은 뒤 index를 재계산해서 현재 보고 있는 슬라이드를 유지해야 함
+
+예시 개념:
+- 현재 slide.kind === "msg" 이면 currentSlide.msg.id 저장
+- 새 merged 도착 후 same id 탐색
+- 찾으면 해당 index 유지
+- 없으면 기존 curIdx 범위 보정
+
+--------------------------------------------------
+최종 요구사항
+--------------------------------------------------
+
+이번 수정의 핵심 목적은
+"슬라이드 전환 시 사진이 꿈벅꿈벅하는 현상 제거"입니다.
+
+따라서 아래 조건을 충족해야 합니다.
+
+- 사진 슬라이드 전환 시 깜빡임 없을 것
+- 이미지 컴포넌트를 전환 순간 제거하지 않을 것
+- 두 레이어를 유지하며 crossfade만 수행할 것
+- 원격 이미지 캐시/prefetch 적용할 것
+- opacity/transform 애니메이션은 native driver 사용할 것
+- 10초 메시지 갱신 시 현재 보고 있는 슬라이드가 갑자기 바뀌지 않도록 할 것
+
+--------------------------------------------------
+작업 우선순위
+--------------------------------------------------
+
+1순위: 렌더 구조를 front/back 2레이어 방식으로 변경
+2순위: photoData 이미지 expo-image로 교체
+3순위: prefetch 추가
+4순위: useNativeDriver true 적용
+5순위: msgs 갱신 시 current msg id 유지 보정
+
+--------------------------------------------------
+한 줄 요약
+--------------------------------------------------
+
+지금 문제의 본질은 애니메이션이 아니라
+"전환 끝날 때 이미지 레이어를 제거하고 다시 렌더하는 구조"입니다.
+이미지 두 장을 고정 유지한 채 opacity crossfade로 바꾸는 방식으로 수정해 주세요.
