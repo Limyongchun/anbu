@@ -161,11 +161,39 @@ export default function ProfileScreen() {
   const [parentNamesByCode, setParentNamesByCode] = useState<Record<string, string>>({});
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
 
-  const PHOTO_KEY = `profile_photo_${deviceId}`;
+  const PHOTO_KEY = deviceId ? `profile_photo_${deviceId}` : "";
 
   useEffect(() => {
-    AsyncStorage.getItem(PHOTO_KEY).then(uri => { if (uri) setProfilePhoto(uri); }).catch(() => {});
-  }, [deviceId]);
+    if (!PHOTO_KEY) { setProfilePhoto(null); return; }
+    let cancelled = false;
+
+    (async () => {
+      const local = await AsyncStorage.getItem(PHOTO_KEY).catch(() => null);
+      if (local && local.startsWith("data:")) {
+        if (!cancelled) setProfilePhoto(local);
+        return;
+      }
+
+      if (local && !local.startsWith("data:")) {
+        await AsyncStorage.removeItem(PHOTO_KEY).catch(() => {});
+      }
+
+      if (familyCode && deviceId) {
+        try {
+          const data = await api.getFamily(familyCode);
+          const me = (data.members ?? []).find(
+            (m: { deviceId: string }) => m.deviceId === deviceId
+          );
+          if (me?.photoData && !cancelled) {
+            setProfilePhoto(me.photoData);
+            await AsyncStorage.setItem(PHOTO_KEY, me.photoData).catch(() => {});
+          }
+        } catch {}
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [deviceId, familyCode]);
 
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -181,18 +209,22 @@ export default function ProfileScreen() {
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      const { uri, base64 } = result.assets[0];
-      setProfilePhoto(uri);
-      await AsyncStorage.setItem(PHOTO_KEY, uri);
-      if (base64 && familyCode && deviceId) {
+      const { base64 } = result.assets[0];
+      if (base64) {
         const photoData = `data:image/jpeg;base64,${base64}`;
-        api.updateMemberPhoto(familyCode, deviceId, photoData).catch(() => {});
-        if (allFamilyCodes.length > 1) {
-          allFamilyCodes.forEach(code => {
-            if (code !== familyCode) {
-              api.updateMemberPhoto(code, deviceId, photoData).catch(() => {});
-            }
-          });
+        setProfilePhoto(photoData);
+        if (PHOTO_KEY) {
+          await AsyncStorage.setItem(PHOTO_KEY, photoData).catch(() => {});
+        }
+        if (familyCode && deviceId) {
+          api.updateMemberPhoto(familyCode, deviceId, photoData).catch(() => {});
+          if (allFamilyCodes.length > 1) {
+            allFamilyCodes.forEach(code => {
+              if (code !== familyCode) {
+                api.updateMemberPhoto(code, deviceId, photoData).catch(() => {});
+              }
+            });
+          }
         }
       }
     }
