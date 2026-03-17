@@ -853,7 +853,7 @@ function HomeScreen({
     location:   { icon: "location",        iconColor: DS.info,   iconBg: COLORS.blueSoft },
     app_open:   { icon: "phone-portrait",  iconColor: DS.success, iconBg: COLORS.greenSoft },
     quiz:       { icon: "bulb",            iconColor: DS.warning, iconBg: COLORS.orangeSoft },
-    message:    { icon: "chatbubble",      iconColor: "#06b6d4", iconBg: "#ecfeff" },
+    message:    { icon: "chatbubble",      iconColor: DS.brand, iconBg: DS.surfaceSoft },
   };
   const DEFAULT_ICON = { icon: "ellipse" as keyof typeof Ionicons.glyphMap, iconColor: DS.textTertiary, iconBg: DS.surfaceSoft };
 
