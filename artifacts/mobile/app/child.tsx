@@ -978,14 +978,16 @@ function HomeScreen({
 
       {/* Anbu Interpretation Card */}
       {(() => {
+        const nowHour = new Date().getHours();
+        const isNight = nowHour >= 22 || nowHour < 7;
         const totalActs = parentActivities.length;
         const totalLoc = parentActivityStats.reduce((s, p) => s + p.locCount, 0);
         const totalTouch = parentActivityStats.reduce((s, p) => s + p.touchCount, 0);
-        const level = (totalLoc >= 2 && totalTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
-        const emoji = level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : "💌";
-        const msg = level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : t.anbuCheck;
-        const sub = level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : t.anbuCheckSub;
-        const accentColor = level === "safe" ? DS.success : level === "quiet" ? DS.warning : DS.info;
+        const level = isNight ? "sleep" : (totalLoc >= 2 && totalTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
+        const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : "💌";
+        const msg = level === "sleep" ? t.anbuSleep : level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : t.anbuCheck;
+        const sub = level === "sleep" ? t.anbuSleepSub : level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : t.anbuCheckSub;
+        const accentColor = level === "sleep" ? DS.textTertiary : level === "safe" ? DS.success : level === "quiet" ? DS.warning : DS.info;
         return (
           <View style={hm.interpretCard}>
             <Text style={hm.interpretLabel}>{t.anbuInterpretLabel}</Text>
