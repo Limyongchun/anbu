@@ -934,7 +934,7 @@ function HomeScreen({
 
   const parentName = parentLoc?.memberName ?? parentMemberName ?? t.parentDefault;
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? t.homeGreetMorning : hour < 18 ? t.homeGreetDay : t.homeGreetEvening;
+  const greeting = t.homeParentActivity;
 
   // 가족 코드 없음 (회원가입 전 직접 접근)
   if (!familyCode) {
@@ -966,7 +966,7 @@ function HomeScreen({
       showsVerticalScrollIndicator={false}
     >
       {/* 인사말 */}
-      <Text style={hm.greeting}>{greeting} 👋</Text>
+      <Text style={hm.greeting}>{greeting}</Text>
 
       {/* 상태 배너 */}
       <View style={hm.statusBanner}>
