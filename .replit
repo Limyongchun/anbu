@@ -30,3 +30,6 @@ timeoutMs = 20000
 [userenv.shared]
 ADMIN_PASSWORD = "Dladydcjs019!"
 JWT_SECRET = "anbu-admin-jwt-secret-2024"
+
+[nix]
+channel = "stable-25_05"

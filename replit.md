@@ -115,6 +115,7 @@ Expo React Native app called A N B U. Korean family safety app.
 - **DB schema** `familyMembersTable`: includes `childRole text` column (null for parents, "master"/"sub" for children)
 - **Parent Activity Logs**: `parentActivityLogsTable` in DB; API `POST /api/family/:code/activity` + `GET /api/family/:code/activities`; parent app logs heart/view_slide/location/app_open activities with throttling; child app fetches real logs for "최근 활동" section
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
+- **Background Location**: `lib/backgroundLocation.ts` — `expo-task-manager` + `expo-location` background API; task `ANBU_BACKGROUND_LOCATION` defined at top-level via import in `_layout.tsx`; saves config to AsyncStorage for background task access; 5-min interval, 50m distance; iOS UIBackgroundModes + Android foreground service configured in `app.json`; web falls back to foreground-only; `parent.tsx` auto-starts background tracking when sharing is on
 - **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
 
 ### `artifacts/admin` (`@workspace/admin`)

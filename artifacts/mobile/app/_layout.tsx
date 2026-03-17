@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FamilyProvider } from "@/context/FamilyContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import "@/lib/backgroundLocation";
 
 SplashScreen.preventAutoHideAsync();
 

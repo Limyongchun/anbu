@@ -18,6 +18,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { api, FamilyMessage } from "@/lib/api";
+import {
+  saveBackgroundLocationConfig,
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking,
+  isBackgroundLocationRunning,
+} from "@/lib/backgroundLocation";
 
 function logActivity(familyCode: string | null, deviceId: string | null, parentName: string | null, type: string, detail?: string) {
   if (!familyCode || !deviceId || !parentName) return;
@@ -178,6 +184,7 @@ export default function ParentScreen() {
   const [currentLoc, setCurrentLoc] = useState<Location.LocationObject | null>(null);
   const [address, setAddress]       = useState("");
   const [locUploading, setLocUploading] = useState(false);
+  const [bgTrackingActive, setBgTrackingActive] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
   const loadMsgs = useCallback(async () => {
@@ -244,9 +251,36 @@ export default function ParentScreen() {
     return () => { if (watchRef.current) { watchRef.current.remove(); watchRef.current = null; } };
   }, [permission?.granted, isSharing]);
 
+  useEffect(() => {
+    if (Platform.OS === "web" || !familyCode || !deviceId || !myName) return;
+    if (!permission?.granted || !isSharing) return;
+
+    (async () => {
+      await saveBackgroundLocationConfig(familyCode, deviceId, myName);
+      const started = await startBackgroundLocationTracking();
+      setBgTrackingActive(started);
+    })();
+
+    return () => {
+      isBackgroundLocationRunning().then(running => {
+        if (running && !isSharing) stopBackgroundLocationTracking();
+      });
+    };
+  }, [permission?.granted, isSharing, familyCode, deviceId, myName]);
+
   const toggleShare = async () => {
     const next = !isSharing; setIsSharing(next);
     if (currentLoc) await uploadLoc(currentLoc, next);
+    if (Platform.OS !== "web") {
+      if (next && familyCode && deviceId && myName) {
+        await saveBackgroundLocationConfig(familyCode, deviceId, myName);
+        const started = await startBackgroundLocationTracking();
+        setBgTrackingActive(started);
+      } else {
+        await stopBackgroundLocationTracking();
+        setBgTrackingActive(false);
+      }
+    }
   };
 
   // ── 슬라이드 데이터 ──

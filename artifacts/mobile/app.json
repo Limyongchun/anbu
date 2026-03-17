@@ -14,9 +14,25 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anbu.family",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "가족의 안전을 위해 현재 위치를 공유합니다.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "앱이 꺼져 있어도 가족에게 위치를 안전하게 공유하기 위해 백그라운드 위치 접근이 필요합니다.",
+        "NSLocationAlwaysUsageDescription": "앱이 꺼져 있어도 가족에게 위치를 안전하게 공유하기 위해 백그라운드 위치 접근이 필요합니다.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
     },
-    "android": {},
+    "android": {
+      "package": "com.anbu.family",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,7 +44,17 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "앱이 꺼져 있어도 가족에게 위치를 안전하게 공유하기 위해 백그라운드 위치 접근이 필요합니다.",
+          "locationAlwaysPermission": "앱이 꺼져 있어도 가족에게 위치를 안전하게 공유하기 위해 백그라운드 위치 접근이 필요합니다.",
+          "locationWhenInUsePermission": "가족의 안전을 위해 현재 위치를 공유합니다.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
