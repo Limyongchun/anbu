@@ -870,7 +870,8 @@ function HomeScreen({
       const style = ACTIVITY_ICON_MAP[a.activityType] || DEFAULT_ICON;
       const baseLabel = ACTIVITY_LABEL_MAP[a.activityType] || a.activityType;
       const detailAddr = a.detail?.includes(" · ") ? a.detail.split(" · ").slice(1).join(" · ") : null;
-      const label = detailAddr ? `${baseLabel} · ${detailAddr}` : baseLabel;
+      const namePrefix = a.parentName ? `${a.parentName} · ` : "";
+      const label = detailAddr ? `${namePrefix}${baseLabel} · ${detailAddr}` : `${namePrefix}${baseLabel}`;
       return {
         id: `pa${a.id}`,
         icon: style.icon,
