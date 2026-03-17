@@ -522,9 +522,11 @@ export default function ProfileScreen() {
                         <Text style={s.parentRowLabel}>{pName}</Text>
                         <Text style={s.parentRowSub}>{idx === 0 ? t.basicLink : t.extraLink}</Text>
                       </View>
-                      <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
-                        <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
-                      </Pressable>
+                      {isMasterChild && (
+                        <Pressable style={s.parentRemoveBtn} onPress={() => handleRemoveFamily(code)}>
+                          <Ionicons name="close-circle-outline" size={20} color="rgba(0,0,0,0.25)" />
+                        </Pressable>
+                      )}
                     </View>
                   );
                 })}
@@ -726,8 +728,8 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 연결 해제 (부모 전체 / 자녀 전체) ── */}
-        {isConnected && (
+        {/* ── 연결 해제 (부모 / 마스터 자녀만) ── */}
+        {isConnected && (myRole === "parent" || isMasterChild) && (
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
