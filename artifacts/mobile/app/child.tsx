@@ -526,7 +526,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
             <View style={ab.handle} />
             <Text style={ab.sheetTitle}>{t.anbuCompose}</Text>
             {photo && (
-              <View style={{ borderRadius: 10, overflow: "hidden", marginBottom: 12, aspectRatio: 1, width: "100%" }}>
+              <View style={{ overflow: "hidden", marginBottom: 12, marginHorizontal: -24, aspectRatio: 1 }}>
                 <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                 <Pressable
                   style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 16 }}
