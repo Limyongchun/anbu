@@ -1,6 +1,13 @@
 import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
+export const accountsTable = pgTable("accounts", {
+  id: serial("id").primaryKey(),
+  phone: text("phone").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const familyGroupsTable = pgTable("family_groups", {
   code: text("code").primaryKey(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -13,6 +20,7 @@ export const familyMembersTable = pgTable("family_members", {
   memberName: text("member_name").notNull(),
   role: text("role").notNull(),
   childRole: text("child_role"),
+  accountId: integer("account_id").references(() => accountsTable.id),
   photoData: text("photo_data"),
   privacyMode: boolean("privacy_mode").notNull().default(false),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
