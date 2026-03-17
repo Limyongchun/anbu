@@ -992,7 +992,7 @@ function HomeScreen({
                 : (t.summaryNoActivity as string);
               const badgeScale = (!isActive && !isResting) ? breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) : undefined;
               const badgeOpacity = (!isActive && !isResting) ? breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.7, 1] }) : undefined;
-              const badgeColor = isActive ? DS.success : isResting ? "#6B7280" : DS.danger;
+              const badgeColor = isActive ? DS.success : isResting ? DS.warning : DS.danger;
               const badgeText = isActive ? t.parentStatusActive : isResting ? t.parentStatusResting : t.parentStatusIdle;
               return (
                 <React.Fragment key={ps.deviceId || i}>
