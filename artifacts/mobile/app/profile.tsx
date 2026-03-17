@@ -728,8 +728,8 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 연결 해제 (부모 / 마스터 자녀만) ── */}
-        {isConnected && (myRole === "parent" || isMasterChild) && (
+        {/* ── 연결 해제 (모든 접속자) ── */}
+        {isConnected && (
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
