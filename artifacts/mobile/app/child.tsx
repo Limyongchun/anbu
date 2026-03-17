@@ -944,7 +944,7 @@ function HomeScreen({
       {/* Today Summary Card */}
       <View style={hm.summaryCard}>
         <View style={hm.summaryHeader}>
-          <Ionicons name="sunny-outline" size={18} color={DS.warning} />
+          <Ionicons name="sunny-outline" size={13} color={DS.warning} />
           <Text style={hm.summaryTitle}>{t.todayAnbu || "Today's Status"}</Text>
         </View>
         <View style={hm.summaryBody}>
@@ -1303,8 +1303,8 @@ const hm = StyleSheet.create({
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
   summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: DS.border },
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: DS.textPrimary },
+  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
+  summaryTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   summaryBody: { paddingHorizontal: 20, paddingBottom: 16 },
   summaryStatRow: { flexDirection: "row", gap: 16, marginBottom: 12 },
   summaryStat: { flexDirection: "row", alignItems: "center", gap: 6 },
