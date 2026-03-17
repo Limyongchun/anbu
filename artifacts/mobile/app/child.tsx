@@ -428,7 +428,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   const [delId, setDelId] = useState<number | null>(null);
   const [showCompose, setShowCompose] = useState(false);
   const photos = msgs.filter(m => !!m.photoData);
-  const THUMB = (width - 52) / 3;
+  const THUMB = (width - 8) / 3;
 
   const load = useCallback(async () => {
     if (allFamilyCodes.length === 0) return;
@@ -564,7 +564,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
         </View>
       </Modal>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: subView === "gallery" ? 2 : 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <Text style={ab.screenTitle}>{t.anbuTitle}</Text>
 
         <View style={ab.seg}>
@@ -631,12 +631,12 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
             {!loading && photos.length === 0 && (
               <View style={ab.empty}><Ionicons name="images-outline" size={32} color={DS.textTertiary} /><Text style={ab.emptyText}>{t.anbuNoPhotos}</Text></View>
             )}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 2 }}>
               {photos.map(m => (
-                <View key={m.id} style={{ width: THUMB, height: THUMB, borderRadius: DS.radius.card, overflow: "visible", position: "relative" }}>
-                  <Pressable onPress={() => { setViewerUri(m.photoData!); setViewerMid(m.id); }} style={{ flex: 1, borderRadius: DS.radius.card, overflow: "hidden" }}>
+                <View key={m.id} style={{ width: THUMB, height: THUMB, borderRadius: 0, overflow: "visible", position: "relative" }}>
+                  <Pressable onPress={() => { setViewerUri(m.photoData!); setViewerMid(m.id); }} style={{ flex: 1, borderRadius: 0, overflow: "hidden" }}>
                     <Image source={{ uri: m.photoData! }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.35)", padding: 4, borderBottomLeftRadius: DS.radius.card, borderBottomRightRadius: DS.radius.card }}>
+                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.35)", padding: 4 }}>
                       <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: "#fff", textAlign: "center" }}>{formatTimeI18n(m.createdAt, t)}</Text>
                     </View>
                   </Pressable>
