@@ -1101,7 +1101,7 @@ const s = StyleSheet.create({
   profileName:  { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textDark, marginBottom: 6 },
   roleBadge:    { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   roleText:     { fontFamily: "Inter_600SemiBold", fontSize: 11 },
-  editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
+  editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.06)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.neon },
 
   sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.textMid, letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
@@ -1123,12 +1123,12 @@ const s = StyleSheet.create({
   codeCell:     { width: 44, height: 52, borderRadius: 12, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
   codeCellText: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.neon, letterSpacing: 2 },
   codeHint:     { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, textAlign: "center", marginBottom: 14 },
-  copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(255,255,255,0.08)" },
+  copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(0,0,0,0.06)" },
   copyBtnDone:  { backgroundColor: COLORS.neon },
   copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.neon },
 
   connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
-  connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#0B1926" },
+  connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#FFFFFF" },
 
   // ── 자녀 다중 부모님 섹션 ──
   parentRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
