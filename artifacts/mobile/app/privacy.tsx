@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
-import { useLang } from "@/lib/i18n";
+import { useLang } from "@/context/LanguageContext";
 
 const SUPPORT_EMAIL = "support@anbu.family";
 
