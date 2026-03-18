@@ -1032,12 +1032,17 @@ function HomeScreen({
         const totalActs = parentActivities.length;
         const totalLoc = parentActivityStats.reduce((s, p) => s + p.locCount, 0);
         const totalTouch = parentActivityStats.reduce((s, p) => s + p.touchCount, 0);
-        const level = isNight ? "sleep" : (totalLoc >= 2 && totalTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
-        const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : "💌";
+        const allParentsAlert = parentActivityStats.length > 0 && parentActivityStats.every(ps => {
+          const st = getParentStatus(ps.loc);
+          return st.level === "alert" || st.level === "none";
+        });
+        const level = isNight ? "sleep" : (totalLoc >= 2 && totalTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : allParentsAlert ? "alert" : "check";
+        const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : level === "alert" ? "🚨" : "💌";
         const checkMsgs = t.anbuCheckMessages;
-        const msg = level === "sleep" ? t.anbuSleep : level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : checkMsgs[randomCheckIdx % checkMsgs.length];
-        const sub = level === "sleep" ? t.anbuSleepSub : level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : t.anbuCheckSub;
-        const accentColor = level === "sleep" ? DS.textTertiary : level === "safe" ? DS.success : level === "quiet" ? DS.warning : DS.info;
+        const alertMsgs = t.anbuAlertMessages;
+        const msg = level === "sleep" ? t.anbuSleep : level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : level === "alert" ? alertMsgs[randomCheckIdx % alertMsgs.length] : checkMsgs[randomCheckIdx % checkMsgs.length];
+        const sub = level === "sleep" ? t.anbuSleepSub : level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : level === "alert" ? t.anbuAlertSub : t.anbuCheckSub;
+        const accentColor = level === "sleep" ? DS.textTertiary : level === "safe" ? DS.success : level === "quiet" ? DS.warning : level === "alert" ? DS.danger : DS.info;
         return (
           <View style={hm.interpretCard}>
             <Text style={hm.interpretLabel}>{t.anbuInterpretLabel}</Text>
