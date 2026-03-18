@@ -260,14 +260,13 @@ export default function ChildSignupScreen() {
     );
   }
 
-  // ── 회원가입 폼 ──
   return (
-    <View style={[s.container, { paddingTop: topInset }]}>
-      <View style={s.header}>
+    <View style={[s.formContainer, { paddingTop: topInset }]}>
+      <View style={s.formHeader}>
         <Pressable style={s.backBtn} onPress={handleBack}>
-          <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
+          <Ionicons name="chevron-back" size={22} color="#333" />
         </Pressable>
-        <Text style={s.headerTitle}>
+        <Text style={s.formHeaderTitle}>
           {mode === "create" ? t.signupFormCreateTitle : t.signupFormJoinTitle}
         </Text>
         <View style={{ width: 36 }} />
@@ -281,37 +280,37 @@ export default function ChildSignupScreen() {
         >
           {mode === "join" && (
             <>
-              <Text style={s.sectionTitle}>{t.signupFamilyCodeInput}</Text>
-              <Text style={s.fieldLabel}>{t.signupMasterCodeLabel}</Text>
+              <Text style={s.fSectionTitle}>{t.signupFamilyCodeInput}</Text>
+              <Text style={s.fFieldLabel}>{t.signupMasterCodeLabel}</Text>
               <TextInput
-                style={[s.input, s.codeInput]}
+                style={[s.fInput, s.codeInput]}
                 value={joinCode}
                 onChangeText={(v) => setJoinCode(v.toUpperCase())}
                 placeholder="AB1234"
-                placeholderTextColor={COLORS.child.textMuted}
+                placeholderTextColor="#aaa"
                 maxLength={6}
                 autoCapitalize="characters"
               />
-              <View style={s.divider} />
+              <View style={s.fDivider} />
             </>
           )}
 
-          <Text style={s.sectionTitle}>{t.signupBasicInfo}</Text>
+          <Text style={s.fSectionTitle}>{t.signupBasicInfo}</Text>
 
-          <Text style={s.fieldLabel}>{t.signupNameLabel}</Text>
+          <Text style={s.fFieldLabel}>{t.signupNameLabel}</Text>
           <TextInput
-            style={s.input}
+            style={s.fInput}
             value={name}
             onChangeText={setName}
             placeholder={t.signupNamePlaceholder as string}
-            placeholderTextColor={COLORS.child.textMuted}
+            placeholderTextColor="#aaa"
             maxLength={20}
           />
 
-          <Text style={s.fieldLabel}>{t.signupPhoneLabel}</Text>
+          <Text style={s.fFieldLabel}>{t.signupPhoneLabel}</Text>
           <View style={s.phoneRow}>
             <TextInput
-              style={[s.input, s.phoneInput]}
+              style={[s.fInput, s.phoneInput]}
               value={phone}
               onChangeText={(v) => {
                 setPhone(v);
@@ -320,18 +319,18 @@ export default function ChildSignupScreen() {
                 setDevCode(null);
               }}
               placeholder="010-0000-0000"
-              placeholderTextColor={COLORS.child.textMuted}
+              placeholderTextColor="#aaa"
               keyboardType="phone-pad"
               maxLength={13}
             />
             <Pressable
-              style={[s.otpRequestBtn, (!phone.trim() || sendingOtp) && s.otpRequestBtnDisabled]}
+              style={[s.fOtpBtn, (!phone.trim() || sendingOtp) && s.fOtpBtnDisabled]}
               disabled={!phone.trim() || sendingOtp}
               onPress={handleSendOtp}
             >
               {sendingOtp
                 ? <ActivityIndicator size="small" color="#9ca3af" />
-                : <Text style={[s.otpRequestBtnText, (!phone.trim() || sendingOtp) && s.otpRequestBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
+                : <Text style={[s.fOtpBtnText, (!phone.trim() || sendingOtp) && s.fOtpBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
               }
             </Pressable>
           </View>
@@ -364,22 +363,22 @@ export default function ChildSignupScreen() {
 
           {otpSent && (
             <View>
-              <Text style={s.fieldLabel}>{t.signupOtpLabel}</Text>
+              <Text style={s.fFieldLabel}>{t.signupOtpLabel}</Text>
               <View style={s.phoneRow}>
                 <TextInput
-                  style={[s.input, s.phoneInput, s.otpInput]}
+                  style={[s.fInput, s.phoneInput, s.otpInput]}
                   value={otp}
                   onChangeText={(v) => { setOtp(v); setOtpVerified(false); setOtpError(""); }}
                   placeholder={t.signupOtpPlaceholder as string}
-                  placeholderTextColor={COLORS.child.textMuted}
+                  placeholderTextColor="#aaa"
                   keyboardType="number-pad"
                   maxLength={6}
                 />
                 <Pressable
                   style={[
-                    s.otpRequestBtn,
-                    otpVerified && s.otpVerifiedBtn,
-                    (otp.length !== 6 || verifyingOtp || otpVerified) && !otpVerified && s.otpRequestBtnDisabled,
+                    s.fOtpBtn,
+                    otpVerified && s.fOtpVerifiedBtn,
+                    (otp.length !== 6 || verifyingOtp || otpVerified) && !otpVerified && s.fOtpBtnDisabled,
                   ]}
                   disabled={otp.length !== 6 || verifyingOtp || otpVerified}
                   onPress={handleVerifyOtp}
@@ -389,9 +388,9 @@ export default function ChildSignupScreen() {
                     : otpVerified
                     ? <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <Ionicons name="checkmark" size={16} color="#fff" />
-                        <Text style={s.otpRequestBtnText}>{t.signupOtpVerified}</Text>
+                        <Text style={s.fOtpBtnText}>{t.signupOtpVerified}</Text>
                       </View>
-                    : <Text style={[s.otpRequestBtnText, otp.length !== 6 && s.otpRequestBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
+                    : <Text style={[s.fOtpBtnText, otp.length !== 6 && s.fOtpBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
                   }
                 </Pressable>
               </View>
@@ -399,9 +398,9 @@ export default function ChildSignupScreen() {
             </View>
           )}
 
-          <View style={s.divider} />
+          <View style={s.fDivider} />
 
-          <Text style={s.sectionTitle}>{t.signupAgreementTitle}</Text>
+          <Text style={s.fSectionTitle}>{t.signupAgreementTitle}</Text>
           <Checkbox
             checked={allowNotif}
             onPress={() => setAllowNotif(v => !v)}
@@ -415,13 +414,13 @@ export default function ChildSignupScreen() {
 
           {!!joinError && <Text style={s.errorText}>{joinError}</Text>}
           <Pressable
-            style={[s.joinBtn, !canJoin && s.joinBtnDisabled, { opacity: joining ? 0.8 : 1 }]}
+            style={[s.fJoinBtn, !canJoin && s.fJoinBtnDisabled, { opacity: joining ? 0.8 : 1 }]}
             disabled={!canJoin || joining}
             onPress={handleJoin}
           >
             {joining
-              ? <ActivityIndicator color={canJoin ? COLORS.neonText : "#9ca3af"} />
-              : <Text style={[s.joinBtnText, !canJoin && s.joinBtnTextDisabled]}>{mode === "create" ? t.signupCreateBtn : t.signupJoinBtn}</Text>
+              ? <ActivityIndicator color={canJoin ? "#fff" : "#9ca3af"} />
+              : <Text style={[s.fJoinBtnText, !canJoin && s.fJoinBtnTextDisabled]}>{mode === "create" ? t.signupCreateBtn : t.signupJoinBtn}</Text>
             }
           </Pressable>
         </ScrollView>
@@ -451,23 +450,34 @@ const s = StyleSheet.create({
   modeFooterText:   { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.7)" },
   modeFooterLink:   { fontFamily: "Inter_700Bold", color: "#FFFFFF", textDecorationLine: "underline" as const },
 
-  // ── 폼 ──
-  scroll:      { padding: 24 },
-  sectionTitle:{ fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 16, marginTop: 8 },
-  fieldLabel:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.child.textSub, marginBottom: 6 },
+  // ── 밝은 톤 폼 ──
+  formContainer: { flex: 1, backgroundColor: "#FAFAFA" },
+  formHeader:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E8E8E8" },
+  formHeaderTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#333" },
 
-  input:       { backgroundColor: COLORS.child.bgCard, borderRadius: 14, padding: 16, fontSize: 16, fontFamily: "Inter_500Medium", color: COLORS.child.text, borderWidth: 1.5, borderColor: COLORS.child.bgCardBorder, marginBottom: 16 },
+  scroll:      { padding: 24 },
+  fSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#333", marginBottom: 16, marginTop: 8 },
+  fFieldLabel:   { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", marginBottom: 6 },
+
+  fInput:      { backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, fontSize: 16, fontFamily: "Inter_500Medium", color: "#333", borderWidth: 1.5, borderColor: "#E0E0E0", marginBottom: 16 },
   codeInput:   { letterSpacing: 8, textAlign: "center", fontSize: 22, fontFamily: "Inter_700Bold" },
 
   phoneRow:    { flexDirection: "row", gap: 10, marginBottom: 0 },
   phoneInput:  { flex: 1, marginBottom: 0 },
   otpInput:    { letterSpacing: 6, textAlign: "center" },
 
-  otpRequestBtn:         { backgroundColor: COLORS.child.accent, borderRadius: 14, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", minWidth: 110, marginBottom: 16 },
-  otpRequestBtnDisabled: { backgroundColor: "#d1d5db" },
-  otpRequestBtnText:     { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.neonText },
-  otpRequestBtnTextDisabled: { color: "#9ca3af" },
-  otpVerifiedBtn:        { backgroundColor: "#22c55e" },
+  fOtpBtn:          { backgroundColor: "#D4843A", borderRadius: 14, paddingHorizontal: 14, justifyContent: "center", alignItems: "center", minWidth: 110, marginBottom: 16 },
+  fOtpBtnDisabled:  { backgroundColor: "#d1d5db" },
+  fOtpBtnText:      { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
+  fOtpBtnTextDisabled: { color: "#9ca3af" },
+  fOtpVerifiedBtn:  { backgroundColor: "#22c55e" },
+
+  fDivider:    { height: 1, backgroundColor: "#E8E8E8", marginVertical: 24 },
+
+  fJoinBtn:          { backgroundColor: "#D4843A", borderRadius: 18, paddingVertical: 18, alignItems: "center", marginTop: 8 },
+  fJoinBtnDisabled:  { backgroundColor: "#d1d5db" },
+  fJoinBtnText:      { fontFamily: "Inter_700Bold", fontSize: 17, color: "#FFFFFF" },
+  fJoinBtnTextDisabled: { color: "#9ca3af" },
 
   devCodeBox:  { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(245,158,11,0.1)", borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
   devCodeText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#92400e", flex: 1 },
@@ -477,9 +487,9 @@ const s = StyleSheet.create({
   divider:     { height: 1, backgroundColor: COLORS.child.bgCardBorder, marginVertical: 24 },
 
   checkRow:    { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16 },
-  checkBox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: COLORS.child.bgCardBorder, alignItems: "center", justifyContent: "center", marginTop: 1, backgroundColor: COLORS.child.bgCard },
-  checkBoxActive: { backgroundColor: COLORS.child.accent, borderColor: COLORS.child.accent },
-  checkLabel:  { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, flex: 1, lineHeight: 20 },
+  checkBox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: "#D0D0D0", alignItems: "center", justifyContent: "center", marginTop: 1, backgroundColor: "#FFFFFF" },
+  checkBoxActive: { backgroundColor: "#D4843A", borderColor: "#D4843A" },
+  checkLabel:  { fontFamily: "Inter_400Regular", fontSize: 14, color: "#555", flex: 1, lineHeight: 20 },
 
   joinBtn:         { backgroundColor: COLORS.child.accent, borderRadius: 18, paddingVertical: 18, alignItems: "center", marginTop: 8 },
   joinBtnDisabled: { backgroundColor: "#d1d5db" },
