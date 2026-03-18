@@ -8,18 +8,19 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 import { useFamilyContext } from "@/context/FamilyContext";
 
 const splashVideoModule = require("@/assets/splash-video.mp4");
 const splashPoster = require("@/assets/splash-poster.jpg");
+const logoImage = require("@/assets/images/logo-anbu.png");
 
 export default function SplashScreen() {
   const { isConnected, myRole, loading } = useFamilyContext();
   const fadeIn = useRef(new Animated.Value(0)).current;
   const [webVideoUri, setWebVideoUri] = useState<string | null>(null);
-  const [videoReady, setVideoReady] = useState(false);
 
   const player = Platform.OS !== "web"
     ? useVideoPlayer(splashVideoModule, (p) => {
@@ -69,7 +70,6 @@ export default function SplashScreen() {
               loop
               muted
               playsInline
-              onCanPlay={() => setVideoReady(true)}
               style={{
                 position: "absolute",
                 top: 0,
@@ -91,10 +91,39 @@ export default function SplashScreen() {
           />
         ) : null}
       </Animated.View>
+
+      <View style={st.overlay}>
+        <Image
+          source={logoImage}
+          style={st.logo}
+          resizeMode="contain"
+        />
+        <Text style={st.tagline}>부모를 섬기는 시간.</Text>
+      </View>
     </Pressable>
   );
 }
 
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 40,
+  },
+  logo: {
+    width: 200,
+    height: 70,
+    marginBottom: 8,
+  },
+  tagline: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    color: "#FFFFFF",
+    letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
 });
