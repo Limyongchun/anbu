@@ -1027,16 +1027,19 @@ function HomeScreen({
 
       {/* Anbu Interpretation Card */}
       {(() => {
-        const nowHour = new Date().getHours();
+        const now = new Date();
+        const nowHour = now.getHours();
         const isNight = nowHour >= 22 || nowHour < 7;
-        const totalActs = parentActivities.length;
-        const totalLoc = parentActivityStats.reduce((s, p) => s + p.locCount, 0);
-        const totalTouch = parentActivityStats.reduce((s, p) => s + p.touchCount, 0);
+        const todayStr = now.toISOString().slice(0, 10);
+        const todayActs = parentActivities.filter(a => a.createdAt.startsWith(todayStr));
+        const totalActs = todayActs.length;
+        const todayLoc = todayActs.filter(a => a.activityType === "location").length;
+        const todayTouch = todayActs.filter(a => a.activityType === "app_open" || a.activityType === "view_slide" || a.activityType === "heart").length;
         const allParentsAlert = parentActivityStats.length > 0 && parentActivityStats.every(ps => {
           const st = getParentStatus(ps.loc);
           return st.level === "alert" || st.level === "none";
         });
-        const level = isNight ? "sleep" : (totalLoc >= 2 && totalTouch >= 3) ? "safe" : allParentsAlert ? "alert" : (totalActs > 0) ? "quiet" : "check";
+        const level = isNight ? "sleep" : (todayLoc >= 2 && todayTouch >= 3) ? "safe" : allParentsAlert ? "alert" : (totalActs > 0) ? "quiet" : "check";
         const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : level === "alert" ? "🚨" : "💌";
         const checkMsgs = t.anbuCheckMessages;
         const alertMsgs = t.anbuAlertMessages;
