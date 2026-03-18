@@ -821,7 +821,7 @@ export default function ProfileScreen() {
           <InfoRow
             icon="document-text-outline"
             label={t.labelPrivacy}
-            onPress={() => Alert.alert(t.privacyTitle, t.privacyContent + SUPPORT_EMAIL)}
+            onPress={() => router.push("/privacy")}
           />
           <Divider />
           <InfoRow

@@ -111,7 +111,7 @@ Expo React Native app called A N B U. Korean family safety app.
   - `app/parent.tsx` — Photo slideshow; fetches messages from ALL family codes (multi-child support)
   - `app/profile.tsx` — Settings; "자녀 관리" section (master only: shows code + children list); disconnect button hidden for sub-children
 - **Context**: `context/FamilyContext.tsx` — AsyncStorage-backed: familyCode, allFamilyCodes, deviceId, myName, myRole, childRole ("master"|"sub"|null), isMasterChild
-- **API client**: `lib/api.ts` — typed fetch client using `EXPO_PUBLIC_DOMAIN` env var
+- **API client**: `lib/api.ts` — typed fetch client; uses `EXPO_PUBLIC_API_URL` (EAS builds) or `EXPO_PUBLIC_DOMAIN` (dev) env var
 - **Auth**: OTP via `POST /api/auth/send-otp` + `POST /api/auth/verify-otp`; devCode returned in non-production
 - **Account system**: `accountsTable` (id serial, phone text unique, created_at, updated_at); `family_members.account_id` nullable FK to accounts; on verify-otp, find-or-create account by phone → returns `accountId` + `existingFamilies`; client stores `accountId` in AsyncStorage via FamilyContext; `child-signup.tsx` shows recovery UI if existing families found; `GET /api/account/:accountId/families` for auto-recovery; `family/create` and `family/join` accept optional `accountId`
 - **DB schema** `familyMembersTable`: includes `childRole text` column (null for parents, "master"/"sub" for children), `accountId integer` nullable FK to `accountsTable`
@@ -120,6 +120,9 @@ Expo React Native app called A N B U. Korean family safety app.
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
 - **Background Location**: `lib/backgroundLocation.ts` — `expo-task-manager` + `expo-location` background API; task `ANBU_BACKGROUND_LOCATION` defined at top-level via import in `_layout.tsx`; saves config to AsyncStorage for background task access; 5-min interval, 50m distance; iOS UIBackgroundModes + Android foreground service configured in `app.json`; web falls back to foreground-only; `parent.tsx` auto-starts background tracking when sharing is on
 - **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
+- **Privacy Policy Screen**: `app/privacy.tsx` — dedicated scrollable screen with shield icon, accessible from profile settings
+- **EAS Build**: `eas.json` — development (simulator), preview (internal), production (auto-increment) profiles; uses `EXPO_PUBLIC_API_URL` env var pointing to production API
+- **Deployment**: API server builds to `dist/index.cjs` via esbuild; health check at `/api/healthz`; splash background matches brand color (#7A5454)
 
 ### `artifacts/admin` (`@workspace/admin`)
 
