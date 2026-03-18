@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -13,6 +14,8 @@ import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
 import { Lang } from "@/lib/i18n";
+
+const splashVideo = require("@/assets/splash-video.mp4");
 
 const LANG_OPTIONS: { id: Lang; label: string; code: string }[] = [
   { id: "ko", label: "한국어", code: "KO" },
@@ -56,6 +59,12 @@ export default function SplashScreen() {
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(28)).current;
 
+  const player = useVideoPlayer(splashVideo, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeIn,  { toValue: 1, duration: 750, useNativeDriver: false }),
@@ -74,15 +83,25 @@ export default function SplashScreen() {
 
   return (
     <View style={[st.container, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}>
+
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        nativeControls={false}
+        allowsFullscreen={false}
+        allowsPictureInPicture={false}
+      />
+
+      <View style={st.overlay} />
+
       <Animated.View style={[st.content, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
 
-        {/* ── 로고 ── */}
         <Text style={st.logo}>A N B U</Text>
         <Text style={st.sub}>{t.appSub}</Text>
 
         <View style={st.divider} />
 
-        {/* ── 미리보기 ── */}
         <Text style={st.previewLabel}>{t.preview}</Text>
         <View style={st.previewRow}>
           <Pressable style={({ pressed }) => [st.previewBtn, { opacity: pressed ? 0.8 : 1 }]} onPress={() => router.push("/child-signup")}>
@@ -96,7 +115,6 @@ export default function SplashScreen() {
 
         <Text style={st.footer}>{t.footer}</Text>
 
-        {/* ── 언어 선택 (드롭다운) ── */}
         <LangDropdown lang={lang} setLang={setLang} />
 
       </Animated.View>
@@ -105,7 +123,8 @@ export default function SplashScreen() {
 }
 
 const st = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: COLORS.mapBg, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  container:    { flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  overlay:      { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
   content:      { width: "100%", maxWidth: 380, alignItems: "center", paddingHorizontal: 28, zIndex: 1 },
   logo:         { fontFamily: "Inter_700Bold", fontSize: 44, color: COLORS.white, letterSpacing: 5, marginBottom: 10 },
   sub:          { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.45)", letterSpacing: 1, textAlign: "center", marginBottom: 36 },
