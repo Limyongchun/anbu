@@ -9,6 +9,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  LayoutChangeEvent,
   Linking,
   Modal,
   Platform,
@@ -20,6 +21,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Defs, LinearGradient, Stop, Rect } from "react-native-svg";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
@@ -46,6 +48,54 @@ const DS = {
   radius: { card: 11, cardLg: 14, pill: 999 },
   space: { xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32 },
 };
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+
+function BorderTracer({ w, h, r, color, duration }: { w: number; h: number; r: number; color: string; duration: number }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  const perimeter = 2 * (w + h) - 8 * r + 2 * Math.PI * r;
+  const glowLen = perimeter * 0.18;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(progress, { toValue: 1, duration, useNativeDriver: false })
+    ).start();
+  }, [duration]);
+
+  const dashOffset = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -perimeter],
+  });
+
+  const inset = 1.5;
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Svg width={w} height={h}>
+        <Defs>
+          <LinearGradient id="tracerGrad" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={color} stopOpacity="0" />
+            <Stop offset="0.5" stopColor={color} stopOpacity="0.9" />
+            <Stop offset="1" stopColor={color} stopOpacity="0" />
+          </LinearGradient>
+        </Defs>
+        <AnimatedRect
+          x={inset}
+          y={inset}
+          width={w - inset * 2}
+          height={h - inset * 2}
+          rx={r - inset}
+          ry={r - inset}
+          fill="none"
+          stroke="url(#tracerGrad)"
+          strokeWidth={3}
+          strokeDasharray={`${glowLen} ${perimeter - glowLen}`}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+        />
+      </Svg>
+    </View>
+  );
+}
 
 function formatTimeI18n(dateStr: string, t: any): string {
   const d = new Date(dateStr), now = new Date();
@@ -759,6 +809,7 @@ function HomeScreen({
   const [showAll, setShowAll] = useState(false);
   const [parentJoined, setParentJoined] = useState(false);
   const [parentChecked, setParentChecked] = useState(false);
+  const [tracerSize, setTracerSize] = useState({ w: 0, h: 0 });
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -1046,8 +1097,20 @@ function HomeScreen({
         const msg = level === "sleep" ? t.anbuSleep : level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : level === "alert" ? alertMsgs[randomCheckIdx % alertMsgs.length] : checkMsgs[randomCheckIdx % checkMsgs.length];
         const sub = level === "sleep" ? t.anbuSleepSub : level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : level === "alert" ? t.anbuAlertSub : t.anbuCheckSub;
         const accentColor = level === "sleep" ? DS.textTertiary : level === "safe" ? DS.success : level === "quiet" ? DS.warning : level === "alert" ? DS.danger : DS.info;
+        const isAlert = level === "alert";
         return (
-          <View style={hm.interpretCard}>
+          <View
+            style={[hm.interpretCard, isAlert && { borderColor: "rgba(229,57,53,0.15)" }]}
+            onLayout={(e: LayoutChangeEvent) => {
+              if (isAlert) {
+                const { width: cw, height: ch } = e.nativeEvent.layout;
+                setTracerSize({ w: cw, h: ch });
+              }
+            }}
+          >
+            {isAlert && tracerSize.w > 0 && (
+              <BorderTracer w={tracerSize.w} h={tracerSize.h} r={DS.radius.cardLg} color="#E53935" duration={3200} />
+            )}
             <Text style={hm.interpretLabel}>{t.anbuInterpretLabel}</Text>
             <Text style={hm.interpretMsg}>{emoji} {msg}</Text>
             <Text style={[hm.interpretSub, { color: accentColor }]}>{sub}</Text>
@@ -1376,7 +1439,7 @@ const hm = StyleSheet.create({
   parentStatsLastTime: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   parentStatsCountText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary, marginTop: 4 },
   summaryExpandRow: { alignItems: "center", paddingBottom: 10, paddingTop: 2 },
-  interpretCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, padding: 16, borderWidth: 1, borderColor: DS.border },
+  interpretCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, padding: 16, borderWidth: 1, borderColor: DS.border, overflow: "hidden" },
   interpretLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: DS.textTertiary, marginBottom: 6, letterSpacing: 0.5 },
   interpretMsg: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DS.textPrimary, lineHeight: 22, marginBottom: 4 },
   interpretSub: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
