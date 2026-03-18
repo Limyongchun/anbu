@@ -1034,8 +1034,8 @@ function HomeScreen({
         const totalTouch = parentActivityStats.reduce((s, p) => s + p.touchCount, 0);
         const level = isNight ? "sleep" : (totalLoc >= 2 && totalTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
         const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : "💌";
-        const checkMsgs = (t as any).anbuCheckMessages as string[] | undefined;
-        const msg = level === "sleep" ? t.anbuSleep : level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : (checkMsgs ? checkMsgs[randomCheckIdx % checkMsgs.length] : t.anbuCheck);
+        const checkMsgs = t.anbuCheckMessages;
+        const msg = level === "sleep" ? t.anbuSleep : level === "safe" ? t.anbuSafe : level === "quiet" ? t.anbuQuiet : checkMsgs[randomCheckIdx % checkMsgs.length];
         const sub = level === "sleep" ? t.anbuSleepSub : level === "safe" ? t.anbuSafeSub : level === "quiet" ? t.anbuQuietSub : t.anbuCheckSub;
         const accentColor = level === "sleep" ? DS.textTertiary : level === "safe" ? DS.success : level === "quiet" ? DS.warning : DS.info;
         return (
