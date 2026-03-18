@@ -110,7 +110,7 @@ const st = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 60,
+    paddingBottom: 100,
   },
   logo: {
     width: 200,
