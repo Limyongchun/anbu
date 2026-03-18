@@ -1039,7 +1039,7 @@ function HomeScreen({
           const st = getParentStatus(ps.loc);
           return st.level === "alert" || st.level === "none";
         });
-        const level = isNight ? "sleep" : (todayLoc >= 2 && todayTouch >= 3) ? "safe" : allParentsAlert ? "alert" : (totalActs > 0) ? "quiet" : "check";
+        const level = isNight ? "sleep" : allParentsAlert ? "alert" : (todayLoc >= 2 && todayTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
         const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : level === "alert" ? "🚨" : "💌";
         const checkMsgs = t.anbuCheckMessages;
         const alertMsgs = t.anbuAlertMessages;
