@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,6 +20,8 @@ import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
 import { api, type AccountFamily } from "@/lib/api";
+
+const logoOrange = require("@/assets/images/logo-anbu-orange.png");
 
 type Mode = null | "create" | "join";
 type Step = "mode" | "form" | "complete";
@@ -205,46 +209,54 @@ export default function ChildSignupScreen() {
     );
   }
 
-  // ── 모드 선택 화면 ──
   if (step === "mode") {
     return (
-      <View style={[s.container, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}>
-        <View style={s.header}>
-          <Pressable style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
-          </Pressable>
-          <Text style={s.headerTitle}>{t.signupChildHeader}</Text>
-          <View style={{ width: 36 }} />
+      <LinearGradient
+        colors={["#D4843A", "#C4692E", "#A85528"]}
+        style={[s.gradContainer, { paddingTop: topInset + 20, paddingBottom: bottomInset + 24 }]}
+      >
+        <View style={s.modeContent}>
+          <Image source={logoOrange} style={s.modeLogo} resizeMode="contain" />
+
+          <Text style={s.modeHero}>
+            <Text style={{ fontFamily: "Inter_700Bold" }}>혼자</Text>
+            <Text>계신{"\n"}</Text>
+            <Text style={{ fontFamily: "Inter_700Bold" }}>외할머니</Text>
+            <Text>를 위해{"\n"}</Text>
+            <Text style={{ fontFamily: "Inter_700Bold" }}>손자</Text>
+            <Text>가 만든{"\n"}</Text>
+            <Text style={{ fontFamily: "Inter_700Bold" }}>서비스</Text>
+          </Text>
         </View>
 
-        <View style={s.modeWrap}>
-          <Text style={s.modeHeading}>{t.signupModeHeading}</Text>
-          <Text style={s.modeSub}>{t.signupModeSub}</Text>
-
-          <Pressable style={s.modeCard} onPress={() => handleSelectMode("create")}>
-            <View style={[s.modeIconBg, { backgroundColor: "rgba(212,242,0,0.15)" }]}>
-              <Ionicons name="home-outline" size={28} color={COLORS.navPill} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.modeCardTitle}>{t.signupCreateFamily}</Text>
-              <Text style={s.modeCardDesc}>{t.signupCreateFamilyDesc}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
+        <View style={s.modeActions}>
+          <Pressable style={({ pressed }) => [s.authBtn, { opacity: pressed ? 0.9 : 1 }]}>
+            <Ionicons name="logo-apple" size={20} color="#000" />
+            <Text style={s.authBtnText}>애플 계정으로 계속</Text>
           </Pressable>
 
-          <Pressable style={s.modeCard} onPress={() => handleSelectMode("join")}>
-            <View style={[s.modeIconBg, { backgroundColor: "rgba(99,102,241,0.12)" }]}>
-              <Ionicons name="enter-outline" size={28} color="#6366f1" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.modeCardTitle}>{t.signupJoinByCode}</Text>
-              <Text style={s.modeCardDesc}>{t.signupJoinByCodeDesc}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.2)" />
+          <Pressable style={({ pressed }) => [s.authBtn, { opacity: pressed ? 0.9 : 1 }]}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: "#4285F4" }}>G</Text>
+            <Text style={s.authBtnText}>구글 계정으로 계속</Text>
           </Pressable>
 
+          <Pressable
+            style={({ pressed }) => [s.authBtnOutline, { opacity: pressed ? 0.9 : 1 }]}
+            onPress={() => handleSelectMode("create")}
+          >
+            <Text style={s.authBtnOutlineText}>휴대폰 인증으로 계속</Text>
+          </Pressable>
+
+          <View style={s.modeFooter}>
+            <Text style={s.modeFooterText}>
+              계정이 있으신가요? <Text style={s.modeFooterLink}>로그인</Text>
+            </Text>
+            <Text style={s.modeFooterText}>
+              회원이 아니신가요? <Text style={s.modeFooterLink} onPress={() => handleSelectMode("create")}>지금 가입하세요</Text>
+            </Text>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -420,19 +432,24 @@ export default function ChildSignupScreen() {
 
 const s = StyleSheet.create({
   container:   { flex: 1, backgroundColor: COLORS.child.bg },
+  gradContainer: { flex: 1 },
 
   header:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.child.bgCardBorder },
   backBtn:     { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.child.text },
 
-  // ── 모드 선택 ──
-  modeWrap:      { flex: 1, paddingHorizontal: 24, paddingTop: 40 },
-  modeHeading:   { fontFamily: "Inter_700Bold", fontSize: 24, color: COLORS.child.text, marginBottom: 10 },
-  modeSub:       { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.child.textSub, lineHeight: 22, marginBottom: 36 },
-  modeCard:      { flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: COLORS.child.bgCard, borderRadius: 18, padding: 18, marginBottom: 14, borderWidth: 1.5, borderColor: COLORS.child.bgCardBorder },
-  modeIconBg:    { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  modeCardTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text, marginBottom: 4 },
-  modeCardDesc:  { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.child.textSub },
+  modeContent:   { flex: 1, paddingHorizontal: 28, justifyContent: "flex-end", paddingBottom: 20 },
+  modeLogo:      { width: 100, height: 40, marginBottom: 20 },
+  modeHero:      { fontFamily: "Inter_400Regular", fontSize: 38, color: "#FFFFFF", lineHeight: 52 },
+
+  modeActions:      { paddingHorizontal: 28, paddingTop: 20 },
+  authBtn:          { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 14, paddingVertical: 16, marginBottom: 12 },
+  authBtnText:      { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#1a1a1a" },
+  authBtnOutline:   { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "transparent", borderRadius: 14, paddingVertical: 16, marginBottom: 20, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.5)" },
+  authBtnOutlineText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#FFFFFF" },
+  modeFooter:       { alignItems: "center", gap: 6, paddingTop: 4 },
+  modeFooterText:   { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.7)" },
+  modeFooterLink:   { fontFamily: "Inter_700Bold", color: "#FFFFFF", textDecorationLine: "underline" as const },
 
   // ── 폼 ──
   scroll:      { padding: 24 },
