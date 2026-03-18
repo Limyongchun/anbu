@@ -120,6 +120,13 @@ Expo React Native app called A N B U. Korean family safety app.
 - **Location**: uses `expo-location` foreground permissions + `watchPositionAsync` + `reverseGeocodeAsync`
 - **Background Location**: `lib/backgroundLocation.ts` — `expo-task-manager` + `expo-location` background API; task `ANBU_BACKGROUND_LOCATION` defined at top-level via import in `_layout.tsx`; saves config to AsyncStorage for background task access; 5-min interval, 50m distance; iOS UIBackgroundModes + Android foreground service configured in `app.json`; web falls back to foreground-only; `parent.tsx` auto-starts background tracking when sharing is on
 - **Device ID**: generated once as `device_<timestamp36>_<random9>`, stored in AsyncStorage
+- **오늘의 안부 해석 카드 규칙** (`child.tsx` HomeScreen):
+  - 레벨 판정 순서: `sleep → alert → safe → quiet → check`
+  - **alert 레벨 조건**: 부모 접속자 두 명 모두 비활동이거나, 한 명이 오랫동안 비활동(3시간+, 붉은 배지)을 유지할 때
+  - **alert 시**: 🚨 긴급/걱정 톤 메시지 + 빨간색 강조 + 카드 외곽에 붉은 border tracer 애니메이션 (SVG 기반, 3.2초 주기 순환)
+  - **평상시 (safe/quiet/check/sleep)**: border tracer 없음, 붉은 라인 없음
+  - 오늘 날짜 활동만 집계 (`todayStr` 필터), 과거 기록은 레벨 판정에 포함하지 않음
+  - 랜덤 문구: `anbuCheckMessages` (check, 30개) / `anbuAlertMessages` (alert, 30개) — ko/en/ja 각각
 - **Privacy Policy Screen**: `app/privacy.tsx` — dedicated scrollable screen with shield icon, accessible from profile settings
 - **EAS Build**: `eas.json` — development (simulator), preview (internal), production (auto-increment) profiles; uses `EXPO_PUBLIC_API_URL` env var pointing to production API
 - **Deployment**: API server builds to `dist/index.cjs` via esbuild; health check at `/api/healthz`; splash background matches brand color (#7A5454)
