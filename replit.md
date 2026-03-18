@@ -123,7 +123,7 @@ Expo React Native app called A N B U. Korean family safety app.
 - **오늘의 안부 해석 카드 규칙** (`child.tsx` HomeScreen):
   - 레벨 판정 순서: `sleep → alert → safe → quiet → check`
   - **alert 레벨 조건**: 부모 접속자 두 명 모두 비활동이거나, 한 명이 오랫동안 비활동(3시간+, 붉은 배지)을 유지할 때
-  - **alert 시**: 🚨 긴급/걱정 톤 메시지 + 빨간색 강조 + 카드 외곽에 붉은 border tracer 애니메이션 (SVG 기반, 3.2초 주기 순환)
+  - **alert 시**: 🚨 긴급/걱정 톤 메시지 + 빨간색 강조 + 카드 외곽에 로즈톤 border glow 애니메이션 (SVG 기반, 8초 주기 느린 순환, 로즈 #C4787A, 은은한 blur gradient, 경고가 아닌 프리미엄 주의 신호)
   - **평상시 (safe/quiet/check/sleep)**: border tracer 없음, 붉은 라인 없음
   - 오늘 날짜 활동만 집계 (`todayStr` 필터), 과거 기록은 레벨 판정에 포함하지 않음
   - 랜덤 문구: `anbuCheckMessages` (check, 30개) / `anbuAlertMessages` (alert, 30개) — ko/en/ja 각각

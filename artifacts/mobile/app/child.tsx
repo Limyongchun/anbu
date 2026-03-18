@@ -51,10 +51,10 @@ const DS = {
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
-function BorderTracer({ w, h, r, color, duration }: { w: number; h: number; r: number; color: string; duration: number }) {
+function BorderGlow({ w, h, r, duration = 8000 }: { w: number; h: number; r: number; duration?: number }) {
   const progress = useRef(new Animated.Value(0)).current;
   const perimeter = 2 * (w + h) - 8 * r + 2 * Math.PI * r;
-  const glowLen = perimeter * 0.18;
+  const glowSpan = perimeter * 0.32;
 
   useEffect(() => {
     Animated.loop(
@@ -67,15 +67,18 @@ function BorderTracer({ w, h, r, color, duration }: { w: number; h: number; r: n
     outputRange: [0, -perimeter],
   });
 
-  const inset = 1.5;
+  const roseColor = "#C4787A";
+  const inset = 0.5;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width={w} height={h}>
         <Defs>
-          <LinearGradient id="tracerGrad" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={color} stopOpacity="0" />
-            <Stop offset="0.5" stopColor={color} stopOpacity="0.9" />
-            <Stop offset="1" stopColor={color} stopOpacity="0" />
+          <LinearGradient id="roseGlow" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={roseColor} stopOpacity="0" />
+            <Stop offset="0.3" stopColor={roseColor} stopOpacity="0.25" />
+            <Stop offset="0.5" stopColor={roseColor} stopOpacity="0.45" />
+            <Stop offset="0.7" stopColor={roseColor} stopOpacity="0.25" />
+            <Stop offset="1" stopColor={roseColor} stopOpacity="0" />
           </LinearGradient>
         </Defs>
         <AnimatedRect
@@ -83,12 +86,12 @@ function BorderTracer({ w, h, r, color, duration }: { w: number; h: number; r: n
           y={inset}
           width={w - inset * 2}
           height={h - inset * 2}
-          rx={r - inset}
-          ry={r - inset}
+          rx={r}
+          ry={r}
           fill="none"
-          stroke="url(#tracerGrad)"
-          strokeWidth={3}
-          strokeDasharray={`${glowLen} ${perimeter - glowLen}`}
+          stroke="url(#roseGlow)"
+          strokeWidth={5}
+          strokeDasharray={`${glowSpan} ${perimeter - glowSpan}`}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
         />
@@ -1100,7 +1103,7 @@ function HomeScreen({
         const isAlert = level === "alert";
         return (
           <View
-            style={[hm.interpretCard, isAlert && { borderColor: "rgba(229,57,53,0.15)" }]}
+            style={[hm.interpretCard, isAlert && { borderColor: "rgba(196,120,122,0.2)" }]}
             onLayout={(e: LayoutChangeEvent) => {
               if (isAlert) {
                 const { width: cw, height: ch } = e.nativeEvent.layout;
@@ -1109,7 +1112,7 @@ function HomeScreen({
             }}
           >
             {isAlert && tracerSize.w > 0 && (
-              <BorderTracer w={tracerSize.w} h={tracerSize.h} r={DS.radius.cardLg} color="#E53935" duration={3200} />
+              <BorderGlow w={tracerSize.w} h={tracerSize.h} r={DS.radius.cardLg} />
             )}
             <Text style={hm.interpretLabel}>{t.anbuInterpretLabel}</Text>
             <Text style={hm.interpretMsg}>{emoji} {msg}</Text>
