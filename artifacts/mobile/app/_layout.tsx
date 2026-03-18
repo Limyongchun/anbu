@@ -8,14 +8,14 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import React, { useEffect } from "react";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FamilyProvider } from "@/context/FamilyContext";
-import { LanguageProvider, useLang } from "@/context/LanguageContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 import "@/lib/backgroundLocation";
 
 SplashScreen.preventAutoHideAsync();
@@ -37,29 +37,6 @@ function RootLayoutNav() {
   );
 }
 
-function WhiteSplash({ onDone }: { onDone: () => void }) {
-  const { t } = useLang();
-  const opacity = useRef(new Animated.Value(1)).current;
-  const letterSpread = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(letterSpread, { toValue: 1, duration: 400, useNativeDriver: false }),
-      Animated.delay(800),
-      Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: false }),
-    ]).start(() => onDone());
-  }, []);
-
-  const spacing = letterSpread.interpolate({ inputRange: [0, 1], outputRange: [0, 14] });
-
-  return (
-    <Animated.View style={[sp.overlay, { opacity }]} pointerEvents="none">
-      <Animated.Text style={[sp.logo, { letterSpacing: spacing }]}>ANBU</Animated.Text>
-      <Text style={sp.sub}>{t.appSubSplash}</Text>
-    </Animated.View>
-  );
-}
-
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -67,8 +44,6 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-
-  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -86,7 +61,6 @@ export default function RootLayout() {
             <FamilyProvider>
               <GestureHandlerRootView style={{ flex: 1 }}>
                 <RootLayoutNav />
-                {showSplash && <WhiteSplash onDone={() => setShowSplash(false)} />}
               </GestureHandlerRootView>
             </FamilyProvider>
           </LanguageProvider>
@@ -96,24 +70,3 @@ export default function RootLayout() {
   );
 }
 
-const sp = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
-  },
-  logo: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 32,
-    color: "#1a2230",
-    marginBottom: 10,
-  },
-  sub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "rgba(26,34,48,0.35)",
-    letterSpacing: 0.5,
-  },
-});
