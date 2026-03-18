@@ -119,7 +119,7 @@ const st = StyleSheet.create({
   },
   tagline: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
+    fontSize: 24,
     color: "#FFFFFF",
     letterSpacing: 1,
     textShadowColor: "rgba(0,0,0,0.5)",
