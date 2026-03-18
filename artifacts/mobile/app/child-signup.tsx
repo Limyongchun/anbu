@@ -439,7 +439,7 @@ const s = StyleSheet.create({
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.child.text },
 
   modeContent:   { flex: 1, paddingHorizontal: 28, justifyContent: "center", paddingBottom: 120 },
-  modeLogo:      { width: 100, height: 40, marginBottom: 20 },
+  modeLogo:      { width: 130, height: 52, marginBottom: 20 },
   modeHero:      { fontFamily: "Inter_400Regular", fontSize: 38, color: "#FFFFFF", lineHeight: 52 },
 
   modeActions:      { paddingHorizontal: 28, paddingTop: 20 },
