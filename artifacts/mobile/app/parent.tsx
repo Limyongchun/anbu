@@ -34,7 +34,7 @@ const DOUBLE_TAP_DELAY = 300;
 
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, allFamilyCodes, myName, deviceId, isConnected } = useFamilyContext();
+  const { familyCode, allFamilyCodes, myName, deviceId } = useFamilyContext();
   const { t, lang } = useLang();
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
@@ -215,7 +215,6 @@ export default function ParentScreen() {
               noPhotosSubLabel={t.parentNoPhotosSub as string}
               connectLabel={t.parentConnectFamily as string}
               settingsLabel={t.parentSettings as string}
-              isConnected={isConnected}
             />
           )}
         </View>

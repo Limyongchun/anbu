@@ -7,11 +7,10 @@ interface EmptyStateProps {
   noPhotosLabel: string;
   noPhotosSubLabel: string;
   connectLabel: string;
-  isConnected: boolean;
   settingsLabel?: string;
 }
 
-export function EmptyState({ noPhotosLabel, noPhotosSubLabel, connectLabel, isConnected, settingsLabel }: EmptyStateProps) {
+export function EmptyState({ noPhotosLabel, noPhotosSubLabel, connectLabel, settingsLabel }: EmptyStateProps) {
   return (
     <View style={st.emptyWrap}>
       <Ionicons name="images-outline" size={56} color="rgba(255,255,255,0.15)" />
