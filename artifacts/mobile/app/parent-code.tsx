@@ -127,8 +127,8 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  topSection: { alignItems: "center", marginTop: 80 },
-  logo: { width: 120, height: 44, marginBottom: 20 },
+  topSection: { alignItems: "center", marginTop: 20 },
+  logo: { width: 120, height: 44, marginBottom: 16 },
   title: {
     fontFamily: "Inter_700Bold",
     fontSize: 26,
@@ -147,12 +147,12 @@ const st = StyleSheet.create({
     lineHeight: 20,
   },
   cardWrap: {
-    marginTop: 30,
+    marginTop: 20,
   },
   card: {
     backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 20,
-    paddingVertical: 32,
+    paddingVertical: 24,
     paddingHorizontal: 24,
     alignItems: "center",
   },
@@ -207,10 +207,8 @@ const st = StyleSheet.create({
   },
   creditWrap: {
     alignItems: "center",
-    position: "absolute",
-    bottom: 15,
-    left: 0,
-    right: 0,
+    marginTop: "auto",
+    paddingBottom: 10,
   },
   creditText: {
     fontFamily: "Inter_400Regular",
