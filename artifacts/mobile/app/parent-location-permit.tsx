@@ -10,6 +10,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -27,8 +28,8 @@ export default function ParentLocationPermitScreen() {
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const { t } = useLang();
 
-  const [foregroundStatus, setForegroundStatus] = useState<PermStatus>("pending");
-  const [backgroundStatus, setBackgroundStatus] = useState<PermStatus>("pending");
+  const [fgStatus, setFgStatus] = useState<PermStatus>("pending");
+  const [bgStatus, setBgStatus] = useState<PermStatus>("pending");
 
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(30)).current;
@@ -41,80 +42,94 @@ export default function ParentLocationPermitScreen() {
     checkCurrentStatus();
   }, []);
 
+  const logStatus = (label: string, fg: PermStatus, bg: PermStatus) => {
+    console.log(`[LocationPerm] ${label} — FG: ${fg}, BG: ${bg}`);
+  };
+
   const checkCurrentStatus = async () => {
     if (Platform.OS === "web") return;
     try {
       const fg = await Location.getForegroundPermissionsAsync();
-      setForegroundStatus(fg.granted ? "granted" : "pending");
+      const fgVal: PermStatus = fg.granted ? "granted" : "pending";
+      setFgStatus(fgVal);
+
+      let bgVal: PermStatus = "pending";
       if (fg.granted) {
         try {
           const bg = await Location.getBackgroundPermissionsAsync();
-          setBackgroundStatus(bg.granted ? "granted" : "pending");
-        } catch {
-          setBackgroundStatus("pending");
-        }
+          bgVal = bg.granted ? "granted" : "pending";
+        } catch {}
       }
+      setBgStatus(bgVal);
+      logStatus("checkCurrentStatus", fgVal, bgVal);
     } catch {}
   };
 
-  const requestForeground = async () => {
+  const handleRequestForeground = async () => {
+    logStatus("handleRequestForeground:before", fgStatus, bgStatus);
+    if (Platform.OS === "web") {
+      setFgStatus("granted");
+      logStatus("handleRequestForeground:web", "granted", bgStatus);
+      return;
+    }
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
-        setForegroundStatus("granted");
-        return true;
+        setFgStatus("granted");
+        logStatus("handleRequestForeground:granted", "granted", bgStatus);
       } else {
-        setForegroundStatus("denied");
+        setFgStatus("denied");
+        logStatus("handleRequestForeground:denied", "denied", bgStatus);
         Alert.alert(
           (t as any).locPermDeniedTitle,
           (t as any).locPermDeniedMsg,
           [
             { text: t.cancel, style: "cancel" },
-            { text: (t as any).locPermOpenSettings, onPress: () => Linking.openSettings() },
+            { text: (t as any).locPermOpenSettings, onPress: () => openSettings() },
           ]
         );
-        return false;
       }
     } catch {
-      setForegroundStatus("denied");
-      return false;
+      setFgStatus("denied");
     }
   };
 
-  const requestBackground = async () => {
-    try {
-      const { status } = await Location.requestBackgroundPermissionsAsync();
-      if (status === "granted") {
-        setBackgroundStatus("granted");
-      } else {
-        setBackgroundStatus("denied");
-      }
-    } catch {
-      setBackgroundStatus("denied");
-    }
-  };
-
-  const handleAllow = async () => {
+  const handleRequestBackground = async () => {
+    logStatus("handleRequestBackground:before", fgStatus, bgStatus);
     if (Platform.OS === "web") {
-      setForegroundStatus("granted");
-      setBackgroundStatus("granted");
+      setBgStatus("granted");
+      logStatus("handleRequestBackground:web", fgStatus, "granted");
       return;
     }
-    if (foregroundStatus !== "granted") {
-      const fgGranted = await requestForeground();
-      if (fgGranted) {
-        await requestBackground();
-      }
-    } else if (backgroundStatus !== "granted") {
-      await requestBackground();
+    try {
+      const { status } = await Location.requestBackgroundPermissionsAsync();
+      const val: PermStatus = status === "granted" ? "granted" : "denied";
+      setBgStatus(val);
+      logStatus("handleRequestBackground:after", fgStatus, val);
+    } catch {
+      setBgStatus("denied");
+      logStatus("handleRequestBackground:error", fgStatus, "denied");
+    }
+  };
+
+  const openSettings = () => {
+    logStatus("openSettings", fgStatus, bgStatus);
+    if (Platform.OS === "ios") {
+      Linking.openURL("app-settings:");
+    } else {
+      Linking.openSettings();
     }
   };
 
   const handleNext = () => {
+    logStatus("handleNext", fgStatus, bgStatus);
     router.push("/parent-code");
   };
 
-  const allGranted = foregroundStatus === "granted" && backgroundStatus === "granted";
+  const allGranted = fgStatus === "granted" && bgStatus === "granted";
+  const fgOnly = fgStatus === "granted" && bgStatus !== "granted";
+  const noneGranted = fgStatus !== "granted";
+
   const statusIcon = (s: PermStatus) =>
     s === "granted" ? "checkmark-circle" : s === "denied" ? "close-circle" : "ellipse-outline";
   const statusColor = (s: PermStatus) =>
@@ -125,11 +140,16 @@ export default function ParentLocationPermitScreen() {
       colors={["#D4843A", "#C4692E", "#A85528"]}
       style={st.container}
     >
-      <View style={[st.inner, { paddingTop: topInset + 20, paddingBottom: bottomInset + 16 }]}>
-        <Pressable style={st.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </Pressable>
+      <Pressable style={[st.backBtn, { top: topInset + 6 }]} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </Pressable>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[st.scrollContent, { paddingTop: topInset + 20, paddingBottom: bottomInset + 100 }]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         <View style={st.topSection}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
           <Text style={st.title}>{(t as any).locPermTitle}</Text>
@@ -145,7 +165,7 @@ export default function ParentLocationPermitScreen() {
               <Text style={st.permTitle}>{(t as any).locPermForeground}</Text>
               <Text style={st.permDesc}>{(t as any).locPermForegroundDesc}</Text>
             </View>
-            <Ionicons name={statusIcon(foregroundStatus)} size={24} color={statusColor(foregroundStatus)} />
+            <Ionicons name={statusIcon(fgStatus)} size={24} color={statusColor(fgStatus)} />
           </View>
 
           <View style={st.divider} />
@@ -158,7 +178,7 @@ export default function ParentLocationPermitScreen() {
               <Text style={st.permTitle}>{(t as any).locPermBackground}</Text>
               <Text style={st.permDesc}>{(t as any).locPermBackgroundDesc}</Text>
             </View>
-            <Ionicons name={statusIcon(backgroundStatus)} size={24} color={statusColor(backgroundStatus)} />
+            <Ionicons name={statusIcon(bgStatus)} size={24} color={statusColor(bgStatus)} />
           </View>
         </Animated.View>
 
@@ -166,40 +186,43 @@ export default function ParentLocationPermitScreen() {
           <Ionicons name="shield-checkmark-outline" size={16} color="rgba(255,255,255,0.7)" />
           <Text style={st.hintText}>{(t as any).locPermHint}</Text>
         </View>
+      </ScrollView>
 
-        <View style={st.bottomSection}>
-          {!allGranted ? (
-            <>
-              <Pressable
-                style={({ pressed }) => [st.allowBtn, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={handleAllow}
-              >
-                <Ionicons name="location" size={20} color="#D4843A" style={{ marginRight: 8 }} />
-                <Text style={st.allowBtnText}>{(t as any).locPermAllowBtn}</Text>
-              </Pressable>
-              <Pressable
-                style={st.settingsLink}
-                onPress={() => {
-                  if (Platform.OS === "ios") {
-                    Linking.openURL("app-settings:");
-                  } else {
-                    Linking.openSettings();
-                  }
-                }}
-              >
-                <Text style={st.settingsLinkText}>{(t as any).locPermAlwaysAllow}</Text>
-              </Pressable>
-            </>
-          ) : (
+      <View style={[st.bottomSection, { paddingBottom: bottomInset + 16 }]}>
+        {noneGranted && (
+          <Pressable
+            style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={handleRequestForeground}
+          >
+            <Ionicons name="location" size={20} color="#D4843A" style={{ marginRight: 8 }} />
+            <Text style={st.primaryBtnText}>{(t as any).locPermAllowBtn}</Text>
+          </Pressable>
+        )}
+
+        {fgOnly && (
+          <>
             <Pressable
-              style={({ pressed }) => [st.nextBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={handleNext}
+              style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={handleRequestBackground}
             >
-              <Text style={st.nextBtnText}>{t.next}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#D4843A" style={{ marginLeft: 8 }} />
+              <Ionicons name="location" size={20} color="#D4843A" style={{ marginRight: 8 }} />
+              <Text style={st.primaryBtnText}>{(t as any).locPermAlwaysAllow}</Text>
             </Pressable>
-          )}
-        </View>
+            <Pressable style={st.settingsLink} onPress={openSettings}>
+              <Text style={st.settingsLinkText}>{(t as any).locPermOpenSettings}</Text>
+            </Pressable>
+          </>
+        )}
+
+        {allGranted && (
+          <Pressable
+            style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={handleNext}
+          >
+            <Text style={st.primaryBtnText}>{t.next}</Text>
+            <Ionicons name="arrow-forward" size={20} color="#D4843A" style={{ marginLeft: 8 }} />
+          </Pressable>
+        )}
       </View>
     </LinearGradient>
   );
@@ -207,10 +230,8 @@ export default function ParentLocationPermitScreen() {
 
 const st = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 24 },
   backBtn: {
     position: "absolute",
-    top: Platform.OS === "web" ? 56 : 50,
     left: 20,
     zIndex: 10,
     width: 40,
@@ -219,6 +240,9 @@ const st = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.15)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
   },
   topSection: { alignItems: "center", marginTop: 40 },
   logo: { width: 100, height: 36, marginBottom: 18 },
@@ -293,10 +317,14 @@ const st = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
   },
   bottomSection: {
-    marginTop: "auto",
-    paddingBottom: 10,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
-  allowBtn: {
+  primaryBtn: {
     width: "100%",
     height: 56,
     backgroundColor: "#FFFFFF",
@@ -305,7 +333,7 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  allowBtnText: {
+  primaryBtnText: {
     fontFamily: "Inter_700Bold",
     fontSize: 17,
     color: "#D4843A",
@@ -319,20 +347,5 @@ const st = StyleSheet.create({
     fontSize: 14,
     color: "#FFFFFF",
     textDecorationLine: "underline",
-  },
-  nextBtn: {
-    width: "100%",
-    height: 56,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  nextBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#D4843A",
-    letterSpacing: 1,
   },
 });
