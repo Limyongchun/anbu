@@ -429,7 +429,7 @@ const translations = {
     signupNameLabel: "성함",
     signupNamePlaceholder: "이름을 입력해주세요",
     signupPhoneLabel: "휴대폰 번호",
-    signupOtpRequest: "인증번호 받기",
+    signupOtpRequest: "인증 받기",
     signupOtpResend: "재전송",
     signupDevMode: "개발 모드 — 인증번호:",
     signupOtpLabel: "인증번호",
