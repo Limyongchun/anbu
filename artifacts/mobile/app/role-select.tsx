@@ -58,7 +58,7 @@ export default function RoleSelectScreen() {
 
           <Pressable
             style={({ pressed }) => [st.card, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push("/parent-code")}
+            onPress={() => router.push("/parent-permissions")}
           >
             <View style={st.iconWrap}>
               <Ionicons name="people-outline" size={40} color="#D4843A" />
