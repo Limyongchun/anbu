@@ -402,6 +402,14 @@ const translations = {
       { emoji: "💌", text: "빨리 보고싶어요!\n사랑해요 ❤️", name: "예진" },
     ],
 
+    // ── role-select.tsx ──
+    roleSelectTitle: "누구로 시작할까요?",
+    roleSelectSub: "역할을 선택해주세요",
+    roleSelectChild: "자녀",
+    roleSelectChildDesc: "부모님께 안부를 보내요",
+    roleSelectParent: "부모님",
+    roleSelectParentDesc: "자녀의 안부를 받아요",
+
     // ── child-signup.tsx ──
     signupError: "오류가 발생했습니다",
     signupChildHeader: "자녀 가입",
@@ -834,6 +842,13 @@ const translations = {
       { emoji: "🏠", text: "I'm home from school~\nEnjoy your dinner!", name: "Minjun" },
       { emoji: "💌", text: "I miss you so much!\nLove you ❤️", name: "Yejin" },
     ],
+    roleSelectTitle: "Who are you?",
+    roleSelectSub: "Choose your role",
+    roleSelectChild: "Child",
+    roleSelectChildDesc: "Send updates to parents",
+    roleSelectParent: "Parent",
+    roleSelectParentDesc: "Receive updates from children",
+
     signupError: "An error occurred",
     signupChildHeader: "Child Sign Up",
     signupRecoveryTitle: "Existing family found!",
@@ -1262,6 +1277,13 @@ const translations = {
       { emoji: "🏠", text: "学校から帰りました〜\n夕食を楽しんでね！", name: "はると" },
       { emoji: "💌", text: "早く会いたいです！\n愛してるよ ❤️", name: "ゆうき" },
     ],
+    roleSelectTitle: "どなたですか？",
+    roleSelectSub: "役割を選んでください",
+    roleSelectChild: "子ども",
+    roleSelectChildDesc: "親に近況を送ります",
+    roleSelectParent: "親",
+    roleSelectParentDesc: "子どもの近況を受け取ります",
+
     signupError: "エラーが発生しました",
     signupChildHeader: "子ども登録",
     signupRecoveryTitle: "既存の家族が見つかりました！",

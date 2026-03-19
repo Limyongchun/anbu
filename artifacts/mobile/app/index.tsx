@@ -67,7 +67,7 @@ export default function SplashScreen() {
   }, [loading, isConnected, myRole]);
 
   const handleTap = () => {
-    router.push("/child-signup");
+    router.push("/role-select");
   };
 
   return (
