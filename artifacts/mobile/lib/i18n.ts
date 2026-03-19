@@ -429,6 +429,19 @@ const translations = {
     permUsageTitle: "앱 사용 기록 허용",
     permUsageDesc: "고객님의 정보는 맞춤화된 자료와 알림에 사용 됩니다.",
 
+    // ── 위치 권한 요청 ──
+    locPermTitle: "위치 접근 허용",
+    locPermSub: "부모님의 실시간 위치를 확인하려면\n위치 권한이 필요합니다.",
+    locPermForeground: "앱 사용 중 위치",
+    locPermForegroundDesc: "앱을 열고 있을 때 위치를 확인합니다.",
+    locPermBackground: "항상 위치 허용",
+    locPermBackgroundDesc: "앱을 닫아도 위치를 자동으로 공유합니다.",
+    locPermHint: "위치 정보는 가족에게만 공유됩니다",
+    locPermAllowBtn: "위치 허용하기",
+    locPermDeniedTitle: "위치 권한 필요",
+    locPermDeniedMsg: "설정에서 위치 권한을 허용해주세요.",
+    locPermOpenSettings: "설정 열기",
+
     // ── child-signup.tsx ──
     signupError: "오류가 발생했습니다",
     signupChildHeader: "자녀 가입",
@@ -887,6 +900,19 @@ const translations = {
     permUsageTitle: "App Usage Tracking",
     permUsageDesc: "Your information is used for personalized data and notifications.",
 
+    // ── Location permission ──
+    locPermTitle: "Allow Location Access",
+    locPermSub: "Location permission is needed to\ncheck your parents' real-time location.",
+    locPermForeground: "While Using the App",
+    locPermForegroundDesc: "Check location while the app is open.",
+    locPermBackground: "Always Allow",
+    locPermBackgroundDesc: "Automatically share location even when the app is closed.",
+    locPermHint: "Location is only shared with family",
+    locPermAllowBtn: "Allow Location",
+    locPermDeniedTitle: "Location Permission Needed",
+    locPermDeniedMsg: "Please allow location permission in Settings.",
+    locPermOpenSettings: "Open Settings",
+
     signupError: "An error occurred",
     signupChildHeader: "Child Sign Up",
     signupRecoveryTitle: "Existing family found!",
@@ -1340,6 +1366,19 @@ const translations = {
     permMotionDesc: "モーションセンサーを使用して位置検出機能を向上させます。",
     permUsageTitle: "アプリ使用記録の許可",
     permUsageDesc: "お客様の情報はカスタマイズされたデータと通知に使用されます。",
+
+    // ── 位置権限 ──
+    locPermTitle: "位置情報のアクセスを許可",
+    locPermSub: "ご両親のリアルタイム位置を確認するには\n位置情報の許可が必要です。",
+    locPermForeground: "アプリ使用中の位置情報",
+    locPermForegroundDesc: "アプリを開いている間、位置情報を確認します。",
+    locPermBackground: "常に許可",
+    locPermBackgroundDesc: "アプリを閉じても自動的に位置情報を共有します。",
+    locPermHint: "位置情報は家族にのみ共有されます",
+    locPermAllowBtn: "位置情報を許可する",
+    locPermDeniedTitle: "位置情報の許可が必要",
+    locPermDeniedMsg: "設定から位置情報の許可をしてください。",
+    locPermOpenSettings: "設定を開く",
 
     signupError: "エラーが発生しました",
     signupChildHeader: "子ども登録",

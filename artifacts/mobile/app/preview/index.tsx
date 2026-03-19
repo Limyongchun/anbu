@@ -22,10 +22,11 @@ import ProfileScreen from "@/app/profile";
 import SetupScreen from "@/app/setup";
 import ParentCodeScreen from "@/app/parent-code";
 import ParentPermissionsScreen from "@/app/parent-permissions";
+import ParentLocationPermitScreen from "@/app/parent-location-permit";
 
-type ScreenKey = "splash" | "role-select" | "signup-mode" | "signup-phone" | "parent-code" | "parent-permissions" | "child" | "parent" | "profile" | "setup";
+type ScreenKey = "splash" | "role-select" | "signup-mode" | "signup-phone" | "parent-code" | "parent-permissions" | "parent-location" | "child" | "parent" | "profile" | "setup";
 
-const VALID_SCREENS: ScreenKey[] = ["splash", "role-select", "signup-mode", "signup-phone", "parent-code", "parent-permissions", "child", "parent", "profile", "setup"];
+const VALID_SCREENS: ScreenKey[] = ["splash", "role-select", "signup-mode", "signup-phone", "parent-code", "parent-permissions", "parent-location", "child", "parent", "profile", "setup"];
 
 
 
@@ -49,6 +50,7 @@ const SCREEN_META: Record<string, { title: string; role: "child" | "parent"; dis
   "signup-phone": { title: "휴대폰 인증 폼", role: "child", disconnected: true },
   "parent-code": { title: "코드 입력", role: "parent", disconnected: true },
   "parent-permissions": { title: "권한 안내", role: "parent", disconnected: true },
+  "parent-location": { title: "위치 허용", role: "parent", disconnected: true },
   child: { title: "자녀 홈", role: "child" },
   parent: { title: "부모 액자", role: "parent" },
   profile: { title: "프로필", role: "child" },
@@ -71,6 +73,7 @@ function WrappedScreen({ id, onBack }: { id: ScreenKey; onBack: () => void }) {
       case "signup-phone": return <ChildSignupScreen initialStep="form" initialMode="create" />;
       case "parent-code": return <ParentCodeScreen />;
       case "parent-permissions": return <ParentPermissionsScreen />;
+      case "parent-location": return <ParentLocationPermitScreen />;
       case "child": return <ChildScreen />;
       case "parent": return <ParentScreen />;
       case "profile": return <ProfileScreen />;
@@ -154,6 +157,7 @@ export default function PreviewIndex() {
         <ScreenCard id="signup-phone" label="3번 — 휴대폰 인증 폼" desc="이름/전화번호/OTP 입력" icon="phone-portrait" onPress={() => setActivePreview("signup-phone")} />
         <ScreenCard id="parent-code" label="3.5번 — 부모 코드 입력" desc="자녀 코드로 가족 연결" icon="key" onPress={() => setActivePreview("parent-code")} />
         <ScreenCard id="parent-permissions" label="3.6번 — 권한 안내" desc="알림/위치/건강/사용기록 안내" icon="shield-checkmark" onPress={() => setActivePreview("parent-permissions")} />
+        <ScreenCard id="parent-location" label="3.7번 — 위치 허용" desc="위치 권한 요청 (실제 동작)" icon="location" onPress={() => setActivePreview("parent-location")} />
         <ScreenCard id="child" label="4번 — 자녀 홈" desc="대시보드 + 5탭 내비게이션" icon="home" onPress={() => setActivePreview("child")} />
         <ScreenCard id="parent" label="5번 — 부모 디지털 액자" desc="사진 슬라이드쇼 + GPS" icon="images" onPress={() => setActivePreview("parent")} />
         <ScreenCard id="profile" label="6번 — 프로필/설정" desc="가족 관리 + 언어 설정" icon="person-circle" onPress={() => setActivePreview("profile")} />

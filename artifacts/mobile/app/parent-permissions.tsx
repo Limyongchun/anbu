@@ -74,7 +74,7 @@ export default function ParentPermissionsScreen() {
         <View style={st.bottomSection}>
           <Pressable
             style={({ pressed }) => [st.nextBtn, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push("/parent-code")}
+            onPress={() => router.push("/parent-location-permit")}
           >
             <Text style={st.nextBtnText}>{t.next}</Text>
           </Pressable>
