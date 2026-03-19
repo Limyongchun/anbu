@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -292,10 +293,10 @@ export default function SetupScreen() {
   const stepProgress = { role: 1, name: 2, action: 3, create_code: 4, join_code: 3 }[step];
 
   return (
-    <View style={[styles.container, { paddingTop: topInset, paddingBottom: bottomInset }]}>
+    <LinearGradient colors={["#D4843A", "#C4692E", "#A85528"]} style={[styles.container, { paddingTop: topInset, paddingBottom: bottomInset }]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.headerBack}>
-          <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
+          <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>{t.setupHeader}</Text>
         <View style={{ width: 36 }} />
@@ -317,14 +318,13 @@ export default function SetupScreen() {
       >
         {renderStep()}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.child.bg,
   },
   header: {
     flexDirection: "row",
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
-    color: COLORS.child.text,
+    color: "#FFFFFF",
   },
   progressBar: {
     flexDirection: "row",
@@ -354,10 +354,10 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(61,43,31,0.1)",
+    backgroundColor: "rgba(255,255,255,0.25)",
   },
   progressDotActive: {
-    backgroundColor: COLORS.child.accent,
+    backgroundColor: "#FFFFFF",
   },
   scroll: {
     flexGrow: 1,
@@ -371,14 +371,14 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 26,
-    color: COLORS.child.text,
+    color: "#FFFFFF",
     textAlign: "center",
     marginBottom: 8,
   },
   stepSub: {
     fontFamily: "Inter_400Regular",
     fontSize: 15,
-    color: COLORS.child.textSub,
+    color: "rgba(255,255,255,0.75)",
     textAlign: "center",
     marginBottom: 32,
   },
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: COLORS.child.accent,
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 32,
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   nextBtnText: {
     fontFamily: "Inter_700Bold",
     fontSize: 17,
-    color: COLORS.white,
+    color: "#D4843A",
   },
   actionCards: {
     width: "100%",
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: COLORS.child.textSub,
+    color: "rgba(255,255,255,0.75)",
   },
   errorText: {
     fontFamily: "Inter_500Medium",
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   codeHintText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: COLORS.child.textSub,
+    color: "rgba(255,255,255,0.75)",
   },
   backLink: {
     flexDirection: "row",
@@ -574,6 +574,6 @@ const styles = StyleSheet.create({
   backLinkText: {
     fontFamily: "Inter_500Medium",
     fontSize: 14,
-    color: COLORS.child.textSub,
+    color: "rgba(255,255,255,0.75)",
   },
 });

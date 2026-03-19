@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -520,7 +521,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[s.container, { paddingTop: topInset }]}>
+    <LinearGradient colors={["#D4843A", "#C4692E", "#A85528"]} style={[s.container, { paddingTop: topInset }]}>
       {/* ── 헤더 ── */}
       <View style={s.header}>
         <Pressable style={s.backBtn} onPress={() => router.back()}>
@@ -1083,14 +1084,14 @@ export default function ProfileScreen() {
           </View>
         </Modal>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: COLORS.bg },
+  container:    { flex: 1 },
 
-  header:       { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: COLORS.navPill, paddingHorizontal: 16, paddingVertical: 14 },
+  header:       { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "transparent", paddingHorizontal: 16, paddingVertical: 14 },
   headerTitle:  { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.white, letterSpacing: 0.5 },
   backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
 

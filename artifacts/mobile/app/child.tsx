@@ -117,7 +117,7 @@ function AppHeader({ topInset, isMap }: { topInset: number; isMap: boolean }) {
   return (
     <View style={[hdr.wrap, {
       paddingTop: topInset + 12,
-      backgroundColor: isMap ? "rgba(90,58,58,0.92)" : DS.bg,
+      backgroundColor: isMap ? "rgba(180,100,50,0.92)" : "transparent",
       borderBottomWidth: isMap ? 0 : 0,
     }]}>
       <Text style={[hdr.logo, { color: "#FFFFFF" }]}>A N B U</Text>
@@ -998,8 +998,8 @@ function HomeScreen({
 
   if (!familyCode) {
     return (
-      <View style={[{ flex: 1, backgroundColor: DS.bg, paddingTop: topBarH }, hm.centerEmpty]}>
-        <View style={hm.emptyIconWrap}><Ionicons name="wifi-outline" size={28} color={DS.textTertiary} /></View>
+      <View style={[{ flex: 1, paddingTop: topBarH }, hm.centerEmpty]}>
+        <View style={hm.emptyIconWrap}><Ionicons name="wifi-outline" size={28} color="rgba(255,255,255,0.6)" /></View>
         <Text style={hm.emptyTitle}>{t.homeNotConnected}</Text>
         <Text style={hm.emptySub}>{t.homeNotConnectedSub}</Text>
       </View>
@@ -1007,7 +1007,7 @@ function HomeScreen({
   }
 
   if (!parentChecked) {
-    return <View style={{ flex: 1, backgroundColor: DS.bg }} />;
+    return <View style={{ flex: 1 }} />;
   }
 
   if (!parentJoined) {
@@ -1017,7 +1017,7 @@ function HomeScreen({
   return (
     <Animated.View style={{ flex: 1, opacity: revealAnim }}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: DS.bg }}
+      style={{ flex: 1 }}
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
@@ -1247,7 +1247,7 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: DS.bg }}
+      style={{ flex: 1 }}
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
@@ -1317,7 +1317,10 @@ export default function ChildScreen() {
   const isMap = tab === "map";
 
   return (
-    <View style={{ flex: 1, backgroundColor: isMap ? DS.brandDeep : DS.bg }}>
+    <ExpoLinearGradient
+      colors={isMap ? [DS.brandDeep, DS.brandDeep] : ["#D4843A", "#C4692E", "#A85528"]}
+      style={{ flex: 1 }}
+    >
       {tab === "home" && (
         <HomeScreen
           familyCode={familyCode}
@@ -1347,7 +1350,7 @@ export default function ChildScreen() {
         onSettings={() => router.push("/profile")}
         bottomInset={bottomInset}
       />
-    </View>
+    </ExpoLinearGradient>
   );
 }
 
