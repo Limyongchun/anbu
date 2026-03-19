@@ -137,7 +137,7 @@ const st = StyleSheet.create({
   creditWrap: {
     alignItems: "center",
     position: "absolute",
-    bottom: 5,
+    bottom: 15,
     left: 0,
     right: 0,
   },
