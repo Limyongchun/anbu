@@ -86,7 +86,9 @@ router.post("/family/create", async (req, res) => {
 router.post("/family/join", async (req, res) => {
   try {
     const { code, deviceId, memberName, role, accountId } = req.body;
+    console.log("[family/join] request:", { code, deviceId, memberName, role, accountId });
     if (!code || !deviceId || !memberName || !role) {
+      console.log("[family/join] missing fields:", { code: !!code, deviceId: !!deviceId, memberName: !!memberName, role: !!role });
       return res.status(400).json({ error: "code, deviceId, memberName, role are required" });
     }
     const [group] = await db.select().from(familyGroupsTable).where(eq(familyGroupsTable.code, code));
@@ -130,9 +132,10 @@ router.post("/family/join", async (req, res) => {
         familyCode: code, deviceId, memberName, role, childRole, accountId: validAccountId,
       }).returning();
     }
+    console.log("[family/join] success:", { memberId: member.id, familyCode: member.familyCode, role: member.role });
     return res.json({ ...serializeMember(member), childRole });
   } catch (e) {
-    console.error(e);
+    console.error("[family/join] error:", e);
     return res.status(500).json({ error: "Failed to join family" });
   }
 });

@@ -1,47 +1,29 @@
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { FamilyContext } from "@/context/FamilyContext";
 import type { FamilyContextValue, FamilyRole, ChildRole } from "@/context/FamilyContext";
 
-const noop = async () => {};
+const MOCK_DEVICE_ID = "preview_device_" + Math.random().toString(36).slice(2, 10);
 
-const MOCK_CHILD_STATE: FamilyContextValue = {
-  familyCode: "DEMO01",
-  allFamilyCodes: ["DEMO01"],
-  deviceId: "preview_device_001",
-  accountId: 999,
-  myName: "미리보기",
-  myRole: "child" as FamilyRole,
-  childRole: "master" as ChildRole,
-  isMasterChild: true,
-  isConnected: true,
-  connect: noop as FamilyContextValue["connect"],
-  disconnect: noop,
-  updateName: noop,
-  setAccountId: noop,
-  addExtraFamily: noop,
-  removeExtraFamily: noop,
-  loading: false,
-};
-
-const MOCK_PARENT_STATE: FamilyContextValue = {
-  ...MOCK_CHILD_STATE,
-  myRole: "parent" as FamilyRole,
-  myName: "부모님",
-  childRole: null,
-  isMasterChild: false,
-};
-
-const MOCK_DISCONNECTED_STATE: FamilyContextValue = {
-  ...MOCK_CHILD_STATE,
-  familyCode: null,
-  allFamilyCodes: [],
-  accountId: null,
-  myName: null,
-  myRole: null,
-  childRole: null,
-  isMasterChild: false,
-  isConnected: false,
-};
+function makeMockState(role: "child" | "parent", connected: boolean): FamilyContextValue {
+  return {
+    familyCode: connected ? "DEMO01" : null,
+    allFamilyCodes: connected ? ["DEMO01"] : [],
+    deviceId: MOCK_DEVICE_ID,
+    accountId: connected ? 999 : null,
+    myName: connected ? (role === "child" ? "미리보기" : "부모님") : null,
+    myRole: connected ? (role as FamilyRole) : null,
+    childRole: connected && role === "child" ? ("master" as ChildRole) : null,
+    isMasterChild: connected && role === "child",
+    isConnected: connected,
+    connect: async () => {},
+    disconnect: async () => {},
+    updateName: async () => {},
+    setAccountId: async () => {},
+    addExtraFamily: async () => {},
+    removeExtraFamily: async () => {},
+    loading: false,
+  };
+}
 
 export function MockFamilyProvider({
   role = "child",
@@ -52,11 +34,31 @@ export function MockFamilyProvider({
   disconnected?: boolean;
   children: React.ReactNode;
 }) {
-  const value = disconnected
-    ? MOCK_DISCONNECTED_STATE
-    : role === "parent"
-      ? MOCK_PARENT_STATE
-      : MOCK_CHILD_STATE;
+  const [override, setOverride] = useState<Partial<FamilyContextValue> | null>(null);
+  const base = useMemo(() => makeMockState(role, !disconnected), [role, disconnected]);
+
+  const connect = useCallback(
+    async (code: string, name: string, r: FamilyRole, cr: ChildRole = null, acctId?: number | null) => {
+      setOverride({
+        familyCode: code,
+        allFamilyCodes: [code],
+        myName: name,
+        myRole: r,
+        childRole: cr,
+        isMasterChild: cr === "master",
+        isConnected: true,
+        accountId: acctId ?? null,
+      });
+    },
+    [],
+  );
+
+  const value = useMemo<FamilyContextValue>(() => ({
+    ...base,
+    ...override,
+    connect,
+  }), [base, override, connect]);
+
   return (
     <FamilyContext.Provider value={value}>
       {children}

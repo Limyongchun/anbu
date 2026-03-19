@@ -70,6 +70,7 @@ export default function ParentCodeScreen() {
     setJoining(true);
     setError("");
     try {
+      console.log("[ParentCode] joining family:", { code, deviceId: familyCtx.deviceId, name: trimmedName, accountId: familyCtx.accountId });
       const member = await api.joinFamily(
         code,
         familyCtx.deviceId,
@@ -77,6 +78,7 @@ export default function ParentCodeScreen() {
         "parent",
         familyCtx.accountId,
       );
+      console.log("[ParentCode] join success:", member);
       await familyCtx.connect(
         code,
         trimmedName,
@@ -84,8 +86,10 @@ export default function ParentCodeScreen() {
         null,
         familyCtx.accountId,
       );
+      console.log("[ParentCode] context connected, navigating to /parent");
       router.replace("/parent");
     } catch (e: any) {
+      console.error("[ParentCode] join failed:", e);
       const msg = e.message || "연결에 실패했습니다";
       setError(msg);
     } finally {
