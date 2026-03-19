@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -24,6 +24,8 @@ import ProfileScreen from "@/app/profile";
 import SetupScreen from "@/app/setup";
 
 type ScreenKey = "splash" | "signup-mode" | "signup-phone" | "child" | "parent" | "profile" | "setup";
+
+const VALID_SCREENS: ScreenKey[] = ["splash", "signup-mode", "signup-phone", "child", "parent", "profile", "setup"];
 
 
 function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
@@ -214,10 +216,15 @@ export default function PreviewIndex() {
     );
   }
 
+  const params = useLocalSearchParams<{ screen?: string }>();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 50 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-  const [activePreview, setActivePreview] = useState<ScreenKey | null>(null);
+
+  const initialScreen = params.screen && VALID_SCREENS.includes(params.screen as ScreenKey)
+    ? (params.screen as ScreenKey)
+    : null;
+  const [activePreview, setActivePreview] = useState<ScreenKey | null>(initialScreen);
 
   if (activePreview === "signup-phone") {
     return (
