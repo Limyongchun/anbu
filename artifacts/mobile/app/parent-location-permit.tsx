@@ -42,12 +42,17 @@ export default function ParentLocationPermitScreen() {
   }, []);
 
   const checkCurrentStatus = async () => {
+    if (Platform.OS === "web") return;
     try {
       const fg = await Location.getForegroundPermissionsAsync();
       setForegroundStatus(fg.granted ? "granted" : "pending");
       if (fg.granted) {
-        const bg = await Location.getBackgroundPermissionsAsync();
-        setBackgroundStatus(bg.granted ? "granted" : "pending");
+        try {
+          const bg = await Location.getBackgroundPermissionsAsync();
+          setBackgroundStatus(bg.granted ? "granted" : "pending");
+        } catch {
+          setBackgroundStatus("pending");
+        }
       }
     } catch {}
   };
@@ -57,7 +62,7 @@ export default function ParentLocationPermitScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
         setForegroundStatus("granted");
-        requestBackground();
+        return true;
       } else {
         setForegroundStatus("denied");
         Alert.alert(
@@ -68,9 +73,11 @@ export default function ParentLocationPermitScreen() {
             { text: (t as any).locPermOpenSettings, onPress: () => Linking.openSettings() },
           ]
         );
+        return false;
       }
     } catch {
       setForegroundStatus("denied");
+      return false;
     }
   };
 
@@ -94,7 +101,10 @@ export default function ParentLocationPermitScreen() {
       return;
     }
     if (foregroundStatus !== "granted") {
-      await requestForeground();
+      const fgGranted = await requestForeground();
+      if (fgGranted) {
+        await requestBackground();
+      }
     } else if (backgroundStatus !== "granted") {
       await requestBackground();
     }
