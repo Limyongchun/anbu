@@ -33,6 +33,7 @@ function RootLayoutNav() {
       <Stack.Screen name="setup" options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="parent" options={{ animation: "fade" }} />
       <Stack.Screen name="child" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="preview/index" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
