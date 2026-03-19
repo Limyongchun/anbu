@@ -79,7 +79,7 @@ export default function RoleSelectScreen() {
 
 const st = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 28 },
+  inner: { flex: 1, paddingHorizontal: 28, justifyContent: "space-between" },
   topSection: { alignItems: "center", marginTop: 60 },
   logo: { width: 140, height: 50, marginBottom: 20 },
   title: {
@@ -136,7 +136,6 @@ const st = StyleSheet.create({
   },
   creditWrap: {
     alignItems: "center",
-    marginBottom: 4,
   },
   creditText: {
     fontFamily: "Inter_400Regular",
