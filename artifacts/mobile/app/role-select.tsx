@@ -123,9 +123,10 @@ const st = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
+    fontSize: 24,
     color: "#1a1a1a",
     marginBottom: 8,
+    letterSpacing: 2,
   },
   cardDesc: {
     fontFamily: "Inter_400Regular",
