@@ -313,32 +313,30 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
           />
 
           <Text style={s.fFieldLabel}>{t.signupPhoneLabel}</Text>
-          <View style={s.phoneRow}>
-            <TextInput
-              style={[s.fInput, s.phoneInput]}
-              value={phone}
-              onChangeText={(v) => {
-                setPhone(v);
-                setOtpSent(false);
-                setOtpVerified(false);
-                setDevCode(null);
-              }}
-              placeholder="010-0000-0000"
-              placeholderTextColor="#aaa"
-              keyboardType="phone-pad"
-              maxLength={13}
-            />
-            <Pressable
-              style={[s.fOtpBtn, (!phone.trim() || sendingOtp) && s.fOtpBtnDisabled]}
-              disabled={!phone.trim() || sendingOtp}
-              onPress={handleSendOtp}
-            >
-              {sendingOtp
-                ? <ActivityIndicator size="small" color="#9ca3af" />
-                : <Text numberOfLines={1} style={[s.fOtpBtnText, (!phone.trim() || sendingOtp) && s.fOtpBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
-              }
-            </Pressable>
-          </View>
+          <TextInput
+            style={s.fInput}
+            value={phone}
+            onChangeText={(v) => {
+              setPhone(v);
+              setOtpSent(false);
+              setOtpVerified(false);
+              setDevCode(null);
+            }}
+            placeholder="010-0000-0000"
+            placeholderTextColor="#aaa"
+            keyboardType="phone-pad"
+            maxLength={13}
+          />
+          <Pressable
+            style={[s.fOtpFullBtn, (!phone.trim() || sendingOtp) && s.fOtpBtnDisabled]}
+            disabled={!phone.trim() || sendingOtp}
+            onPress={handleSendOtp}
+          >
+            {sendingOtp
+              ? <ActivityIndicator size="small" color="#9ca3af" />
+              : <Text style={[s.fOtpFullBtnText, (!phone.trim() || sendingOtp) && s.fOtpBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
+            }
+          </Pressable>
           {!!sendError && <Text style={s.errorText}>{sendError}</Text>}
 
           {devCode && (
@@ -369,36 +367,34 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
           {otpSent && (
             <View>
               <Text style={s.fFieldLabel}>{t.signupOtpLabel}</Text>
-              <View style={s.phoneRow}>
-                <TextInput
-                  style={[s.fInput, s.phoneInput, s.otpInput]}
-                  value={otp}
-                  onChangeText={(v) => { setOtp(v); setOtpVerified(false); setOtpError(""); }}
-                  placeholder={t.signupOtpPlaceholder as string}
-                  placeholderTextColor="#aaa"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-                <Pressable
-                  style={[
-                    s.fOtpBtn,
-                    otpVerified && s.fOtpVerifiedBtn,
-                    (otp.length !== 6 || verifyingOtp || otpVerified) && !otpVerified && s.fOtpBtnDisabled,
-                  ]}
-                  disabled={otp.length !== 6 || verifyingOtp || otpVerified}
-                  onPress={handleVerifyOtp}
-                >
-                  {verifyingOtp
-                    ? <ActivityIndicator size="small" color="#9ca3af" />
-                    : otpVerified
-                    ? <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Ionicons name="checkmark" size={16} color="#fff" />
-                        <Text style={s.fOtpBtnText}>{t.signupOtpVerified}</Text>
-                      </View>
-                    : <Text numberOfLines={1} style={[s.fOtpBtnText, otp.length !== 6 && s.fOtpBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
-                  }
-                </Pressable>
-              </View>
+              <TextInput
+                style={[s.fInput, s.otpInput]}
+                value={otp}
+                onChangeText={(v) => { setOtp(v); setOtpVerified(false); setOtpError(""); }}
+                placeholder={t.signupOtpPlaceholder as string}
+                placeholderTextColor="#aaa"
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+              <Pressable
+                style={[
+                  s.fOtpFullBtn,
+                  otpVerified && s.fOtpVerifiedBtn,
+                  (otp.length !== 6 || verifyingOtp || otpVerified) && !otpVerified && s.fOtpBtnDisabled,
+                ]}
+                disabled={otp.length !== 6 || verifyingOtp || otpVerified}
+                onPress={handleVerifyOtp}
+              >
+                {verifyingOtp
+                  ? <ActivityIndicator size="small" color="#9ca3af" />
+                  : otpVerified
+                  ? <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                      <Text style={s.fOtpFullBtnText}>{t.signupOtpVerified}</Text>
+                    </View>
+                  : <Text style={[s.fOtpFullBtnText, otp.length !== 6 && s.fOtpBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
+                }
+              </Pressable>
               {!!otpError && <Text style={s.errorText}>{otpError}</Text>}
             </View>
           )}
@@ -467,13 +463,11 @@ const s = StyleSheet.create({
   fInput:      { backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Inter_500Medium", color: "#333", borderWidth: 1.5, borderColor: "#E0E0E0", marginBottom: 16 },
   codeInput:   { letterSpacing: 8, textAlign: "center", fontSize: 22, fontFamily: "Inter_700Bold" },
 
-  phoneRow:    { flexDirection: "row", gap: 10, marginBottom: 0, alignItems: "stretch" },
-  phoneInput:  { flex: 5, marginBottom: 0 },
   otpInput:    { letterSpacing: 6, textAlign: "center" },
 
-  fOtpBtn:          { flex: 3, backgroundColor: "#D4843A", borderRadius: 14, paddingHorizontal: 6, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  fOtpFullBtn:      { backgroundColor: "#D4843A", borderRadius: 14, paddingVertical: 14, alignItems: "center", marginBottom: 16 },
   fOtpBtnDisabled:  { backgroundColor: "#d1d5db" },
-  fOtpBtnText:      { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
+  fOtpFullBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#FFFFFF" },
   fOtpBtnTextDisabled: { color: "#9ca3af" },
   fOtpVerifiedBtn:  { backgroundColor: "#22c55e" },
 
