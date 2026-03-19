@@ -118,19 +118,14 @@ export default function ParentScreen() {
 
   const lastTapRef = useRef(0);
   const touchStartRef = useRef({ y: 0, x: 0, t: 0 });
+  const lastTouchEndRef = useRef(0);
 
-  const onTouchStart = (e: any) => {
-    touchStartRef.current = {
-      y: e.nativeEvent?.pageY ?? e.touches?.[0]?.pageY ?? 0,
-      x: e.nativeEvent?.pageX ?? e.touches?.[0]?.pageX ?? 0,
-      t: Date.now(),
-    };
+  const handleGestureStart = (pageX: number, pageY: number) => {
+    touchStartRef.current = { y: pageY, x: pageX, t: Date.now() };
   };
 
-  const onTouchEnd = (e: any) => {
-    const endY = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
-    const endX = e.nativeEvent?.pageX ?? e.changedTouches?.[0]?.pageX ?? 0;
-    const deltaY = endY - touchStartRef.current.y;
+  const handleGestureEnd = (pageX: number, pageY: number) => {
+    const deltaY = pageY - touchStartRef.current.y;
     const elapsed = Date.now() - touchStartRef.current.t;
 
     if (deltaY < -60 && elapsed < 500) {
@@ -143,7 +138,7 @@ export default function ParentScreen() {
       const now = Date.now();
       if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
         lastTapRef.current = 0;
-        if (activeSlide) heartSlide(activeSlide, endX, endY);
+        if (activeSlide) heartSlide(activeSlide, pageX, pageY);
         overlay.hideUI();
         return;
       }
@@ -162,6 +157,33 @@ export default function ParentScreen() {
     }
   };
 
+  const onTouchStart = (e: any) => {
+    const px = e.nativeEvent?.pageX ?? e.touches?.[0]?.pageX ?? 0;
+    const py = e.nativeEvent?.pageY ?? e.touches?.[0]?.pageY ?? 0;
+    handleGestureStart(px, py);
+  };
+
+  const onTouchEnd = (e: any) => {
+    lastTouchEndRef.current = Date.now();
+    const px = e.nativeEvent?.pageX ?? e.changedTouches?.[0]?.pageX ?? 0;
+    const py = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
+    handleGestureEnd(px, py);
+  };
+
+  const onMouseDown = (e: any) => {
+    if (Platform.OS !== "web") return;
+    if (e.nativeEvent?.button !== undefined && e.nativeEvent.button !== 0) return;
+    if (Date.now() - lastTouchEndRef.current < 500) return;
+    handleGestureStart(e.nativeEvent?.pageX ?? 0, e.nativeEvent?.pageY ?? 0);
+  };
+
+  const onMouseUp = (e: any) => {
+    if (Platform.OS !== "web") return;
+    if (e.nativeEvent?.button !== undefined && e.nativeEvent.button !== 0) return;
+    if (Date.now() - lastTouchEndRef.current < 500) return;
+    handleGestureEnd(e.nativeEvent?.pageX ?? 0, e.nativeEvent?.pageY ?? 0);
+  };
+
   return (
     <View style={st.root}>
       <View style={st.slideArea}>
@@ -169,6 +191,7 @@ export default function ParentScreen() {
           style={StyleSheet.absoluteFillObject}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
+          {...(Platform.OS === "web" ? { onMouseDown, onMouseUp } : {})}
         >
           {loadingMsgs && msgs.length === 0 ? (
             <View style={st.loadingWrap}>
@@ -191,6 +214,7 @@ export default function ParentScreen() {
               noPhotosLabel={t.parentNoPhotos as string}
               noPhotosSubLabel={t.parentNoPhotosSub as string}
               connectLabel={t.parentConnectFamily as string}
+              settingsLabel={t.parentSettings as string}
               isConnected={isConnected}
             />
           )}
