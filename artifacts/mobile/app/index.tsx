@@ -17,29 +17,61 @@ const splashVideoModule = require("@/assets/splash-video.mp4");
 const splashPoster = require("@/assets/splash-poster.jpg");
 const logoImage = require("@/assets/images/logo-anbu.png");
 
+function NativeVideo() {
+  const player = useVideoPlayer(splashVideoModule, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={StyleSheet.absoluteFill}
+      contentFit="cover"
+      nativeControls={false}
+      allowsFullscreen={false}
+      allowsPictureInPicture={false}
+    />
+  );
+}
+
+function WebVideo() {
+  const [uri, setUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    const asset = Asset.fromModule(splashVideoModule);
+    asset.downloadAsync().then(() => {
+      setUri(asset.localUri || asset.uri);
+    });
+  }, []);
+
+  if (!uri) return null;
+
+  return (
+    <video
+      src={uri}
+      autoPlay
+      loop
+      muted
+      playsInline
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      } as any}
+    />
+  );
+}
+
 export default function SplashScreen() {
   const { isConnected, myRole, loading } = useFamilyContext();
   const fadeIn = useRef(new Animated.Value(0)).current;
   const breathScale = useRef(new Animated.Value(1)).current;
   const breathOpacity = useRef(new Animated.Value(1)).current;
-  const [webVideoUri, setWebVideoUri] = useState<string | null>(null);
-
-  const player = Platform.OS !== "web"
-    ? useVideoPlayer(splashVideoModule, (p) => {
-        p.loop = true;
-        p.muted = true;
-        p.play();
-      })
-    : null;
-
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      const asset = Asset.fromModule(splashVideoModule);
-      asset.downloadAsync().then(() => {
-        setWebVideoUri(asset.localUri || asset.uri);
-      });
-    }
-  }, []);
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: false }).start();
@@ -79,34 +111,7 @@ export default function SplashScreen() {
       />
 
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeIn }]}>
-        {Platform.OS === "web" ? (
-          webVideoUri ? (
-            <video
-              src={webVideoUri}
-              autoPlay
-              loop
-              muted
-              playsInline
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              } as any}
-            />
-          ) : null
-        ) : player ? (
-          <VideoView
-            player={player}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            nativeControls={false}
-            allowsFullscreen={false}
-            allowsPictureInPicture={false}
-          />
-        ) : null}
+        {Platform.OS === "web" ? <WebVideo /> : <NativeVideo />}
       </Animated.View>
 
       <Animated.View style={[st.overlay, { opacity: breathOpacity, transform: [{ scale: breathScale }] }]}>
