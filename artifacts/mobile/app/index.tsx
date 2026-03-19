@@ -20,6 +20,8 @@ const logoImage = require("@/assets/images/logo-anbu.png");
 export default function SplashScreen() {
   const { isConnected, myRole, loading } = useFamilyContext();
   const fadeIn = useRef(new Animated.Value(0)).current;
+  const breathScale = useRef(new Animated.Value(1)).current;
+  const breathOpacity = useRef(new Animated.Value(1)).current;
   const [webVideoUri, setWebVideoUri] = useState<string | null>(null);
 
   const player = Platform.OS !== "web"
@@ -41,6 +43,21 @@ export default function SplashScreen() {
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: false }).start();
+
+    const breathLoop = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(breathScale, { toValue: 1.02, duration: 1800, useNativeDriver: false }),
+          Animated.timing(breathScale, { toValue: 1, duration: 1800, useNativeDriver: false }),
+        ]),
+        Animated.sequence([
+          Animated.timing(breathOpacity, { toValue: 0.92, duration: 1800, useNativeDriver: false }),
+          Animated.timing(breathOpacity, { toValue: 1, duration: 1800, useNativeDriver: false }),
+        ]),
+      ])
+    );
+    breathLoop.start();
+    return () => breathLoop.stop();
   }, []);
 
   useEffect(() => {
@@ -92,14 +109,14 @@ export default function SplashScreen() {
         ) : null}
       </Animated.View>
 
-      <View style={st.overlay}>
+      <Animated.View style={[st.overlay, { opacity: breathOpacity, transform: [{ scale: breathScale }] }]}>
         <Image
           source={logoImage}
           style={st.logo}
           resizeMode="contain"
         />
         <Text style={st.tagline}>부모를 섬기는 시간.</Text>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
