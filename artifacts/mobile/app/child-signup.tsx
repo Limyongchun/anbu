@@ -226,7 +226,7 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
           <Text style={s.modeHero}>
             <Text style={{ fontFamily: "Inter_700Bold" }}>혼자</Text>
             <Text>계신{"\n"}</Text>
-            <Text style={{ fontFamily: "Inter_700Bold" }}>외할머니</Text>
+            <Text style={{ fontFamily: "Inter_700Bold" }}>할머니</Text>
             <Text>를 위해{"\n"}</Text>
             <Text style={{ fontFamily: "Inter_700Bold" }}>손자</Text>
             <Text>가 만든{"\n"}</Text>
