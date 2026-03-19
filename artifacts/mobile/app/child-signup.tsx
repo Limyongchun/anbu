@@ -224,6 +224,9 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
         colors={["#D4843A", "#C4692E", "#A85528"]}
         style={[s.gradContainer, { paddingTop: topInset + 20, paddingBottom: bottomInset + 24 }]}
       >
+        <Pressable style={s.modeBackBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.85)" />
+        </Pressable>
         <View style={s.modeContent}>
           <Image source={logoOrange} style={s.modeLogo} resizeMode="contain" />
 
@@ -449,6 +452,7 @@ const s = StyleSheet.create({
   backBtn:     { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.child.text },
 
+  modeBackBtn:   { position: "absolute", top: 0, right: 16, zIndex: 10, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   modeContent:   { flex: 1, paddingHorizontal: 28, justifyContent: "center", paddingBottom: 120 },
   modeLogo:      { width: 130, height: 52, marginBottom: 20 },
   modeHero:      { fontFamily: "Inter_400Regular", fontSize: 38, color: "#FFFFFF", lineHeight: 52 },
