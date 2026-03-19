@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Image,
-  ImageBackground,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLang } from "@/context/LanguageContext";
 
-const bgImage = require("@/assets/images/role-select-bg.png");
 const logoImage = require("@/assets/images/logo-anbu.png");
 
 export default function RoleSelectScreen() {
@@ -34,7 +33,10 @@ export default function RoleSelectScreen() {
   }, []);
 
   return (
-    <ImageBackground source={bgImage} style={st.container} resizeMode="cover">
+    <LinearGradient
+      colors={["#D4843A", "#C4692E", "#A85528"]}
+      style={st.container}
+    >
       <View style={[st.inner, { paddingTop: topInset + 40, paddingBottom: bottomInset + 24 }]}>
         <View style={st.topSection}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
@@ -71,7 +73,7 @@ export default function RoleSelectScreen() {
           <Text style={st.creditText}>With Love, For Parents</Text>
         </View>
       </View>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
