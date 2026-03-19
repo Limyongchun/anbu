@@ -84,7 +84,7 @@ const st = StyleSheet.create({
   logo: { width: 140, height: 50, marginBottom: 20 },
   title: {
     fontFamily: "Inter_700Bold",
-    fontSize: 26,
+    fontSize: 28,
     color: "#FFFFFF",
     textAlign: "center",
     marginBottom: 8,
