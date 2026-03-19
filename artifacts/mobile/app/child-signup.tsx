@@ -31,13 +31,16 @@ export type ChildSignupProps = {
   initialMode?: Mode;
 };
 
-function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
+function Checkbox({ checked, onPress, label, sublabel }: { checked: boolean; onPress: () => void; label: string; sublabel?: string }) {
   return (
     <Pressable style={s.checkRow} onPress={onPress}>
       <View style={[s.checkBox, checked && s.checkBoxActive]}>
         {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
       </View>
-      <Text style={s.checkLabel}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={s.checkLabel}>{label}</Text>
+        {sublabel ? <Text style={s.checkSublabel}>{sublabel}</Text> : null}
+      </View>
     </Pressable>
   );
 }
@@ -64,6 +67,7 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
   const [existingFamilies, setExistingFamilies] = useState<AccountFamily[]>([]);
 
   const [allowNotif,  setAllowNotif]  = useState(false);
+  const [allowUsage,  setAllowUsage]  = useState(false);
   const [agreeTerms,  setAgreeTerms]  = useState(false);
 
   const [sendingOtp,   setSendingOtp]   = useState(false);
@@ -76,7 +80,7 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const scaleUp = useRef(new Animated.Value(0.8)).current;
 
-  const canJoin = otpVerified && allowNotif && agreeTerms && name.trim().length > 0
+  const canJoin = otpVerified && allowNotif && allowUsage && agreeTerms && name.trim().length > 0
     && (mode === "create" || (mode === "join" && joinCode.trim().length === 6));
 
   const handleSendOtp = async () => {
@@ -409,6 +413,12 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
             label={t.signupAgreeNotif as string}
           />
           <Checkbox
+            checked={allowUsage}
+            onPress={() => setAllowUsage(v => !v)}
+            label={t.signupAgreeUsage as string}
+            sublabel={t.signupAgreeUsageDesc as string}
+          />
+          <Checkbox
             checked={agreeTerms}
             onPress={() => setAgreeTerms(v => !v)}
             label={t.signupAgreeTerms as string}
@@ -490,6 +500,7 @@ const s = StyleSheet.create({
   checkBox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: "#D0D0D0", alignItems: "center", justifyContent: "center", marginTop: 1, backgroundColor: "#FFFFFF" },
   checkBoxActive: { backgroundColor: "#D4843A", borderColor: "#D4843A" },
   checkLabel:  { fontFamily: "Inter_400Regular", fontSize: 14, color: "#555", flex: 1, lineHeight: 20 },
+  checkSublabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999", lineHeight: 17, marginTop: 2 },
 
   joinBtn:         { backgroundColor: COLORS.child.accent, borderRadius: 18, paddingVertical: 18, alignItems: "center", marginTop: 8 },
   joinBtnDisabled: { backgroundColor: "#d1d5db" },
