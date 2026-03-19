@@ -437,7 +437,7 @@ const translations = {
     signupOtpVerified: "인증 완료",
     signupOtpConfirm: "확인",
     signupAgreementTitle: "동의 항목",
-    signupAgreeNotif: "알림 허용 — 부모님의 하트·메시지 알림을 받아요",
+    signupAgreeNotif: "알림 허용 — 부모님의 하루를 놓치지 않아요",
     signupAgreeTerms: "서비스 이용약관 및 개인정보처리방침에 동의합니다 (필수)",
     signupCreateBtn: "가족 만들기",
     signupJoinBtn: "가족방 참여",
