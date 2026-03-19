@@ -17,7 +17,7 @@ export interface FamilyState {
   isConnected: boolean;
 }
 
-interface FamilyContextValue extends FamilyState {
+export interface FamilyContextValue extends FamilyState {
   connect: (
     code: string,
     name: string,

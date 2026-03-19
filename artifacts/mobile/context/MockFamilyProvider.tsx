@@ -1,10 +1,10 @@
 import React from "react";
 import { FamilyContext } from "@/context/FamilyContext";
-import type { FamilyRole, ChildRole } from "@/context/FamilyContext";
+import type { FamilyContextValue, FamilyRole, ChildRole } from "@/context/FamilyContext";
 
 const noop = async () => {};
 
-const MOCK_CHILD_STATE = {
+const MOCK_CHILD_STATE: FamilyContextValue = {
   familyCode: "DEMO01",
   allFamilyCodes: ["DEMO01"],
   deviceId: "preview_device_001",
@@ -14,7 +14,7 @@ const MOCK_CHILD_STATE = {
   childRole: "master" as ChildRole,
   isMasterChild: true,
   isConnected: true,
-  connect: noop as any,
+  connect: noop as FamilyContextValue["connect"],
   disconnect: noop,
   updateName: noop,
   setAccountId: noop,
@@ -23,15 +23,15 @@ const MOCK_CHILD_STATE = {
   loading: false,
 };
 
-const MOCK_PARENT_STATE = {
+const MOCK_PARENT_STATE: FamilyContextValue = {
   ...MOCK_CHILD_STATE,
   myRole: "parent" as FamilyRole,
   myName: "부모님",
-  childRole: null as ChildRole,
+  childRole: null,
   isMasterChild: false,
 };
 
-const MOCK_DISCONNECTED_STATE = {
+const MOCK_DISCONNECTED_STATE: FamilyContextValue = {
   ...MOCK_CHILD_STATE,
   familyCode: null,
   allFamilyCodes: [],
@@ -58,7 +58,7 @@ export function MockFamilyProvider({
       ? MOCK_PARENT_STATE
       : MOCK_CHILD_STATE;
   return (
-    <FamilyContext.Provider value={value as any}>
+    <FamilyContext.Provider value={value}>
       {children}
     </FamilyContext.Provider>
   );
