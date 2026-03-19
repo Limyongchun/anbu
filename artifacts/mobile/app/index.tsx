@@ -117,6 +117,11 @@ export default function SplashScreen() {
         />
         <Text style={st.tagline}>부모를 섬기는 시간.</Text>
       </Animated.View>
+
+      <View style={st.creditWrap}>
+        <Text style={st.creditText}>© ANBU Co., Ltd.</Text>
+        <Text style={st.creditText}>With Love, For Parents</Text>
+      </View>
     </Pressable>
   );
 }
@@ -142,5 +147,18 @@ const st = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  creditWrap: {
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  creditText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.55)",
+    lineHeight: 16,
   },
 });
