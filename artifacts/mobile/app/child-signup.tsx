@@ -249,6 +249,7 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
             style={({ pressed }) => [s.authBtnOutline, { opacity: pressed ? 0.9 : 1 }]}
             onPress={() => handleSelectMode("create")}
           >
+            <Ionicons name="phone-portrait-outline" size={18} color="#FFFFFF" />
             <Text style={s.authBtnOutlineText}>휴대폰 인증으로 계속</Text>
           </Pressable>
 
