@@ -3,6 +3,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -16,6 +18,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLang } from "@/context/LanguageContext";
+import { useFamilyContext } from "@/context/FamilyContext";
+import { api } from "@/lib/api";
 
 const logoImage = require("@/assets/images/logo-anbu.png");
 
@@ -24,9 +28,12 @@ export default function ParentCodeScreen() {
   const topInset = Platform.OS === "web" ? 50 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const { t } = useLang();
+  const familyCtx = useFamilyContext();
 
   const [code, setCode] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [joining, setJoining] = useState(false);
 
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(30)).current;
@@ -44,15 +51,49 @@ export default function ParentCodeScreen() {
     if (error) setError("");
   };
 
-  const handleJoin = () => {
+  const handleNameChange = (text: string) => {
+    setName(text.slice(0, 20));
+    if (error) setError("");
+  };
+
+  const handleJoin = async () => {
+    const trimmedName = name.trim();
     if (code.length !== 6) {
       setError(t.errorCode || "코드를 확인해주세요");
       return;
     }
-    router.push({ pathname: "/child-signup", params: { role: "parent", familyCode: code } });
+    if (!trimmedName) {
+      setError("이름을 입력해주세요");
+      return;
+    }
+
+    setJoining(true);
+    setError("");
+    try {
+      const member = await api.joinFamily(
+        code,
+        familyCtx.deviceId,
+        trimmedName,
+        "parent",
+        familyCtx.accountId,
+      );
+      await familyCtx.connect(
+        code,
+        trimmedName,
+        "parent",
+        null,
+        familyCtx.accountId,
+      );
+      router.replace("/parent");
+    } catch (e: any) {
+      const msg = e.message || "연결에 실패했습니다";
+      setError(msg);
+    } finally {
+      setJoining(false);
+    }
   };
 
-  const canJoin = code.length === 6;
+  const canJoin = code.length === 6 && name.trim().length > 0 && !joining;
 
   return (
     <LinearGradient
@@ -86,6 +127,16 @@ export default function ParentCodeScreen() {
               </View>
 
               <TextInput
+                style={st.nameInput}
+                value={name}
+                onChangeText={handleNameChange}
+                placeholder={(t as any).parentCodeNamePlaceholder}
+                placeholderTextColor="#bbb"
+                maxLength={20}
+                editable={!joining}
+              />
+
+              <TextInput
                 style={st.codeInput}
                 value={code}
                 onChangeText={handleCodeChange}
@@ -94,6 +145,7 @@ export default function ParentCodeScreen() {
                 maxLength={6}
                 autoCapitalize="characters"
                 textAlign="center"
+                editable={!joining}
               />
 
               {error ? <Text style={st.errorText}>{error}</Text> : null}
@@ -106,8 +158,17 @@ export default function ParentCodeScreen() {
                 onPress={handleJoin}
                 disabled={!canJoin}
               >
-                <Ionicons name="link-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={st.joinBtnText}>{t.parentCodeJoinBtn}</Text>
+                {joining ? (
+                  <>
+                    <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={st.joinBtnText}>{(t as any).parentCodeJoining}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="link-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={st.joinBtnText}>{t.parentCodeJoinBtn}</Text>
+                  </>
+                )}
               </Pressable>
 
               <Text style={st.hintText}>{t.parentCodeHint}</Text>
@@ -178,6 +239,17 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
+  },
+  nameInput: {
+    width: "100%",
+    height: 52,
+    backgroundColor: "#F5F0EB",
+    borderRadius: 14,
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: "#1a1a1a",
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   codeInput: {
     width: "100%",

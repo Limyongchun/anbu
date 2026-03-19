@@ -414,7 +414,9 @@ const translations = {
     parentCodeTitle: "가족 코드 입력",
     parentCodeSub: "자녀가 공유한 6자리 코드를 입력해주세요",
     parentCodePlaceholder: "6자리 코드",
+    parentCodeNamePlaceholder: "부모님 이름",
     parentCodeJoinBtn: "연결하기",
+    parentCodeJoining: "연결 중...",
     parentCodeHint: "자녀 앱의 가족 설정에서 코드를 확인할 수 있어요",
 
     // ── 부모 권한 안내 ──
@@ -886,7 +888,9 @@ const translations = {
     parentCodeTitle: "Enter Family Code",
     parentCodeSub: "Enter the 6-digit code shared by your child",
     parentCodePlaceholder: "6-digit code",
+    parentCodeNamePlaceholder: "Parent name",
     parentCodeJoinBtn: "Connect",
+    parentCodeJoining: "Connecting...",
     parentCodeHint: "You can find the code in your child's app under Family Settings",
 
     // ── Parent permissions ──
@@ -1354,7 +1358,9 @@ const translations = {
     parentCodeTitle: "家族コードを入力",
     parentCodeSub: "お子さまが共有した6桁のコードを入力してください",
     parentCodePlaceholder: "6桁のコード",
+    parentCodeNamePlaceholder: "保護者の名前",
     parentCodeJoinBtn: "接続する",
+    parentCodeJoining: "接続中...",
     parentCodeHint: "お子さまのアプリの家族設定でコードを確認できます",
 
     // ── 親権限案内 ──
