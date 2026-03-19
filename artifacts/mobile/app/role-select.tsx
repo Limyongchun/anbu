@@ -102,7 +102,7 @@ const st = StyleSheet.create({
   cardsRow: {
     flexDirection: "row",
     gap: 16,
-    marginBottom: 60,
+    marginBottom: 110,
   },
   card: {
     flex: 1,
