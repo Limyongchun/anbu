@@ -80,7 +80,7 @@ export default function RoleSelectScreen() {
 const st = StyleSheet.create({
   container: { flex: 1 },
   inner: { flex: 1, paddingHorizontal: 28 },
-  topSection: { flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 20 },
+  topSection: { alignItems: "center", marginTop: 60 },
   logo: { width: 140, height: 50, marginBottom: 20 },
   title: {
     fontFamily: "Inter_700Bold",
@@ -102,7 +102,7 @@ const st = StyleSheet.create({
   cardsRow: {
     flexDirection: "row",
     gap: 16,
-    marginBottom: 110,
+    marginTop: 40,
   },
   card: {
     flex: 1,
