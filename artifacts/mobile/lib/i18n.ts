@@ -418,7 +418,7 @@ const translations = {
     parentCodeHint: "자녀 앱의 가족 설정에서 코드를 확인할 수 있어요",
 
     // ── 부모 권한 안내 ──
-    permMainTitle: "ANBU 설정을\n시작해 볼까요?",
+    permMainTitle: "설정을 시작해 볼까요?",
     permMainSub: "부모님의 안전을 위해 몇 가지 설정이 필요해요.",
     permNotifTitle: "알림 허용",
     permNotifDesc: "ANBU가 부모님의 상태를 알려주도록 허용하세요.",
