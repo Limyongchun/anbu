@@ -335,7 +335,7 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
             >
               {sendingOtp
                 ? <ActivityIndicator size="small" color="#9ca3af" />
-                : <Text style={[s.fOtpBtnText, (!phone.trim() || sendingOtp) && s.fOtpBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
+                : <Text numberOfLines={1} style={[s.fOtpBtnText, (!phone.trim() || sendingOtp) && s.fOtpBtnTextDisabled]}>{otpSent ? t.signupOtpResend : t.signupOtpRequest}</Text>
               }
             </Pressable>
           </View>
@@ -395,7 +395,7 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
                         <Ionicons name="checkmark" size={16} color="#fff" />
                         <Text style={s.fOtpBtnText}>{t.signupOtpVerified}</Text>
                       </View>
-                    : <Text style={[s.fOtpBtnText, otp.length !== 6 && s.fOtpBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
+                    : <Text numberOfLines={1} style={[s.fOtpBtnText, otp.length !== 6 && s.fOtpBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
                   }
                 </Pressable>
               </View>
@@ -467,13 +467,13 @@ const s = StyleSheet.create({
   fInput:      { backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Inter_500Medium", color: "#333", borderWidth: 1.5, borderColor: "#E0E0E0", marginBottom: 16 },
   codeInput:   { letterSpacing: 8, textAlign: "center", fontSize: 22, fontFamily: "Inter_700Bold" },
 
-  phoneRow:    { flexDirection: "row", gap: 8, marginBottom: 0 },
-  phoneInput:  { flex: 1, marginBottom: 0 },
+  phoneRow:    { flexDirection: "row", gap: 10, marginBottom: 0, alignItems: "stretch" },
+  phoneInput:  { flex: 5, marginBottom: 0 },
   otpInput:    { letterSpacing: 6, textAlign: "center" },
 
-  fOtpBtn:          { backgroundColor: "#D4843A", borderRadius: 14, paddingHorizontal: 10, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  fOtpBtn:          { flex: 3, backgroundColor: "#D4843A", borderRadius: 14, paddingHorizontal: 6, justifyContent: "center", alignItems: "center", marginBottom: 16 },
   fOtpBtnDisabled:  { backgroundColor: "#d1d5db" },
-  fOtpBtnText:      { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFFFFF" },
+  fOtpBtnText:      { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
   fOtpBtnTextDisabled: { color: "#9ca3af" },
   fOtpVerifiedBtn:  { backgroundColor: "#22c55e" },
 
