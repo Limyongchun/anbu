@@ -653,9 +653,6 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
             {msgs.map((msg) => (
               <View key={msg.id} style={ab.card}>
                 <View style={ab.cardTop}>
-                  <View style={ab.cardAvatar}>
-                    <Ionicons name="person" size={13} color={DS.info} />
-                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={ab.cardName}>{msg.fromName}</Text>
                     <Text style={ab.cardTime}>{formatTimeI18n(msg.createdAt, t)}</Text>
