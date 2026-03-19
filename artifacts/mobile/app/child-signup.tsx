@@ -199,22 +199,25 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
   // ── 완료 화면 ──
   if (step === "complete") {
     return (
-      <View style={[s.container, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}>
+      <LinearGradient
+        colors={["#D4843A", "#C4692E", "#A85528"]}
+        style={[s.gradContainer, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}
+      >
         <Animated.View style={[s.completeWrap, { opacity: fadeIn, transform: [{ scale: scaleUp }] }]}>
           <View style={s.completeIcon}>
-            <Ionicons name="checkmark-circle" size={80} color={COLORS.neon} />
+            <Ionicons name="checkmark-circle" size={80} color="#FFFFFF" />
           </View>
-          <Text style={s.completeTitle}>{t.signupComplete}</Text>
-          <Text style={s.completeSub}>{(t.signupCompleteSub as string).replace("{name}", name)}</Text>
+          <Text style={[s.completeTitle, { color: "#FFFFFF" }]}>{t.signupComplete}</Text>
+          <Text style={[s.completeSub, { color: "rgba(255,255,255,0.85)" }]}>{(t.signupCompleteSub as string).replace("{name}", name)}</Text>
           <Pressable
-            style={({ pressed }) => [s.startBtn, { opacity: pressed ? 0.88 : 1 }]}
+            style={({ pressed }) => [s.startBtn, { backgroundColor: "#FFFFFF", opacity: pressed ? 0.88 : 1 }]}
             onPress={() => router.replace("/child")}
           >
-            <Text style={s.startBtnText}>{t.signupStartAnbu}</Text>
-            <Ionicons name="arrow-forward" size={20} color={COLORS.neonText} />
+            <Text style={[s.startBtnText, { color: "#D4843A" }]}>{t.signupStartAnbu}</Text>
+            <Ionicons name="arrow-forward" size={20} color="#D4843A" />
           </Pressable>
         </Animated.View>
-      </View>
+      </LinearGradient>
     );
   }
 
