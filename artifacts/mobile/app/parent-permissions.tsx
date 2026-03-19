@@ -7,6 +7,7 @@ import {
   Image,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -50,11 +51,16 @@ export default function ParentPermissionsScreen() {
       colors={["#D4843A", "#C4692E", "#A85528"]}
       style={st.container}
     >
-      <View style={[st.inner, { paddingTop: topInset + 20, paddingBottom: bottomInset + 16 }]}>
-        <Pressable style={st.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </Pressable>
+      <Pressable style={[st.backBtn, { top: topInset + 6 }]} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </Pressable>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[st.scrollContent, { paddingTop: topInset + 20, paddingBottom: bottomInset + 80 }]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         <View style={st.topSection}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
           <Text style={st.title}>{(t as any).permMainTitle}</Text>
@@ -74,15 +80,15 @@ export default function ParentPermissionsScreen() {
             </View>
           ))}
         </Animated.View>
+      </ScrollView>
 
-        <View style={st.bottomSection}>
-          <Pressable
-            style={({ pressed }) => [st.nextBtn, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push("/parent-location-permit")}
-          >
-            <Text style={st.nextBtnText}>{t.next}</Text>
-          </Pressable>
-        </View>
+      <View style={[st.bottomSection, { paddingBottom: bottomInset + 16 }]}>
+        <Pressable
+          style={({ pressed }) => [st.nextBtn, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.push("/parent-location-permit")}
+        >
+          <Text style={st.nextBtnText}>{t.next}</Text>
+        </Pressable>
       </View>
     </LinearGradient>
   );
@@ -90,10 +96,8 @@ export default function ParentPermissionsScreen() {
 
 const st = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 24 },
   backBtn: {
     position: "absolute",
-    top: Platform.OS === "web" ? 56 : 50,
     left: 20,
     zIndex: 10,
     width: 40,
@@ -102,6 +106,9 @@ const st = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.15)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
   },
   topSection: { alignItems: "center", marginTop: 40 },
   logo: { width: 100, height: 36, marginBottom: 18 },
@@ -166,8 +173,12 @@ const st = StyleSheet.create({
     lineHeight: 18,
   },
   bottomSection: {
-    marginTop: "auto",
-    paddingBottom: 10,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
   nextBtn: {
     width: "100%",
