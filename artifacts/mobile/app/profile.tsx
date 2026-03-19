@@ -66,7 +66,7 @@ function InfoRow({
       disabled={!onPress}
     >
       <View style={[s.rowIcon, danger && { backgroundColor: "rgba(255,80,80,0.1)" }]}>
-        <Ionicons name={icon as any} size={18} color={danger ? "#ff5050" : COLORS.navPill} />
+        <Ionicons name={icon as any} size={18} color={danger ? "#ff5050" : "#888"} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[s.rowLabel, danger && { color: "#ff5050" }]}>{label}</Text>
@@ -101,8 +101,8 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
         onPress={() => setOpen(!open)}
       >
         <View style={s.rowIcon}>
-          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.neon, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.neonText }}>{current.code}</Text>
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#E0E0E0", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: "#555" }}>{current.code}</Text>
           </View>
         </View>
         <View style={{ flex: 1 }}>
@@ -121,7 +121,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
             >
               <View style={s.rowIcon}>
                 <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: COLORS.textMuted }}>{opt.code}</Text>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: "#999" }}>{opt.code}</Text>
                 </View>
               </View>
               <View style={{ flex: 1 }}>
@@ -473,8 +473,8 @@ export default function ProfileScreen() {
     : myRole === "child"
       ? (isMasterChild ? t.masterChild : t.subChild)
       : "-";
-  const roleColor = myRole === "parent" ? "#6c63ff" : myRole === "child" ? COLORS.neon : "#aaa";
-  const roleTextColor = myRole === "parent" ? "#fff" : myRole === "child" ? COLORS.neonText : "#fff";
+  const roleColor = myRole === "parent" ? "#6c63ff" : myRole === "child" ? "#E0E0E0" : "#aaa";
+  const roleTextColor = myRole === "parent" ? "#fff" : myRole === "child" ? "#555" : "#fff";
 
   const shortId = deviceId ? deviceId.slice(-8).toUpperCase() : "--------";
 
@@ -542,7 +542,7 @@ export default function ProfileScreen() {
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={s.avatarPhoto} />
             ) : (
-              <Ionicons name="camera" size={26} color={COLORS.neon} />
+              <Ionicons name="camera" size={26} color="#888" />
             )}
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -552,7 +552,7 @@ export default function ProfileScreen() {
             </View>
           </View>
           <Pressable style={s.editBtn} onPress={() => { setNameInput(myName ?? ""); setShowNameModal(true); }}>
-            <Ionicons name="pencil" size={15} color={COLORS.navPill} />
+            <Ionicons name="pencil" size={15} color="#888" />
             <Text style={s.editBtnText}>{t.edit}</Text>
           </Pressable>
         </View>
@@ -571,8 +571,8 @@ export default function ProfileScreen() {
                   ))}
                 </View>
                 <Pressable style={[s.copyBtn, childCodeCopied && s.copyBtnDone]} onPress={copyChildCode}>
-                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={14} color={childCodeCopied ? COLORS.neonText : COLORS.navPill} />
-                  <Text style={[s.copyBtnText, childCodeCopied && { color: COLORS.neonText }]}>
+                  <Ionicons name={childCodeCopied ? "checkmark" : "copy-outline"} size={14} color={childCodeCopied ? "#333" : "#888"} />
+                  <Text style={[s.copyBtnText, childCodeCopied && { color: "#333" }]}>
                     {childCodeCopied ? t.copied : t.copy}
                   </Text>
                 </Pressable>
@@ -591,7 +591,7 @@ export default function ProfileScreen() {
                 {parentEntries.length > 0 ? parentEntries.map((entry, idx) => {
                   const isFirst = entry.code === familyCode;
                   return (
-                    <View key={`${entry.code}_${entry.deviceId}`} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                    <View key={`${entry.code}_${entry.deviceId}`} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: "#E8E8E8" }]}>
                       <View style={s.parentAvatar}>
                         <Text style={s.parentAvatarText}>{entry.name[0]?.toUpperCase()}</Text>
                       </View>
@@ -607,7 +607,7 @@ export default function ProfileScreen() {
                     </View>
                   );
                 }) : allFamilyCodes.map((code, idx) => (
-                  <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
+                  <View key={code} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: "#E8E8E8" }]}>
                     <View style={s.parentAvatar}>
                       <Text style={s.parentAvatarText}>?</Text>
                     </View>
@@ -630,8 +630,8 @@ export default function ProfileScreen() {
                 </View>
                 <Text style={s.codeHint}>{t.codeShareHint}</Text>
                 <Pressable style={[s.copyBtn, codeCopied && s.copyBtnDone]} onPress={copyCode}>
-                  <Ionicons name={codeCopied ? "checkmark" : "copy-outline"} size={14} color={codeCopied ? COLORS.neonText : COLORS.navPill} />
-                  <Text style={[s.copyBtnText, codeCopied && { color: COLORS.neonText }]}>
+                  <Ionicons name={codeCopied ? "checkmark" : "copy-outline"} size={14} color={codeCopied ? "#333" : "#888"} />
+                  <Text style={[s.copyBtnText, codeCopied && { color: "#333" }]}>
                     {codeCopied ? t.copied : t.copy}
                   </Text>
                 </Pressable>
@@ -646,8 +646,8 @@ export default function ProfileScreen() {
                 style={s.connectBigBtn}
                 onPress={() => { setJoinCode(""); setJoinName(""); setJoinRole(null); setJoinError(""); setShowJoinSheet(true); }}
               >
-                <View style={[s.connectBigIcon, { backgroundColor: "rgba(122,84,84,0.10)" }]}>
-                  <Ionicons name="enter-outline" size={24} color={COLORS.brandPrimary} />
+                <View style={[s.connectBigIcon, { backgroundColor: "rgba(0,0,0,0.05)" }]}>
+                  <Ionicons name="enter-outline" size={24} color="#888" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.connectBigLabel}>{t.joinByCode}</Text>
@@ -667,8 +667,8 @@ export default function ProfileScreen() {
                 style={s.connectBigBtn}
                 onPress={() => { setCreateName(""); setCreateRole(null); setCreateError(""); setCreatedCode(null); setShowCreateSheet(true); }}
               >
-                <View style={[s.connectBigIcon, { backgroundColor: "rgba(212,242,0,0.12)" }]}>
-                  <Ionicons name="add-circle-outline" size={24} color={COLORS.navPill} />
+                <View style={[s.connectBigIcon, { backgroundColor: "rgba(0,0,0,0.05)" }]}>
+                  <Ionicons name="add-circle-outline" size={24} color="#888" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.connectBigLabel}>{t.createFamily}</Text>
@@ -687,7 +687,7 @@ export default function ProfileScreen() {
             <View style={s.card}>
               <View style={s.childMgmtShareBlock}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <Ionicons name="people-outline" size={18} color={COLORS.navPill} />
+                  <Ionicons name="people-outline" size={18} color="#888" />
                   <Text style={s.childMgmtTitle}>{t.inviteSubChild}</Text>
                 </View>
                 <Text style={s.childMgmtHint}>{t.inviteSubChildHint}</Text>
@@ -695,10 +695,10 @@ export default function ProfileScreen() {
 
               {/* 자녀 목록 — 마스터/서브 모두 동일하게 표시 */}
               {familyChildren.length > 0 && (
-                <View style={{ borderTopWidth: 1, borderTopColor: COLORS.border }}>
+                <View style={{ borderTopWidth: 1, borderTopColor: "#E8E8E8" }}>
                   {familyChildren.map((child, idx) => (
-                    <View key={child.deviceId} style={[s.childRow, idx > 0 && { borderTopWidth: 1, borderTopColor: COLORS.border }]}>
-                      <View style={[s.childAvatar, { backgroundColor: child.childRole === "master" ? COLORS.navPill : "#6366f1" }]}>
+                    <View key={child.deviceId} style={[s.childRow, idx > 0 && { borderTopWidth: 1, borderTopColor: "#E8E8E8" }]}>
+                      <View style={[s.childAvatar, { backgroundColor: child.childRole === "master" ? "#888" : "#6366f1" }]}>
                         <Text style={s.childAvatarText}>{child.memberName[0]?.toUpperCase()}</Text>
                       </View>
                       <View style={{ flex: 1 }}>
@@ -735,7 +735,7 @@ export default function ProfileScreen() {
             <View style={s.card}>
               <View style={s.privacyRow}>
                 <View style={s.privacyIconWrap}>
-                  <Ionicons name="eye-off" size={18} color={COLORS.brandPrimary} />
+                  <Ionicons name="eye-off" size={18} color="#888" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.privacyTitle}>{t.privacyModeLabel}</Text>
@@ -744,7 +744,7 @@ export default function ProfileScreen() {
                 <Switch
                   value={privacyMode}
                   onValueChange={togglePrivacyMode}
-                  trackColor={{ false: "#e2e8f0", true: COLORS.brandPrimary }}
+                  trackColor={{ false: "#e2e8f0", true: "#888" }}
                   thumbColor={privacyMode ? "#fff" : "#fff"}
                 />
               </View>
@@ -797,7 +797,7 @@ export default function ProfileScreen() {
             <View key={i}>
               {i > 0 && <Divider />}
               <Pressable style={s.faqQ} onPress={() => setShowFaq(showFaq === i ? null : i)}>
-                <Ionicons name="help-circle-outline" size={17} color={COLORS.navPill} style={{ marginRight: 10 }} />
+                <Ionicons name="help-circle-outline" size={17} color="#888" style={{ marginRight: 10 }} />
                 <Text style={s.faqQText}>{faq.q}</Text>
                 <Ionicons
                   name={showFaq === i ? "chevron-up" : "chevron-down"}
@@ -863,7 +863,7 @@ export default function ProfileScreen() {
               value={nameInput}
               onChangeText={setNameInput}
               placeholder={t.namePlaceholder}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={"#999"}
               maxLength={20}
               autoFocus={false}
             />
@@ -894,7 +894,7 @@ export default function ProfileScreen() {
               value={addParentCode}
               onChangeText={(t) => setAddParentCode(t.toUpperCase())}
               placeholder="AB1234"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={"#999"}
               maxLength={6}
               autoCapitalize="characters"
               autoFocus={false}
@@ -943,7 +943,7 @@ export default function ProfileScreen() {
               value={joinName}
               onChangeText={setJoinName}
               placeholder={t.nameDisplayPlaceholder}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={"#999"}
               maxLength={20}
               autoFocus={false}
             />
@@ -954,7 +954,7 @@ export default function ProfileScreen() {
               value={joinCode}
               onChangeText={(t) => setJoinCode(t.toUpperCase())}
               placeholder="AB1234"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={"#999"}
               maxLength={6}
               autoCapitalize="characters"
             />
@@ -996,8 +996,8 @@ export default function ProfileScreen() {
                   <Text style={s.createdCodeText}>{createdCode}</Text>
                 </View>
                 <Pressable style={[s.copyBtn, createCodeCopied && s.copyBtnDone, { marginBottom: 16 }]} onPress={copyCreatedCode}>
-                  <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={14} color={createCodeCopied ? COLORS.neonText : COLORS.navPill} />
-                  <Text style={[s.copyBtnText, createCodeCopied && { color: COLORS.neonText }]}>
+                  <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={14} color={createCodeCopied ? "#333" : "#888"} />
+                  <Text style={[s.copyBtnText, createCodeCopied && { color: "#333" }]}>
                     {createCodeCopied ? t.copied : t.copy}
                   </Text>
                 </Pressable>
@@ -1030,7 +1030,7 @@ export default function ProfileScreen() {
                   value={createName}
                   onChangeText={setCreateName}
                   placeholder={t.nameDisplayPlaceholder}
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={"#999"}
                   maxLength={20}
                   autoFocus={false}
                 />
@@ -1095,128 +1095,128 @@ const s = StyleSheet.create({
   headerTitle:  { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.white, letterSpacing: 0.5 },
   backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
 
-  profileCard:  { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: COLORS.cardBg, borderRadius: 20, padding: 18, marginTop: 20, marginBottom: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: COLORS.border },
-  avatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  avatarText:   { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.white },
+  profileCard:  { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#fff", borderRadius: 20, padding: 18, marginTop: 20, marginBottom: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: "#E8E8E8" },
+  avatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#E0E0E0", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatarText:   { fontFamily: "Inter_700Bold", fontSize: 22, color: "#666" },
   avatarPhoto:  { width: 56, height: 56, borderRadius: 28 },
-  profileName:  { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textDark, marginBottom: 6 },
+  profileName:  { fontFamily: "Inter_700Bold", fontSize: 18, color: "#333", marginBottom: 6 },
   roleBadge:    { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   roleText:     { fontFamily: "Inter_600SemiBold", fontSize: 11 },
   editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.06)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
-  editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.neon },
+  editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666" },
 
-  sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.textMid, letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#999", letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
   privacyRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
   privacyIconWrap: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(139,92,246,0.1)", alignItems: "center", justifyContent: "center" },
-  privacyTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.textDark, marginBottom: 2 },
-  privacyDesc:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, lineHeight: 16 },
+  privacyTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: "#333", marginBottom: 2 },
+  privacyDesc:  { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999", lineHeight: 16 },
 
-  card:         { backgroundColor: COLORS.cardBg, borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 1, borderWidth: 1, borderColor: COLORS.border },
+  card:         { backgroundColor: "#fff", borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 1, borderWidth: 1, borderColor: "#E8E8E8" },
 
   row:          { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
-  rowIcon:      { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
-  rowLabel:     { fontFamily: "Inter_500Medium", fontSize: 15, color: COLORS.textDark, marginBottom: 1 },
-  rowValue:     { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
+  rowIcon:      { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.04)", alignItems: "center", justifyContent: "center" },
+  rowLabel:     { fontFamily: "Inter_500Medium", fontSize: 15, color: "#333", marginBottom: 1 },
+  rowValue:     { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
 
-  divider:      { height: 1, backgroundColor: COLORS.border, marginLeft: 64 },
+  divider:      { height: 1, backgroundColor: "#E8E8E8", marginLeft: 64 },
 
   codeDisplay:  { flexDirection: "row", justifyContent: "center", gap: 8, paddingVertical: 20 },
-  codeCell:     { width: 44, height: 52, borderRadius: 12, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
-  codeCellText: { fontFamily: "Inter_700Bold", fontSize: 22, color: COLORS.neon, letterSpacing: 2 },
-  codeHint:     { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, textAlign: "center", marginBottom: 14 },
+  codeCell:     { width: 44, height: 52, borderRadius: 12, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center" },
+  codeCellText: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#555", letterSpacing: 2 },
+  codeHint:     { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999", textAlign: "center", marginBottom: 14 },
   copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(0,0,0,0.06)" },
-  copyBtnDone:  { backgroundColor: COLORS.neon },
-  copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.neon },
+  copyBtnDone:  { backgroundColor: "#888" },
+  copyBtnText:  { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#666" },
 
-  connectNowBtn:{ marginTop: 12, backgroundColor: COLORS.neon, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
+  connectNowBtn:{ marginTop: 12, backgroundColor: "#888", paddingHorizontal: 24, paddingVertical: 11, borderRadius: 50 },
   connectNowText:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#FFFFFF" },
 
   // ── 자녀 다중 부모님 섹션 ──
   parentRow:        { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
-  parentCodeBadge:  { backgroundColor: COLORS.navPill, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, minWidth: 72, alignItems: "center" },
-  parentAvatar:     { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
-  parentAvatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.neon },
-  parentCodeText:   { fontFamily: "Inter_700Bold", fontSize: 13, color: COLORS.neon, letterSpacing: 2 },
-  parentRowLabel:   { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark },
-  parentRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  parentCodeBadge:  { backgroundColor: "#E8E8E8", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, minWidth: 72, alignItems: "center" },
+  parentAvatar:     { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E0E0E0", alignItems: "center", justifyContent: "center" },
+  parentAvatarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#666" },
+  parentCodeText:   { fontFamily: "Inter_700Bold", fontSize: 13, color: "#555", letterSpacing: 2 },
+  parentRowLabel:   { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#333" },
+  parentRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "#999", marginTop: 1 },
   parentRemoveBtn:  { padding: 4 },
-  addParentBtn:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 50, borderWidth: 1.5, borderColor: COLORS.neon },
-  addParentBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.neon },
+  addParentBtn:     { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, marginVertical: 12, paddingVertical: 12, borderRadius: 50, borderWidth: 1.5, borderColor: "#ccc" },
+  addParentBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#666" },
 
   // ── 미연결 연결 섹션 ──
   connectSection:   { paddingTop: 4, paddingBottom: 8 },
-  connectSectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: COLORS.textMid, textAlign: "center", marginBottom: 14 },
-  connectBigBtn:    { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 4 },
+  connectSectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#999", textAlign: "center", marginBottom: 14 },
+  connectBigBtn:    { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: "#E8E8E8", marginBottom: 4 },
   connectBigIcon:   { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  connectBigLabel:  { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.textDark, marginBottom: 2 },
-  connectBigDesc:   { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
+  connectBigLabel:  { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#333", marginBottom: 2 },
+  connectBigDesc:   { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
   connectOrRow:     { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10, paddingHorizontal: 16 },
-  connectOrLine:    { flex: 1, height: 1, backgroundColor: COLORS.border },
-  connectOrText:    { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
+  connectOrLine:    { flex: 1, height: 1, backgroundColor: "rgba(0,0,0,0.08)" },
+  connectOrText:    { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
 
   // ── 참가 / 만들기 시트 ──
-  bigSheet:         { backgroundColor: COLORS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 },
-  sheetSub:         { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginTop: -10, marginBottom: 20 },
-  fieldLabel:       { fontFamily: "Inter_600SemiBold", fontSize: 12, color: COLORS.textMid, letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
+  bigSheet:         { backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 },
+  sheetSub:         { fontFamily: "Inter_400Regular", fontSize: 13, color: "#999", textAlign: "center", marginTop: -10, marginBottom: 20 },
+  fieldLabel:       { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#999", letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
   roleRow:          { flexDirection: "row", gap: 10, marginBottom: 16 },
-  roleChip:         { flex: 1, paddingVertical: 10, borderRadius: 50, borderWidth: 1.5, borderColor: COLORS.border, alignItems: "center" },
-  roleChipActive:   { backgroundColor: COLORS.navPill, borderColor: COLORS.navPill },
-  roleChipText:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textMid },
-  roleChipTextActive:{ color: COLORS.white },
-  sheetInput:       { backgroundColor: COLORS.white, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
+  roleChip:         { flex: 1, paddingVertical: 10, borderRadius: 50, borderWidth: 1.5, borderColor: "#E8E8E8", alignItems: "center" },
+  roleChipActive:   { backgroundColor: "#888", borderColor: "#888" },
+  roleChipText:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#999" },
+  roleChipTextActive:{ color: "#fff" },
+  sheetInput:       { backgroundColor: "#fff", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 16, fontFamily: "Inter_400Regular", color: "#333", borderWidth: 1, borderColor: "rgba(0,0,0,0.1)", marginBottom: 14 },
   codeInputStyle:   { fontFamily: "Inter_700Bold", fontSize: 22, letterSpacing: 8, textAlign: "center" },
   errorText:        { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.danger, textAlign: "center", marginBottom: 12 },
 
   // ── 코드 발급 완료 ──
-  createdCodeBox:   { backgroundColor: COLORS.navPill, borderRadius: 18, paddingVertical: 22, marginBottom: 14, alignItems: "center" },
-  createdCodeText:  { fontFamily: "Inter_700Bold", fontSize: 34, color: COLORS.neon, letterSpacing: 10 },
+  createdCodeBox:   { backgroundColor: "#E8E8E8", borderRadius: 18, paddingVertical: 22, marginBottom: 14, alignItems: "center" },
+  createdCodeText:  { fontFamily: "Inter_700Bold", fontSize: 34, color: "#555", letterSpacing: 10 },
 
   faqQ:         { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },
-  faqQText:     { fontFamily: "Inter_500Medium", fontSize: 14, color: COLORS.textDark, flex: 1, lineHeight: 20 },
-  faqA:         { backgroundColor: "rgba(26,34,48,0.04)", paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 8, marginBottom: 10, borderRadius: 12 },
-  faqAText:     { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.textMid, lineHeight: 20 },
+  faqQText:     { fontFamily: "Inter_500Medium", fontSize: 14, color: "#333", flex: 1, lineHeight: 20 },
+  faqA:         { backgroundColor: "rgba(0,0,0,0.03)", paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 8, marginBottom: 10, borderRadius: 12 },
+  faqAText:     { fontFamily: "Inter_400Regular", fontSize: 13, color: "#777", lineHeight: 20 },
 
   bottomNote:   { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(0,0,0,0.2)", textAlign: "center", marginTop: 28 },
 
-  nameSheet:    { backgroundColor: COLORS.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+  nameSheet:    { backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
   sheetHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.12)", alignSelf: "center", marginBottom: 18 },
-  sheetTitle:   { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.textDark, marginBottom: 16, textAlign: "center" },
-  nameInput:    { backgroundColor: COLORS.white, borderRadius: 16, padding: 14, fontSize: 16, fontFamily: "Inter_400Regular", color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border, marginBottom: 14 },
-  saveBtn:      { backgroundColor: COLORS.navPill, paddingVertical: 14, borderRadius: 50, alignItems: "center" },
-  saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: COLORS.white },
+  sheetTitle:   { fontFamily: "Inter_700Bold", fontSize: 17, color: "#333", marginBottom: 16, textAlign: "center" },
+  nameInput:    { backgroundColor: "#fff", borderRadius: 16, padding: 14, fontSize: 16, fontFamily: "Inter_400Regular", color: "#333", borderWidth: 1, borderColor: "rgba(0,0,0,0.1)", marginBottom: 14 },
+  saveBtn:      { backgroundColor: "#888", paddingVertical: 14, borderRadius: 50, alignItems: "center" },
+  saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 
 
   confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
   confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },
-  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.textDark, textAlign: "center" },
-  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.textMid, textAlign: "center", lineHeight: 20 },
+  confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#333", textAlign: "center" },
+  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "#777", textAlign: "center", lineHeight: 20 },
   confirmBtns:       { flexDirection: "row", gap: 10, marginTop: 6 },
-  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: COLORS.surfaceSoft, alignItems: "center" },
-  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.textMid },
+  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#F0F0F0", alignItems: "center" },
+  confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#777" },
   confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: COLORS.danger, alignItems: "center" },
   confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 
   // ── 자녀 관리 섹션 ──
   childMgmtShareBlock: { padding: 16, paddingBottom: 8 },
-  childMgmtTitle:  { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark },
-  childMgmtHint:   { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted, lineHeight: 18, marginBottom: 14 },
+  childMgmtTitle:  { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#333" },
+  childMgmtHint:   { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999", lineHeight: 18, marginBottom: 14 },
   childCodeDisplay:{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 12 },
-  childCodeCell:   { width: 38, height: 44, borderRadius: 10, backgroundColor: COLORS.navPill, alignItems: "center", justifyContent: "center" },
-  childCodeCellText:{ fontFamily: "Inter_700Bold", fontSize: 18, color: COLORS.neon, letterSpacing: 1 },
+  childCodeCell:   { width: 38, height: 44, borderRadius: 10, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center" },
+  childCodeCellText:{ fontFamily: "Inter_700Bold", fontSize: 18, color: "#555", letterSpacing: 1 },
 
   childRow:        { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 12 },
   removeChildBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(229,57,53,0.10)", alignItems: "center", justifyContent: "center" },
   childAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   childAvatarText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
-  childRowName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.textDark, marginBottom: 2 },
-  childRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: COLORS.textMuted },
+  childRowName:    { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#333", marginBottom: 2 },
+  childRowSub:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "#999" },
 
-  masterBadge:     { backgroundColor: "rgba(212,242,0,0.4)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  masterBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.navPill },
-  subBadge:        { backgroundColor: "rgba(122,84,84,0.12)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  subBadgeText:    { fontFamily: "Inter_600SemiBold", fontSize: 10, color: COLORS.brandPrimary },
+  masterBadge:     { backgroundColor: "rgba(0,0,0,0.06)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  masterBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#666" },
+  subBadge:        { backgroundColor: "rgba(0,0,0,0.04)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  subBadgeText:    { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#888" },
 
   subChildNotice:      { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
-  subChildNoticeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.brandPrimary, marginBottom: 2 },
-  subChildNoticeText:  { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.textMuted },
+  subChildNoticeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#666", marginBottom: 2 },
+  subChildNoticeText:  { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
 });
