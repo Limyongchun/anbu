@@ -38,20 +38,16 @@ function logActivity(
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const INTERVAL_MS = 6000;
-const CROSSFADE_MS = 800;
+const SLIDE_INTERVAL = 6000;
+const SLIDE_DURATION = 900;
+const AUTO_RESUME_DELAY = 5000;
 const DOUBLE_TAP_DELAY = 300;
 const DEMO_SLIDE_BGS = ["#1a3a2a", "#1a2a3a", "#2a1a3a"];
-const EASE_SMOOTH = Easing.bezier(0.4, 0, 0.2, 1);
+const EASE_SLIDE = Easing.bezier(0.25, 0.1, 0.25, 1);
 
-// ── 타입 ──────────────────────────────────────────────────────────────────────
 type Slide =
   | { kind: "msg"; msg: FamilyMessage }
   | { kind: "demo"; id: number; emoji: string; text: string; name: string; bg: string };
-
-function slideId(s: Slide): string | number {
-  return s.kind === "msg" ? s.msg.id : s.id;
-}
 
 function buildSlides(msgs: FamilyMessage[], demoSlides: any[]): Slide[] {
   if (msgs.length > 0) return msgs.map((msg) => ({ kind: "msg", msg }));
@@ -65,7 +61,6 @@ function buildSlides(msgs: FamilyMessage[], demoSlides: any[]): Slide[] {
   }));
 }
 
-// ── 하트 파티클 ───────────────────────────────────────────────────────────────
 interface FloatHeart {
   id: number;
   x: number;
@@ -102,7 +97,6 @@ function HeartParticle({ h }: { h: FloatHeart }) {
   );
 }
 
-// ── 시간 포맷 ─────────────────────────────────────────────────────────────────
 function formatTimeI18n(s: string, t: any): string {
   const m = Math.floor((Date.now() - new Date(s).getTime()) / 60000);
   if (m < 1) return t.timeJustNow;
@@ -112,15 +106,15 @@ function formatTimeI18n(s: string, t: any): string {
   return (t.timeDayAgo as string).replace("{d}", String(Math.floor(hh / 24)));
 }
 
-// ── 사진 슬라이드 (분리 컴포넌트) ─────────────────────────────────────────────
 const PhotoSlide = React.memo(function PhotoSlide({ msg }: { msg: FamilyMessage }) {
   const { t } = useLang();
   return (
-    <View style={StyleSheet.absoluteFillObject}>
+    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#000" }]}>
       <ExpoImage
         source={{ uri: msg.photoData! }}
-        style={StyleSheet.absoluteFillObject}
+        style={{ width: SCREEN_W, height: SCREEN_H }}
         contentFit="cover"
+        contentPosition="top center"
         transition={0}
         cachePolicy="memory-disk"
       />
@@ -139,10 +133,7 @@ const PhotoSlide = React.memo(function PhotoSlide({ msg }: { msg: FamilyMessage 
   );
 });
 
-// ── 텍스트/데모 슬라이드 ──────────────────────────────────────────────────────
 const TextSlide = React.memo(function TextSlide({ slide }: { slide: Slide }) {
-  const { t } = useLang();
-
   if (slide.kind === "demo") {
     return (
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: slide.bg }]}>
@@ -159,6 +150,7 @@ const TextSlide = React.memo(function TextSlide({ slide }: { slide: Slide }) {
   }
 
   const { msg } = slide;
+  const { t } = useLang();
   return (
     <View style={[StyleSheet.absoluteFillObject, sl.textSlideBg]}>
       <View style={sl.decoCircle1} />
@@ -176,16 +168,12 @@ const TextSlide = React.memo(function TextSlide({ slide }: { slide: Slide }) {
   );
 });
 
-// ── 슬라이드 렌더 (photo vs text 분기) ────────────────────────────────────────
 function RenderSlide({ slide }: { slide: Slide | null }) {
   if (!slide) return <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#000" }]} />;
   if (slide.kind === "msg" && slide.msg.photoData) return <PhotoSlide msg={slide.msg} />;
   return <TextSlide slide={slide} />;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ██ 부모님 메인 (디지털 액자) ██
-// ══════════════════════════════════════════════════════════════════════════════
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, deviceId, isConnected } = useFamilyContext();
@@ -194,7 +182,6 @@ export default function ParentScreen() {
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  // ── 메시지 & 슬라이드 상태 ──
   const [msgs, setMsgs] = useState<FamilyMessage[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [curIdx, setCurIdx] = useState(0);
@@ -202,20 +189,15 @@ export default function ParentScreen() {
   const transitioningRef = useRef(false);
   const currentMsgIdRef = useRef<number | null>(null);
 
-  // ── front/back 2레이어 crossfade ──
-  const [frontIdx, setFrontIdx] = useState(0);
-  const [backIdx, setBackIdx] = useState(0);
-  const [isFrontActive, setIsFrontActive] = useState(true);
-  const frontOpacity = useRef(new Animated.Value(1)).current;
-  const backOpacity = useRef(new Animated.Value(0)).current;
+  const slideY = useRef(new Animated.Value(0)).current;
+  const [nextIdx, setNextIdx] = useState(0);
 
-  // ── 프로그레스 ──
   const progressAnim = useRef(new Animated.Value(0)).current;
   const progressRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // ── 하트 ──
   const [floatHearts, setFloatHearts] = useState<FloatHeart[]>([]);
   const lastTapRef = useRef(0);
+  const autoResumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const spawnHeartsAt = useCallback((x: number, y: number) => {
     const hs: FloatHeart[] = Array.from({ length: 8 }, (_, i) => ({
@@ -229,7 +211,6 @@ export default function ParentScreen() {
     setTimeout(() => setFloatHearts((p) => p.filter((h) => !hs.some((n) => n.id === h.id))), 2200);
   }, []);
 
-  // ── UI 오버레이 토글 ──
   const [uiVisible, setUiVisible] = useState(false);
   const topBarAnim = useRef(new Animated.Value(-160)).current;
   const bottomBarAnim = useRef(new Animated.Value(160)).current;
@@ -256,7 +237,6 @@ export default function ParentScreen() {
     uiHideTimer.current = setTimeout(() => hideUI(), 5000);
   }, [topBarAnim, bottomBarAnim, hideUI]);
 
-  // ── GPS ──
   const [permission, requestPermission] = Location.useForegroundPermissions();
   const [isSharing, setIsSharing] = useState(true);
   const [currentLoc, setCurrentLoc] = useState<Location.LocationObject | null>(null);
@@ -264,7 +244,25 @@ export default function ParentScreen() {
   const [locUploading, setLocUploading] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
-  // ── 메시지 로딩 (msg.id 유지 보정) ──
+  const pendingMsgsRef = useRef<FamilyMessage[] | null>(null);
+
+  const applyNewMsgs = useCallback(
+    (newMsgs: FamilyMessage[]) => {
+      const watchId = currentMsgIdRef.current;
+      setMsgs((prevMsgs) => {
+        if (watchId !== null && newMsgs.length > 0) {
+          const newIndex = newMsgs.findIndex((m) => m.id === watchId);
+          if (newIndex >= 0) {
+            setTimeout(() => setCurIdx(newIndex), 0);
+          }
+        }
+        return newMsgs;
+      });
+      pendingMsgsRef.current = null;
+    },
+    [],
+  );
+
   const loadMsgs = useCallback(async () => {
     if (allFamilyCodes.length === 0) return;
     try {
@@ -282,28 +280,6 @@ export default function ParentScreen() {
       }
     } catch {}
   }, [allFamilyCodes]);
-
-  const pendingMsgsRef = useRef<FamilyMessage[] | null>(null);
-
-  const applyNewMsgs = useCallback(
-    (newMsgs: FamilyMessage[]) => {
-      const watchId = currentMsgIdRef.current;
-      setMsgs((prevMsgs) => {
-        if (watchId !== null && newMsgs.length > 0) {
-          const newIndex = newMsgs.findIndex((m) => m.id === watchId);
-          if (newIndex >= 0) {
-            setTimeout(() => {
-              setCurIdx(newIndex);
-              setFrontIdx(newIndex);
-            }, 0);
-          }
-        }
-        return newMsgs;
-      });
-      pendingMsgsRef.current = null;
-    },
-    [],
-  );
 
   useEffect(() => {
     if (allFamilyCodes.length === 0) return;
@@ -422,11 +398,9 @@ export default function ParentScreen() {
     if (currentLoc) await uploadLoc(currentLoc, next);
   };
 
-  // ── 슬라이드 빌드 ──
   const slides = useMemo(() => buildSlides(msgs, t.parentDemoSlides as any[]), [msgs, t.parentDemoSlides]);
   const total = slides.length;
 
-  // ── 현재 보고 있는 msg.id 추적 ──
   useEffect(() => {
     const cur = slides[curIdx];
     if (cur?.kind === "msg") {
@@ -434,16 +408,15 @@ export default function ParentScreen() {
     }
   }, [curIdx, slides]);
 
-  // ── 다음 이미지 prefetch ──
   useEffect(() => {
     if (total <= 1) return;
-    const nextSlide = slides[(curIdx + 1) % total];
+    const ni = (curIdx + 1) % total;
+    const nextSlide = slides[ni];
     if (nextSlide?.kind === "msg" && nextSlide.msg.photoData) {
       ExpoImage.prefetch(nextSlide.msg.photoData);
     }
   }, [curIdx, total, slides]);
 
-  // ── 슬라이드 전환 (front/back crossfade) ──
   const slideViewCountRef = useRef(0);
   const lastSlideLogRef = useRef(0);
 
@@ -453,11 +426,11 @@ export default function ParentScreen() {
     progressAnim.stopAnimation();
 
     slideViewCountRef.current += 1;
-    const nextI = (curIdx + 1) % total;
+    const ni = (curIdx + 1) % total;
     const now = Date.now();
     if (now - lastSlideLogRef.current > 60000) {
       lastSlideLogRef.current = now;
-      const s = slides[nextI];
+      const s = slides[ni];
       const detail =
         s?.kind === "msg" && s.msg.photoData
           ? (t.parentLogViewPhoto as string)
@@ -465,71 +438,27 @@ export default function ParentScreen() {
       logActivity(familyCode, deviceId, myName, "view_slide", detail);
     }
 
-    if (isFrontActive) {
-      setBackIdx(nextI);
-      backOpacity.setValue(0);
-      Animated.parallel([
-        Animated.timing(backOpacity, {
-          toValue: 1,
-          duration: CROSSFADE_MS,
-          easing: EASE_SMOOTH,
-          useNativeDriver: true,
-        }),
-        Animated.timing(frontOpacity, {
-          toValue: 0,
-          duration: CROSSFADE_MS,
-          easing: EASE_SMOOTH,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setIsFrontActive(false);
-        setCurIdx(nextI);
-        transitioningRef.current = false;
-        if (pendingMsgsRef.current) applyNewMsgs(pendingMsgsRef.current);
-      });
-    } else {
-      setFrontIdx(nextI);
-      frontOpacity.setValue(0);
-      Animated.parallel([
-        Animated.timing(frontOpacity, {
-          toValue: 1,
-          duration: CROSSFADE_MS,
-          easing: EASE_SMOOTH,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backOpacity, {
-          toValue: 0,
-          duration: CROSSFADE_MS,
-          easing: EASE_SMOOTH,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setIsFrontActive(true);
-        setCurIdx(nextI);
-        transitioningRef.current = false;
-        if (pendingMsgsRef.current) applyNewMsgs(pendingMsgsRef.current);
-      });
-    }
-  }, [
-    total,
-    curIdx,
-    isFrontActive,
-    frontOpacity,
-    backOpacity,
-    progressAnim,
-    slides,
-    familyCode,
-    deviceId,
-    myName,
-    applyNewMsgs,
-  ]);
+    setNextIdx(ni);
+    slideY.setValue(0);
 
-  // ── 프로그레스 타이머 ──
+    Animated.timing(slideY, {
+      toValue: -SCREEN_H,
+      duration: SLIDE_DURATION,
+      easing: EASE_SLIDE,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurIdx(ni);
+      slideY.setValue(0);
+      transitioningRef.current = false;
+      if (pendingMsgsRef.current) applyNewMsgs(pendingMsgsRef.current);
+    });
+  }, [total, curIdx, slideY, progressAnim, slides, familyCode, deviceId, myName, applyNewMsgs]);
+
   const startProgress = useCallback(() => {
     progressAnim.setValue(0);
     progressRef.current = Animated.timing(progressAnim, {
       toValue: 1,
-      duration: INTERVAL_MS,
+      duration: SLIDE_INTERVAL,
       useNativeDriver: false,
     });
     progressRef.current.start(({ finished }) => {
@@ -547,7 +476,31 @@ export default function ParentScreen() {
     return stopProgress;
   }, [isPaused, curIdx, total]);
 
-  // ── 하트 ──
+  const clearAutoResume = () => {
+    if (autoResumeTimer.current) {
+      clearTimeout(autoResumeTimer.current);
+      autoResumeTimer.current = null;
+    }
+  };
+
+  const pauseSlideshow = useCallback(() => {
+    clearAutoResume();
+    setIsPaused(true);
+    stopProgress();
+    autoResumeTimer.current = setTimeout(() => {
+      setIsPaused(false);
+    }, AUTO_RESUME_DELAY);
+  }, [stopProgress]);
+
+  const resumeSlideshow = useCallback(() => {
+    clearAutoResume();
+    setIsPaused(false);
+  }, []);
+
+  useEffect(() => {
+    return () => clearAutoResume();
+  }, []);
+
   const heartSlide = useCallback(
     async (slide: Slide, x: number, y: number) => {
       spawnHeartsAt(x, y);
@@ -572,25 +525,38 @@ export default function ParentScreen() {
     [familyCode, deviceId, myName, spawnHeartsAt],
   );
 
-  // ── 터치: 탭→UI토글, 더블탭→하트, 스와이프↑→다음 ──
-  const touchStartY = useRef(0);
-  const touchStartT = useRef(0);
+  const activeSlide = slides[curIdx] ?? null;
+  const nextSlideData = slides[nextIdx] ?? null;
 
-  const onTouchStart = (e: any) => {
-    touchStartY.current = e.nativeEvent?.pageY ?? e.touches?.[0]?.pageY ?? 0;
-    touchStartT.current = Date.now();
-    setIsPaused(true);
-    stopProgress();
+  const onTouchStart = () => {
+    if (isPaused) {
+      resumeSlideshow();
+    } else {
+      pauseSlideshow();
+    }
   };
 
-  const activeSlide = slides[curIdx] ?? null;
+  const touchStartRef = useRef({ y: 0, t: 0, x: 0 });
 
-  const onTouchEnd = (e: any) => {
+  const onTouchStartFull = (e: any) => {
+    touchStartRef.current = {
+      y: e.nativeEvent?.pageY ?? e.touches?.[0]?.pageY ?? 0,
+      x: e.nativeEvent?.pageX ?? e.touches?.[0]?.pageX ?? 0,
+      t: Date.now(),
+    };
+  };
+
+  const onTouchEndFull = (e: any) => {
     const endY = e.nativeEvent?.pageY ?? e.changedTouches?.[0]?.pageY ?? 0;
     const endX = e.nativeEvent?.pageX ?? e.changedTouches?.[0]?.pageX ?? 0;
-    const deltaY = endY - touchStartY.current;
-    const elapsed = Date.now() - touchStartT.current;
-    setIsPaused(false);
+    const deltaY = endY - touchStartRef.current.y;
+    const elapsed = Date.now() - touchStartRef.current.t;
+
+    if (deltaY < -60 && elapsed < 500) {
+      hideUI();
+      goNext();
+      return;
+    }
 
     if (Math.abs(deltaY) < 50 && elapsed < 300) {
       const now = Date.now();
@@ -598,35 +564,33 @@ export default function ParentScreen() {
         lastTapRef.current = 0;
         if (activeSlide) heartSlide(activeSlide, endX, endY);
         hideUI();
-      } else {
-        lastTapRef.current = now;
-        setTimeout(() => {
-          if (lastTapRef.current === now) {
-            if (uiVisible) hideUI();
-            else showUI();
-          }
-        }, DOUBLE_TAP_DELAY + 30);
+        return;
       }
-    } else if (deltaY < -60) {
-      hideUI();
-      goNext();
+      lastTapRef.current = now;
+      setTimeout(() => {
+        if (lastTapRef.current === now) {
+          if (uiVisible) {
+            hideUI();
+            resumeSlideshow();
+          } else {
+            showUI();
+            pauseSlideshow();
+          }
+        }
+      }, DOUBLE_TAP_DELAY + 30);
     }
   };
 
-  // ── 렌더용 데이터 ──
-  const frontSlide = slides[frontIdx] ?? null;
-  const backSlide = slides[backIdx] ?? null;
   const progressWidth = progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
   const currentHearts = activeSlide?.kind === "msg" ? activeSlide.msg.hearts : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <View style={ps.slideArea}>
-        {/* ── 터치 영역 ── */}
         <View
           style={StyleSheet.absoluteFillObject}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
+          onTouchStart={onTouchStartFull}
+          onTouchEnd={onTouchEndFull}
         >
           {loadingMsgs && msgs.length === 0 ? (
             <View style={ps.loadingWrap}>
@@ -635,13 +599,17 @@ export default function ParentScreen() {
             </View>
           ) : total > 0 ? (
             <>
-              {/* ── FRONT 레이어 (항상 존재) ── */}
-              <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: frontOpacity }]}>
-                <RenderSlide slide={frontSlide} />
-              </Animated.View>
-              {/* ── BACK 레이어 (항상 존재) ── */}
-              <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backOpacity }]}>
-                <RenderSlide slide={backSlide} />
+              <View style={StyleSheet.absoluteFillObject}>
+                <RenderSlide slide={nextSlideData} />
+              </View>
+
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  { transform: [{ translateY: slideY }] },
+                ]}
+              >
+                <RenderSlide slide={activeSlide} />
               </Animated.View>
             </>
           ) : (
@@ -658,12 +626,10 @@ export default function ParentScreen() {
           )}
         </View>
 
-        {/* ── 하트 파티클 ── */}
         {floatHearts.map((h) => (
           <HeartParticle key={h.id} h={h} />
         ))}
 
-        {/* ── 프로그레스 바 ── */}
         {total > 1 && (
           <View style={[ps.storyBars, { top: topInset + 10 }]} pointerEvents="none">
             {slides.map((_, i) => (
@@ -679,7 +645,6 @@ export default function ParentScreen() {
           </View>
         )}
 
-        {/* ── 상단 오버레이 ── */}
         <Animated.View
           style={[ps.topOverlay, { paddingTop: topInset + 14, transform: [{ translateY: topBarAnim }] }]}
           pointerEvents={uiVisible ? "box-none" : "none"}
@@ -707,7 +672,6 @@ export default function ParentScreen() {
           </View>
         </Animated.View>
 
-        {/* ── 하단 오버레이 ── */}
         <Animated.View
           style={[
             ps.bottomOverlay,
@@ -737,7 +701,6 @@ export default function ParentScreen() {
           </View>
         </Animated.View>
 
-        {/* ── 일시정지 표시 ── */}
         {isPaused && !transitioningRef.current && (
           <View style={ps.pauseOverlay} pointerEvents="none">
             <View style={ps.pauseBadge}>
@@ -751,7 +714,6 @@ export default function ParentScreen() {
   );
 }
 
-// ── 슬라이드 스타일 ───────────────────────────────────────────────────────────
 const sl = StyleSheet.create({
   photoMeta: {
     position: "absolute",
@@ -794,7 +756,6 @@ const sl = StyleSheet.create({
   captionTime2: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.35)" },
 });
 
-// ── 화면 스타일 ───────────────────────────────────────────────────────────────
 const ps = StyleSheet.create({
   slideArea: { flex: 1, overflow: "hidden", backgroundColor: "#000" },
 
