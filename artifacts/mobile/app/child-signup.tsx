@@ -361,8 +361,8 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
             <View style={s.recoveryBox}>
               <Text style={s.recoveryTitle}>{t.signupRecoveryTitle || "기존 가족이 발견됐어요!"}</Text>
               <Text style={s.recoveryDesc}>{t.signupRecoveryDesc || "이 번호로 등록된 가족이 있습니다. 바로 복구할 수 있어요."}</Text>
-              {existingFamilies.map((fam) => (
-                <Pressable key={fam.familyCode} style={s.recoveryCard} onPress={() => handleRecoverFamily(fam)}>
+              {existingFamilies.map((fam, idx) => (
+                <Pressable key={`${fam.familyCode}-${fam.deviceId || idx}`} style={s.recoveryCard} onPress={() => handleRecoverFamily(fam)}>
                   <View style={{ flex: 1 }}>
                     <Text style={s.recoveryName}>{fam.memberName}</Text>
                     <Text style={s.recoveryCode}>{fam.familyCode} · {fam.role === "child" ? (fam.childRole === "master" ? "마스터" : "서브") : "부모"}</Text>
