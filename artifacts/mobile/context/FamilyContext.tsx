@@ -60,7 +60,7 @@ function buildAllCodes(primary: string | null, extras: string[]): string[] {
   return result;
 }
 
-const FamilyContext = createContext<FamilyContextValue | null>(null);
+export const FamilyContext = createContext<FamilyContextValue | null>(null);
 
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FamilyState>({

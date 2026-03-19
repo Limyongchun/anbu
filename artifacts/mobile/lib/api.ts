@@ -4,7 +4,12 @@ const BASE = process.env.EXPO_PUBLIC_API_URL
     ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
     : "/api";
 
+let _previewMode = false;
+export function setPreviewMode(on: boolean) { _previewMode = on; }
+export function isPreviewMode() { return _previewMode; }
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  if (_previewMode) return [] as unknown as T;
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,

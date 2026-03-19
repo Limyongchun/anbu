@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,18 +13,40 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLang } from "@/context/LanguageContext";
+import { MockFamilyProvider } from "@/context/MockFamilyProvider";
+import { setPreviewMode } from "@/lib/api";
 import COLORS from "@/constants/colors";
 
-type ScreenId = null | "signup-phone" | "setup-preview";
+import SplashScreen from "@/app/index";
+import ChildSignupScreen from "@/app/child-signup";
+import ChildScreen from "@/app/child";
+import ParentScreen from "@/app/parent";
+import ProfileScreen from "@/app/profile";
+import SetupScreen from "@/app/setup";
 
-const SCREENS = [
-  { id: "splash" as const, label: "1번 — 스플래시", desc: "동영상 배경 + 로고", icon: "play-circle" as const, route: "/" },
-  { id: "signup-mode" as const, label: "2번 — 회원가입 모드선택", desc: "Apple/Google/휴대폰 인증", icon: "log-in" as const, route: "/child-signup" },
-  { id: "signup-phone" as const, label: "3번 — 휴대폰 인증 폼", desc: "이름/전화번호/OTP 입력", icon: "phone-portrait" as const, inline: true },
-  { id: "child" as const, label: "4번 — 자녀 홈", desc: "대시보드 + 5탭 내비게이션", icon: "home" as const, route: "/child" },
-  { id: "parent" as const, label: "5번 — 부모 디지털 액자", desc: "사진 슬라이드쇼 + GPS", icon: "images" as const, route: "/parent" },
-  { id: "profile" as const, label: "6번 — 프로필/설정", desc: "가족 관리 + 언어 설정", icon: "person-circle" as const, route: "/profile" },
-  { id: "setup-preview" as const, label: "7번 — 가족 설정", desc: "역할 선택 + 코드 생성/참가", icon: "settings" as const, inline: true },
+type ScreenId =
+  | null
+  | "splash"
+  | "signup-mode"
+  | "signup-phone"
+  | "child"
+  | "parent"
+  | "profile"
+  | "setup";
+
+const SCREENS: {
+  id: ScreenId;
+  label: string;
+  desc: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: "splash", label: "1번 — 스플래시", desc: "동영상 배경 + 로고", icon: "play-circle" },
+  { id: "signup-mode", label: "2번 — 회원가입 모드선택", desc: "Apple/Google/휴대폰 인증", icon: "log-in" },
+  { id: "signup-phone", label: "3번 — 휴대폰 인증 폼", desc: "이름/전화번호/OTP 입력", icon: "phone-portrait" },
+  { id: "child", label: "4번 — 자녀 홈", desc: "대시보드 + 5탭 내비게이션", icon: "home" },
+  { id: "parent", label: "5번 — 부모 디지털 액자", desc: "사진 슬라이드쇼 + GPS", icon: "images" },
+  { id: "profile", label: "6번 — 프로필/설정", desc: "가족 관리 + 언어 설정", icon: "person-circle" },
+  { id: "setup", label: "7번 — 가족 설정", desc: "역할 선택 + 코드 생성/참가", icon: "settings" },
 ];
 
 function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
@@ -125,63 +147,71 @@ function PhoneFormPreview({ onBack }: { onBack: () => void }) {
   );
 }
 
-function SetupPreview({ onBack }: { onBack: () => void }) {
+function PreviewBackBar({ onBack, title }: { onBack: () => void; title: string }) {
   const insets = useSafeAreaInsets();
-  const topInset = Platform.OS === "web" ? 50 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-  const { t } = useLang();
-  const [role, setRole] = useState<"parent" | "child" | null>(null);
+  const topInset = Platform.OS === "web" ? 0 : insets.top;
+  return (
+    <View style={[bb.bar, { paddingTop: topInset }]}>
+      <Pressable style={bb.btn} onPress={onBack}>
+        <Ionicons name="chevron-back" size={18} color="#fff" />
+        <Text style={bb.text}>미리보기: {title}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function WrappedScreen({ id, onBack }: { id: ScreenId; onBack: () => void }) {
+  const titleMap: Record<string, string> = {
+    splash: "스플래시",
+    "signup-mode": "회원가입",
+    child: "자녀 홈",
+    parent: "부모 액자",
+    profile: "프로필",
+    setup: "가족 설정",
+  };
+
+  const roleMap: Record<string, "child" | "parent"> = {
+    splash: "child",
+    "signup-mode": "child",
+    child: "child",
+    parent: "parent",
+    profile: "child",
+    setup: "child",
+  };
+
+  useEffect(() => {
+    setPreviewMode(true);
+    return () => { setPreviewMode(false); };
+  }, []);
+
+  const isSplash = id === "splash";
+
+  const renderScreen = () => {
+    switch (id) {
+      case "splash":
+        return <SplashScreen />;
+      case "signup-mode":
+        return <ChildSignupScreen />;
+      case "child":
+        return <ChildScreen />;
+      case "parent":
+        return <ParentScreen />;
+      case "profile":
+        return <ProfileScreen />;
+      case "setup":
+        return <SetupScreen />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <View style={[su.container, { paddingTop: topInset, paddingBottom: bottomInset }]}>
-      <View style={su.header}>
-        <Pressable onPress={onBack} style={su.headerBack}>
-          <Ionicons name="chevron-back" size={22} color={COLORS.child.text} />
-        </Pressable>
-        <Text style={su.headerTitle}>{t.setupHeader}</Text>
-        <View style={{ width: 36 }} />
+    <MockFamilyProvider role={roleMap[id!] ?? "child"} disconnected={isSplash}>
+      <View style={{ flex: 1 }}>
+        <PreviewBackBar onBack={onBack} title={titleMap[id!] ?? ""} />
+        {renderScreen()}
       </View>
-
-      <View style={su.progressBar}>
-        <View style={[su.progressDot, su.progressDotActive]} />
-        <View style={su.progressDot} />
-        <View style={su.progressDot} />
-        <View style={su.progressDot} />
-      </View>
-
-      <ScrollView contentContainerStyle={su.scroll} showsVerticalScrollIndicator={false}>
-        <View style={su.stepContainer}>
-          <Text style={su.stepTitle}>{t.setupRoleTitle}</Text>
-          <Text style={su.stepSub}>{t.setupRoleSub}</Text>
-          <View style={su.roleCards}>
-            <Pressable
-              style={[su.roleCard, role === "parent" && su.roleCardActive]}
-              onPress={() => setRole("parent")}
-            >
-              <View style={[su.roleIcon, role === "parent" && su.roleIconActive]}>
-                <Ionicons name="home" size={28} color={role === "parent" ? "#fff" : COLORS.child.accent} />
-              </View>
-              <Text style={[su.roleLabel, role === "parent" && su.roleLabelActive]}>{t.roleParent}</Text>
-              <Text style={[su.roleDesc, role === "parent" && su.roleDescActive]}>{t.roleParentDesc}</Text>
-            </Pressable>
-            <Pressable
-              style={[su.roleCard, role === "child" && su.roleCardActive]}
-              onPress={() => setRole("child")}
-            >
-              <View style={[su.roleIcon, role === "child" && su.roleIconActive]}>
-                <Ionicons name="people" size={28} color={role === "child" ? "#fff" : COLORS.child.accent} />
-              </View>
-              <Text style={[su.roleLabel, role === "child" && su.roleLabelActive]}>{t.roleChild}</Text>
-              <Text style={[su.roleDesc, role === "child" && su.roleDescActive]}>{t.roleChildDesc}</Text>
-            </Pressable>
-          </View>
-          <Pressable style={[su.nextBtn, !role && su.nextBtnDisabled]} disabled={!role}>
-            <Text style={su.nextBtnText}>{t.next}</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
-          </Pressable>
-        </View>
-      </ScrollView>
-    </View>
+    </MockFamilyProvider>
   );
 }
 
@@ -189,7 +219,9 @@ export default function PreviewIndex() {
   if (!__DEV__) {
     return (
       <View style={{ flex: 1, backgroundColor: "#FAFAFA", alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#999" }}>개발 모드에서만 사용 가능합니다</Text>
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#999" }}>
+          개발 모드에서만 사용 가능합니다
+        </Text>
       </View>
     );
   }
@@ -200,20 +232,16 @@ export default function PreviewIndex() {
   const [activePreview, setActivePreview] = useState<ScreenId>(null);
 
   if (activePreview === "signup-phone") {
-    return <PhoneFormPreview onBack={() => setActivePreview(null)} />;
+    return (
+      <MockFamilyProvider disconnected>
+        <PhoneFormPreview onBack={() => setActivePreview(null)} />
+      </MockFamilyProvider>
+    );
   }
 
-  if (activePreview === "setup-preview") {
-    return <SetupPreview onBack={() => setActivePreview(null)} />;
+  if (activePreview && activePreview !== "signup-phone") {
+    return <WrappedScreen id={activePreview} onBack={() => setActivePreview(null)} />;
   }
-
-  const handlePress = (screen: typeof SCREENS[number]) => {
-    if ("inline" in screen && screen.inline) {
-      setActivePreview(screen.id as ScreenId);
-    } else if ("route" in screen && screen.route) {
-      router.push(screen.route as any);
-    }
-  };
 
   return (
     <View style={[st.container, { paddingTop: topInset }]}>
@@ -229,39 +257,31 @@ export default function PreviewIndex() {
         contentContainerStyle={[st.list, { paddingBottom: bottomInset + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={st.subtitle}>터치하면 해당 화면으로 이동합니다</Text>
+        <Text style={st.subtitle}>터치하면 해당 화면을 독립적으로 미리봅니다</Text>
 
-        {SCREENS.map((screen) => {
-          const isInline = "inline" in screen && screen.inline;
-          return (
-            <Pressable
-              key={screen.id}
-              style={({ pressed }) => [st.card, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => handlePress(screen)}
-            >
-              <View style={st.cardIcon}>
-                <Ionicons name={screen.icon} size={24} color="#D4843A" />
-              </View>
-              <View style={st.cardText}>
-                <Text style={st.cardLabel}>{screen.label}</Text>
-                <Text style={st.cardDesc}>{screen.desc}</Text>
-              </View>
-              {isInline ? (
-                <View style={st.inlineBadge}>
-                  <Text style={st.inlineBadgeText}>독립</Text>
-                </View>
-              ) : null}
-              <Ionicons name="chevron-forward" size={18} color="#ccc" />
-            </Pressable>
-          );
-        })}
+        {SCREENS.map((screen) => (
+          <Pressable
+            key={screen.id}
+            style={({ pressed }) => [st.card, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => setActivePreview(screen.id)}
+          >
+            <View style={st.cardIcon}>
+              <Ionicons name={screen.icon} size={24} color="#D4843A" />
+            </View>
+            <View style={st.cardText}>
+              <Text style={st.cardLabel}>{screen.label}</Text>
+              <Text style={st.cardDesc}>{screen.desc}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+          </Pressable>
+        ))}
 
         <View style={st.infoBox}>
           <Ionicons name="information-circle-outline" size={16} color="#888" />
           <Text style={st.infoText}>
-            "독립" 표시된 화면은 로그인 없이 독립적으로 미리보기됩니다.{"\n"}
-            다른 화면은 현재 앱 상태(연결/미연결)에 따라 표시됩니다.{"\n"}
-            뒤로가기로 이 목록으로 돌아올 수 있습니다.
+            모든 화면은 Mock 데이터로 독립 렌더링됩니다.{"\n"}
+            상단 돌아가기 바를 터치하면 이 목록으로 돌아옵니다.{"\n"}
+            API 호출은 비활성 상태이며 UI 레이아웃만 확인 가능합니다.
           </Text>
         </View>
       </ScrollView>
@@ -312,13 +332,6 @@ const st = StyleSheet.create({
   cardText: { flex: 1, gap: 2 },
   cardLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#333" },
   cardDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
-  inlineBadge: {
-    backgroundColor: "rgba(52,168,83,0.12)",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  inlineBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#34A853" },
   infoBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -329,6 +342,25 @@ const st = StyleSheet.create({
     marginTop: 8,
   },
   infoText: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#888", flex: 1, lineHeight: 18 },
+});
+
+const bb = StyleSheet.create({
+  bar: {
+    backgroundColor: "rgba(0,0,0,0.75)",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingBottom: 6,
+    zIndex: 9999,
+  },
+  btn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  text: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
 });
 
 const ps = StyleSheet.create({
@@ -398,64 +430,4 @@ const ps = StyleSheet.create({
   },
   checkBoxActive: { backgroundColor: "#D4843A", borderColor: "#D4843A" },
   checkLabel: { fontFamily: "Inter_400Regular", fontSize: 14, color: "#555", flex: 1, lineHeight: 20 },
-});
-
-const su = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.child.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerBack: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: COLORS.child.text },
-  progressBar: { flexDirection: "row", gap: 8, paddingHorizontal: 24, paddingBottom: 8 },
-  progressDot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(61,43,31,0.1)" },
-  progressDotActive: { backgroundColor: COLORS.child.accent },
-  scroll: { flexGrow: 1, padding: 24, justifyContent: "center" },
-  stepContainer: { width: "100%", alignItems: "center" },
-  stepTitle: { fontFamily: "Inter_700Bold", fontSize: 26, color: COLORS.child.text, textAlign: "center", marginBottom: 8 },
-  stepSub: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.child.textSub, textAlign: "center", marginBottom: 32 },
-  roleCards: { flexDirection: "row", gap: 14, marginBottom: 32, width: "100%" },
-  roleCard: {
-    flex: 1,
-    backgroundColor: COLORS.child.bgCard,
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(61,43,31,0.08)",
-    gap: 8,
-  },
-  roleCardActive: { borderColor: COLORS.child.accent, backgroundColor: "rgba(200,112,74,0.06)" },
-  roleIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: COLORS.child.accentSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  roleIconActive: { backgroundColor: COLORS.child.accent },
-  roleLabel: { fontFamily: "Inter_700Bold", fontSize: 16, color: COLORS.child.text },
-  roleLabelActive: { color: COLORS.child.accent },
-  roleDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.child.textSub, textAlign: "center" },
-  roleDescActive: { color: COLORS.child.accent },
-  nextBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: COLORS.child.accent,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    width: "100%",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  nextBtnDisabled: { opacity: 0.4 },
-  nextBtnText: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#fff" },
 });
