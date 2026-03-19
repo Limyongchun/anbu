@@ -440,6 +440,7 @@ const translations = {
     locPermAllowBtn: "위치 허용하기",
     locPermDeniedTitle: "위치 권한 필요",
     locPermDeniedMsg: "설정에서 위치 권한을 허용해주세요.",
+    locPermAlwaysAllow: "항상 허용으로 변경",
     locPermOpenSettings: "설정 열기",
 
     // ── child-signup.tsx ──
@@ -911,6 +912,7 @@ const translations = {
     locPermAllowBtn: "Allow Location",
     locPermDeniedTitle: "Location Permission Needed",
     locPermDeniedMsg: "Please allow location permission in Settings.",
+    locPermAlwaysAllow: "Change to Always Allow",
     locPermOpenSettings: "Open Settings",
 
     signupError: "An error occurred",
@@ -1378,6 +1380,7 @@ const translations = {
     locPermAllowBtn: "位置情報を許可する",
     locPermDeniedTitle: "位置情報の許可が必要",
     locPermDeniedMsg: "設定から位置情報の許可をしてください。",
+    locPermAlwaysAllow: "常に許可に変更",
     locPermOpenSettings: "設定を開く",
 
     signupError: "エラーが発生しました",

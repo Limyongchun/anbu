@@ -159,13 +159,27 @@ export default function ParentLocationPermitScreen() {
 
         <View style={st.bottomSection}>
           {!allGranted ? (
-            <Pressable
-              style={({ pressed }) => [st.allowBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={handleAllow}
-            >
-              <Ionicons name="location" size={20} color="#D4843A" style={{ marginRight: 8 }} />
-              <Text style={st.allowBtnText}>{(t as any).locPermAllowBtn}</Text>
-            </Pressable>
+            <>
+              <Pressable
+                style={({ pressed }) => [st.allowBtn, { opacity: pressed ? 0.85 : 1 }]}
+                onPress={handleAllow}
+              >
+                <Ionicons name="location" size={20} color="#D4843A" style={{ marginRight: 8 }} />
+                <Text style={st.allowBtnText}>{(t as any).locPermAllowBtn}</Text>
+              </Pressable>
+              <Pressable
+                style={st.settingsLink}
+                onPress={() => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                }}
+              >
+                <Text style={st.settingsLinkText}>{(t as any).locPermAlwaysAllow}</Text>
+              </Pressable>
+            </>
           ) : (
             <Pressable
               style={({ pressed }) => [st.nextBtn, { opacity: pressed ? 0.85 : 1 }]}
@@ -285,6 +299,16 @@ const st = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 17,
     color: "#D4843A",
+  },
+  settingsLink: {
+    marginTop: 14,
+    alignItems: "center",
+  },
+  settingsLinkText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#FFFFFF",
+    textDecorationLine: "underline",
   },
   nextBtn: {
     width: "100%",
