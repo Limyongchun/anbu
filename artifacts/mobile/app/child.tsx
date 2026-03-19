@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient as ExpoLinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -729,55 +730,60 @@ function WaitingRoom({ familyCode, topBarH, bottomInset }: {
   const segments = familyCode.match(/.{1,3}/g) ?? [familyCode];
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: DS.bg }}
-      contentContainerStyle={{ paddingTop: topBarH + 24, paddingBottom: bottomInset + 40, alignItems: "center", paddingHorizontal: 24 }}
-      showsVerticalScrollIndicator={false}
+    <ExpoLinearGradient
+      colors={["#D4843A", "#C4692E", "#A85528"]}
+      style={{ flex: 1 }}
     >
-      <View style={wr.badge}>
-        <View style={wr.badgeDot} />
-        <Text style={wr.badgeText}>{t.waitingBadge}</Text>
-      </View>
-      <Text style={wr.title}>{t.waitingTitle}</Text>
-      <Text style={wr.sub}>{t.waitingSub}</Text>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: topBarH + 20, paddingBottom: bottomInset + 40, alignItems: "center", paddingHorizontal: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={wr.badge}>
+          <View style={wr.badgeDot} />
+          <Text style={wr.badgeText}>{t.waitingBadge}</Text>
+        </View>
+        <Text style={wr.title}>{t.waitingTitle}</Text>
+        <Text style={wr.sub}>{t.waitingSub}</Text>
 
-      <View style={wr.qrWrap}>
-        <Image source={{ uri: qrUri }} style={{ width: 220, height: 220 }} resizeMode="contain" />
-      </View>
+        <View style={wr.qrWrap}>
+          <Image source={{ uri: qrUri }} style={{ width: 200, height: 200 }} resizeMode="contain" />
+        </View>
 
-      <Text style={wr.codeLabel}>{t.waitingCodeLabel}</Text>
-      <View style={wr.codeRow}>
-        {segments.map((seg, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <Text style={wr.codeSep}>·</Text>}
-            <View style={wr.codePill}>
-              <Text style={wr.codeDigits}>{seg}</Text>
+        <Text style={wr.codeLabel}>{t.waitingCodeLabel}</Text>
+        <View style={wr.codeRow}>
+          {segments.map((seg, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <Text style={wr.codeSep}>·</Text>}
+              <View style={wr.codePill}>
+                <Text style={wr.codeDigits}>{seg}</Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+
+        <View style={wr.infoCard}>
+          <View style={wr.infoRow}>
+            <View style={[wr.infoIcon, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+              <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
             </View>
-          </React.Fragment>
-        ))}
-      </View>
-
-      <View style={wr.infoCard}>
-        <View style={wr.infoRow}>
-          <View style={[wr.infoIcon, { backgroundColor: COLORS.blueSoft }]}>
-            <Ionicons name="qr-code-outline" size={18} color={DS.info} />
+            <Text style={wr.infoText}>{t.waitingInfo1}</Text>
           </View>
-          <Text style={wr.infoText}>{t.waitingInfo1}</Text>
-        </View>
-        <View style={wr.infoRow}>
-          <View style={[wr.infoIcon, { backgroundColor: COLORS.greenSoft }]}>
-            <Ionicons name="keypad-outline" size={18} color={DS.success} />
+          <View style={wr.infoRow}>
+            <View style={[wr.infoIcon, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+              <Ionicons name="keypad-outline" size={18} color="#FFFFFF" />
+            </View>
+            <Text style={wr.infoText}>{t.waitingInfo2}</Text>
           </View>
-          <Text style={wr.infoText}>{t.waitingInfo2}</Text>
-        </View>
-        <View style={wr.infoRow}>
-          <View style={[wr.infoIcon, { backgroundColor: COLORS.orangeSoft }]}>
-            <Ionicons name="radio-outline" size={18} color={DS.warning} />
+          <View style={wr.infoRow}>
+            <View style={[wr.infoIcon, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+              <Ionicons name="radio-outline" size={18} color="#FFFFFF" />
+            </View>
+            <Text style={wr.infoText}>{t.waitingInfo3}</Text>
           </View>
-          <Text style={wr.infoText}>{t.waitingInfo3}</Text>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </ExpoLinearGradient>
   );
 }
 
@@ -1408,21 +1414,21 @@ const mp = StyleSheet.create({
 });
 
 const wr = StyleSheet.create({
-  badge: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(45,212,191,0.12)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: DS.radius.pill, marginBottom: 20, borderWidth: 1, borderColor: "rgba(45,212,191,0.25)" },
-  badgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: DS.brand },
-  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
-  title: { fontFamily: "Inter_700Bold", fontSize: 28, color: DS.textPrimary, textAlign: "center", lineHeight: 36, marginBottom: 10 },
-  sub: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 32 },
-  qrWrap: { width: 232, height: 232, backgroundColor: "#FFFFFF", borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 6, borderWidth: 1, borderColor: DS.border, overflow: "hidden" },
-  codeLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, letterSpacing: 1, marginBottom: 10 },
-  codeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 },
-  codePill: { backgroundColor: DS.surface, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 2 },
-  codeDigits: { fontFamily: "Inter_700Bold", fontSize: 26, color: DS.brand, letterSpacing: 4 },
-  codeSep: { fontFamily: "Inter_700Bold", fontSize: 20, color: DS.textTertiary },
-  infoCard: { width: "100%", backgroundColor: DS.surface, borderRadius: DS.radius.cardLg, padding: 20, gap: 14, borderWidth: 1, borderColor: DS.border },
+  badge: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: DS.radius.pill, marginBottom: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
+  badgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#FFFFFF" },
+  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
+  title: { fontFamily: "Inter_700Bold", fontSize: 26, color: "#FFFFFF", textAlign: "center", lineHeight: 34, marginBottom: 8 },
+  sub: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.8)", textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  qrWrap: { width: 220, height: 220, backgroundColor: "#FFFFFF", borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 24, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 6, overflow: "hidden" },
+  codeLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.65)", letterSpacing: 1, marginBottom: 10 },
+  codeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 28 },
+  codePill: { backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 2 },
+  codeDigits: { fontFamily: "Inter_700Bold", fontSize: 24, color: "#D4843A", letterSpacing: 4 },
+  codeSep: { fontFamily: "Inter_700Bold", fontSize: 20, color: "rgba(255,255,255,0.5)" },
+  infoCard: { width: "100%", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 20, padding: 20, gap: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   infoIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  infoText: { fontFamily: "Inter_400Regular", fontSize: 14, color: DS.textSecondary, flex: 1 },
+  infoText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.85)", flex: 1 },
 });
 
 const hm = StyleSheet.create({
