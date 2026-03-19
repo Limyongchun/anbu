@@ -410,6 +410,13 @@ const translations = {
     roleSelectParent: "부모님",
     roleSelectParentDesc: "자녀의 안부를 받아요",
 
+    // ── 부모 코드 입력 ──
+    parentCodeTitle: "가족 코드 입력",
+    parentCodeSub: "자녀가 공유한 6자리 코드를 입력해주세요",
+    parentCodePlaceholder: "6자리 코드",
+    parentCodeJoinBtn: "연결하기",
+    parentCodeHint: "자녀 앱의 가족 설정에서 코드를 확인할 수 있어요",
+
     // ── child-signup.tsx ──
     signupError: "오류가 발생했습니다",
     signupChildHeader: "자녀 가입",
@@ -849,6 +856,13 @@ const translations = {
     roleSelectParent: "Parent",
     roleSelectParentDesc: "Receive updates from children",
 
+    // ── Parent code input ──
+    parentCodeTitle: "Enter Family Code",
+    parentCodeSub: "Enter the 6-digit code shared by your child",
+    parentCodePlaceholder: "6-digit code",
+    parentCodeJoinBtn: "Connect",
+    parentCodeHint: "You can find the code in your child's app under Family Settings",
+
     signupError: "An error occurred",
     signupChildHeader: "Child Sign Up",
     signupRecoveryTitle: "Existing family found!",
@@ -1283,6 +1297,13 @@ const translations = {
     roleSelectChildDesc: "親に近況を送ります",
     roleSelectParent: "親",
     roleSelectParentDesc: "子どもの近況を受け取ります",
+
+    // ── 親コード入力 ──
+    parentCodeTitle: "家族コードを入力",
+    parentCodeSub: "お子さまが共有した6桁のコードを入力してください",
+    parentCodePlaceholder: "6桁のコード",
+    parentCodeJoinBtn: "接続する",
+    parentCodeHint: "お子さまのアプリの家族設定でコードを確認できます",
 
     signupError: "エラーが発生しました",
     signupChildHeader: "子ども登録",
