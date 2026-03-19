@@ -417,6 +417,18 @@ const translations = {
     parentCodeJoinBtn: "연결하기",
     parentCodeHint: "자녀 앱의 가족 설정에서 코드를 확인할 수 있어요",
 
+    // ── 부모 권한 안내 ──
+    permMainTitle: "ANBU 설정을\n시작해 볼까요?",
+    permMainSub: "부모님의 안전을 위해 몇 가지 설정이 필요해요.",
+    permNotifTitle: "알림 허용",
+    permNotifDesc: "ANBU가 부모님의 상태를 알려주도록 허용하세요.",
+    permLocationTitle: "위치: 항상 허용",
+    permLocationDesc: "정확한 실시간 위치 공유를 위해 활성화됩니다. 설정은 언제든 변경 가능해요.",
+    permMotionTitle: "움직임 & 건강 허용하기",
+    permMotionDesc: "모션 센서를 사용하여 위치 감지 기능을 향상시킵니다.",
+    permUsageTitle: "앱 사용 기록 허용",
+    permUsageDesc: "고객님의 정보는 맞춤화된 자료와 알림에 사용 됩니다.",
+
     // ── child-signup.tsx ──
     signupError: "오류가 발생했습니다",
     signupChildHeader: "자녀 가입",
@@ -863,6 +875,18 @@ const translations = {
     parentCodeJoinBtn: "Connect",
     parentCodeHint: "You can find the code in your child's app under Family Settings",
 
+    // ── Parent permissions ──
+    permMainTitle: "Ready to set up\nANBU?",
+    permMainSub: "A few settings are needed for your parents' safety.",
+    permNotifTitle: "Allow Notifications",
+    permNotifDesc: "Allow ANBU to notify you about your parents' status.",
+    permLocationTitle: "Location: Always Allow",
+    permLocationDesc: "Enables accurate real-time location sharing. You can change this anytime.",
+    permMotionTitle: "Motion & Health Access",
+    permMotionDesc: "Uses motion sensors to improve location detection.",
+    permUsageTitle: "App Usage Tracking",
+    permUsageDesc: "Your information is used for personalized data and notifications.",
+
     signupError: "An error occurred",
     signupChildHeader: "Child Sign Up",
     signupRecoveryTitle: "Existing family found!",
@@ -1304,6 +1328,18 @@ const translations = {
     parentCodePlaceholder: "6桁のコード",
     parentCodeJoinBtn: "接続する",
     parentCodeHint: "お子さまのアプリの家族設定でコードを確認できます",
+
+    // ── 親権限案内 ──
+    permMainTitle: "ANBUの設定を\n始めましょうか？",
+    permMainSub: "ご両親の安全のためにいくつかの設定が必要です。",
+    permNotifTitle: "通知を許可",
+    permNotifDesc: "ANBUがご両親の状態をお知らせできるよう許可してください。",
+    permLocationTitle: "位置情報: 常に許可",
+    permLocationDesc: "正確なリアルタイム位置共有のために有効化されます。設定はいつでも変更可能です。",
+    permMotionTitle: "モーション＆ヘルスへのアクセス",
+    permMotionDesc: "モーションセンサーを使用して位置検出機能を向上させます。",
+    permUsageTitle: "アプリ使用記録の許可",
+    permUsageDesc: "お客様の情報はカスタマイズされたデータと通知に使用されます。",
 
     signupError: "エラーが発生しました",
     signupChildHeader: "子ども登録",
