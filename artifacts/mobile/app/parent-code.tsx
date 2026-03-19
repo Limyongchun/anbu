@@ -5,8 +5,10 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -57,67 +59,75 @@ export default function ParentCodeScreen() {
       colors={["#D4843A", "#C4692E", "#A85528"]}
       style={st.container}
     >
-      <View style={[st.inner, { paddingTop: topInset + 20, paddingBottom: bottomInset + 24 }]}>
-        <Pressable style={st.backBtn} onPress={() => router.back()}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Pressable style={[st.backBtn, { top: topInset + 6 }]} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </Pressable>
 
-        <View style={st.topSection}>
-          <Image source={logoImage} style={st.logo} resizeMode="contain" />
-          <Text style={st.title}>{t.parentCodeTitle}</Text>
-          <Text style={st.subtitle}>{t.parentCodeSub}</Text>
-        </View>
-
-        <Animated.View style={[st.cardWrap, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
-          <View style={st.card}>
-            <View style={st.iconWrap}>
-              <Ionicons name="key-outline" size={36} color="#D4843A" />
-            </View>
-
-            <TextInput
-              style={st.codeInput}
-              value={code}
-              onChangeText={handleCodeChange}
-              placeholder={t.parentCodePlaceholder}
-              placeholderTextColor="#bbb"
-              maxLength={6}
-              autoCapitalize="characters"
-              textAlign="center"
-            />
-
-            {error ? <Text style={st.errorText}>{error}</Text> : null}
-
-            <Pressable
-              style={({ pressed }) => [
-                st.joinBtn,
-                { opacity: canJoin ? (pressed ? 0.85 : 1) : 0.5 },
-              ]}
-              onPress={handleJoin}
-              disabled={!canJoin}
-            >
-              <Ionicons name="link-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={st.joinBtnText}>{t.parentCodeJoinBtn}</Text>
-            </Pressable>
-
-            <Text style={st.hintText}>{t.parentCodeHint}</Text>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[st.scrollContent, { paddingTop: topInset + 20, paddingBottom: bottomInset + 40 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={st.topSection}>
+            <Image source={logoImage} style={st.logo} resizeMode="contain" />
+            <Text style={st.title}>{t.parentCodeTitle}</Text>
+            <Text style={st.subtitle}>{t.parentCodeSub}</Text>
           </View>
-        </Animated.View>
 
-        <View style={st.creditWrap}>
-          <Text style={st.creditText}>© ANBU Co., Ltd.</Text>
-          <Text style={st.creditText}>With Love, For Parents</Text>
-        </View>
-      </View>
+          <Animated.View style={[st.cardWrap, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+            <View style={st.card}>
+              <View style={st.iconWrap}>
+                <Ionicons name="key-outline" size={36} color="#D4843A" />
+              </View>
+
+              <TextInput
+                style={st.codeInput}
+                value={code}
+                onChangeText={handleCodeChange}
+                placeholder={t.parentCodePlaceholder}
+                placeholderTextColor="#bbb"
+                maxLength={6}
+                autoCapitalize="characters"
+                textAlign="center"
+              />
+
+              {error ? <Text style={st.errorText}>{error}</Text> : null}
+
+              <Pressable
+                style={({ pressed }) => [
+                  st.joinBtn,
+                  { opacity: canJoin ? (pressed ? 0.85 : 1) : 0.5 },
+                ]}
+                onPress={handleJoin}
+                disabled={!canJoin}
+              >
+                <Ionicons name="link-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={st.joinBtnText}>{t.parentCodeJoinBtn}</Text>
+              </Pressable>
+
+              <Text style={st.hintText}>{t.parentCodeHint}</Text>
+            </View>
+          </Animated.View>
+
+          <View style={st.creditWrap}>
+            <Text style={st.creditText}>© ANBU Co., Ltd.</Text>
+            <Text style={st.creditText}>With Love, For Parents</Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const st = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 28 },
   backBtn: {
     position: "absolute",
-    top: Platform.OS === "web" ? 56 : 50,
     left: 20,
     zIndex: 10,
     width: 40,
@@ -126,6 +136,10 @@ const st = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.15)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: 28,
+    flexGrow: 1,
   },
   topSection: { alignItems: "center", marginTop: 20 },
   logo: { width: 120, height: 44, marginBottom: 16 },
@@ -208,6 +222,7 @@ const st = StyleSheet.create({
   creditWrap: {
     alignItems: "center",
     marginTop: "auto",
+    paddingTop: 20,
     paddingBottom: 10,
   },
   creditText: {
