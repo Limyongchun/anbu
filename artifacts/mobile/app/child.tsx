@@ -579,16 +579,6 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
           <Pressable onPress={() => {}} style={ab.sheet}>
             <View style={ab.handle} />
             <Text style={ab.sheetTitle}>{t.anbuCompose}</Text>
-            {photo && (
-              <View style={{ overflow: "hidden", marginBottom: 12, marginHorizontal: -24, aspectRatio: 1 }}>
-                <Image source={{ uri: photo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                <Pressable
-                  style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 16 }}
-                  onPress={() => setPhoto(null)}>
-                  <Ionicons name="close-circle" size={22} color="#fff" />
-                </Pressable>
-              </View>
-            )}
             <TextInput
               style={ab.input}
               value={text}
@@ -598,6 +588,18 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
               multiline
               maxLength={200}
             />
+            {photo && (
+              <View style={ab.photoPreviewRow}>
+                <Image source={{ uri: photo }} style={ab.photoThumb} resizeMode="cover" />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={ab.photoLabel}>{t.anbuPhotoAttached || "사진 첨부됨"}</Text>
+                  <Text style={ab.photoHint}>{t.anbuPhotoHint || "메시지와 함께 전송됩니다"}</Text>
+                </View>
+                <Pressable onPress={() => setPhoto(null)} style={ab.photoRemoveBtn}>
+                  <Ionicons name="close" size={16} color="#fff" />
+                </Pressable>
+              </View>
+            )}
             <View style={ab.sheetBar}>
               <Pressable style={ab.attachBtn} onPress={pickCamera}>
                 <Ionicons name="camera" size={18} color={DS.textSecondary} />
@@ -1525,4 +1527,9 @@ const ab = StyleSheet.create({
   cardText: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textPrimary, lineHeight: 22 },
   cardPhoto: { width: "100%", height: 180, borderRadius: 14, marginTop: 8 },
   fab: { position: "absolute", bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: DS.brand, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 10 },
+  photoPreviewRow: { width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.card, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: DS.brand + "33" },
+  photoThumb: { width: 60, height: 60, borderRadius: 10 },
+  photoLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
+  photoHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: DS.textTertiary, marginTop: 2 },
+  photoRemoveBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center" },
 });
