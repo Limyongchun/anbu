@@ -51,6 +51,10 @@ export default function ParentPermissionsScreen() {
       style={st.container}
     >
       <View style={[st.inner, { paddingTop: topInset + 20, paddingBottom: bottomInset + 16 }]}>
+        <Pressable style={st.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </Pressable>
+
         <View style={st.topSection}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
           <Text style={st.title}>{(t as any).permMainTitle}</Text>
@@ -87,6 +91,18 @@ export default function ParentPermissionsScreen() {
 const st = StyleSheet.create({
   container: { flex: 1 },
   inner: { flex: 1, paddingHorizontal: 24 },
+  backBtn: {
+    position: "absolute",
+    top: Platform.OS === "web" ? 56 : 50,
+    left: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   topSection: { alignItems: "center", marginTop: 40 },
   logo: { width: 100, height: 36, marginBottom: 18 },
   title: {
