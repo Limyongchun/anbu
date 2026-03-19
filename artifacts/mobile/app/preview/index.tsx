@@ -1,18 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLang } from "@/context/LanguageContext";
 import { MockFamilyProvider } from "@/context/MockFamilyProvider";
 import { setPreviewMode } from "@/lib/api";
 
@@ -28,103 +25,6 @@ type ScreenKey = "splash" | "signup-mode" | "signup-phone" | "child" | "parent" 
 const VALID_SCREENS: ScreenKey[] = ["splash", "signup-mode", "signup-phone", "child", "parent", "profile", "setup"];
 
 
-function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
-  return (
-    <Pressable style={ps.checkRow} onPress={onPress}>
-      <View style={[ps.checkBox, checked && ps.checkBoxActive]}>
-        {checked && <Ionicons name="checkmark" size={14} color="#fff" />}
-      </View>
-      <Text style={ps.checkLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function PhoneFormPreview({ onBack }: { onBack: () => void }) {
-  const insets = useSafeAreaInsets();
-  const topInset = Platform.OS === "web" ? 50 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-  const { t } = useLang();
-
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [allowNotif, setAllowNotif] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-
-  return (
-    <View style={[ps.formContainer, { paddingTop: topInset }]}>
-      <View style={ps.formHeader}>
-        <Pressable style={ps.backBtn} onPress={onBack}>
-          <Ionicons name="chevron-back" size={22} color="#333" />
-        </Pressable>
-        <Text style={ps.formHeaderTitle}>{t.signupFormCreateTitle}</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <ScrollView
-          contentContainerStyle={[ps.scroll, { paddingBottom: bottomInset + 32 }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={ps.fSectionTitle}>{t.signupBasicInfo}</Text>
-
-          <Text style={ps.fFieldLabel}>{t.signupNameLabel}</Text>
-          <TextInput
-            style={ps.fInput}
-            value={name}
-            onChangeText={setName}
-            placeholder={t.signupNamePlaceholder as string}
-            placeholderTextColor="#aaa"
-            maxLength={20}
-          />
-
-          <Text style={ps.fFieldLabel}>{t.signupPhoneLabel}</Text>
-          <View style={ps.phoneRow}>
-            <TextInput
-              style={[ps.fInput, ps.phoneInput]}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="010-0000-0000"
-              placeholderTextColor="#aaa"
-              keyboardType="phone-pad"
-              maxLength={13}
-            />
-            <Pressable style={[ps.fOtpBtn, !phone.trim() && ps.fOtpBtnDisabled]} disabled={!phone.trim()}>
-              <Text style={[ps.fOtpBtnText, !phone.trim() && ps.fOtpBtnTextDisabled]}>{t.signupOtpRequest}</Text>
-            </Pressable>
-          </View>
-
-          <Text style={ps.fFieldLabel}>{t.signupOtpLabel}</Text>
-          <View style={ps.phoneRow}>
-            <TextInput
-              style={[ps.fInput, ps.phoneInput, ps.otpInput]}
-              value={otp}
-              onChangeText={setOtp}
-              placeholder={t.signupOtpPlaceholder as string}
-              placeholderTextColor="#aaa"
-              keyboardType="number-pad"
-              maxLength={6}
-            />
-            <Pressable style={[ps.fOtpBtn, ps.fOtpBtnDisabled]}>
-              <Text style={[ps.fOtpBtnText, ps.fOtpBtnTextDisabled]}>{t.signupOtpConfirm}</Text>
-            </Pressable>
-          </View>
-
-          <View style={ps.fDivider} />
-
-          <Text style={ps.fSectionTitle}>{t.signupAgreementTitle}</Text>
-          <Checkbox checked={allowNotif} onPress={() => setAllowNotif(v => !v)} label={t.signupAgreeNotif as string} />
-          <Checkbox checked={agreeTerms} onPress={() => setAgreeTerms(v => !v)} label={t.signupAgreeTerms as string} />
-
-          <Pressable style={[ps.fJoinBtn, ps.fJoinBtnDisabled]}>
-            <Text style={[ps.fJoinBtnText, ps.fJoinBtnTextDisabled]}>{t.signupCreateBtn}</Text>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
-  );
-}
 
 function PreviewBackBar({ onBack, title }: { onBack: () => void; title: string }) {
   const insets = useSafeAreaInsets();
@@ -139,22 +39,14 @@ function PreviewBackBar({ onBack, title }: { onBack: () => void; title: string }
   );
 }
 
-const SCREEN_TITLES: Record<string, string> = {
-  splash: "스플래시",
-  "signup-mode": "회원가입",
-  child: "자녀 홈",
-  parent: "부모 액자",
-  profile: "프로필",
-  setup: "가족 설정",
-};
-
-const SCREEN_ROLES: Record<string, "child" | "parent"> = {
-  splash: "child",
-  "signup-mode": "child",
-  child: "child",
-  parent: "parent",
-  profile: "child",
-  setup: "child",
+const SCREEN_META: Record<string, { title: string; role: "child" | "parent"; disconnected?: boolean }> = {
+  splash: { title: "스플래시", role: "child", disconnected: true },
+  "signup-mode": { title: "회원가입", role: "child", disconnected: true },
+  "signup-phone": { title: "휴대폰 인증 폼", role: "child", disconnected: true },
+  child: { title: "자녀 홈", role: "child" },
+  parent: { title: "부모 액자", role: "parent" },
+  profile: { title: "프로필", role: "child" },
+  setup: { title: "가족 설정", role: "child" },
 };
 
 function WrappedScreen({ id, onBack }: { id: ScreenKey; onBack: () => void }) {
@@ -163,12 +55,13 @@ function WrappedScreen({ id, onBack }: { id: ScreenKey; onBack: () => void }) {
     return () => { setPreviewMode(false); };
   }, []);
 
-  const isSplash = id === "splash";
+  const meta = SCREEN_META[id] ?? { title: id, role: "child" as const };
 
   const renderScreen = () => {
     switch (id) {
       case "splash": return <SplashScreen />;
       case "signup-mode": return <ChildSignupScreen />;
+      case "signup-phone": return <ChildSignupScreen initialStep="form" initialMode="create" />;
       case "child": return <ChildScreen />;
       case "parent": return <ParentScreen />;
       case "profile": return <ProfileScreen />;
@@ -178,9 +71,9 @@ function WrappedScreen({ id, onBack }: { id: ScreenKey; onBack: () => void }) {
   };
 
   return (
-    <MockFamilyProvider role={SCREEN_ROLES[id] ?? "child"} disconnected={isSplash}>
+    <MockFamilyProvider role={meta.role} disconnected={meta.disconnected}>
       <View style={{ flex: 1 }}>
-        <PreviewBackBar onBack={onBack} title={SCREEN_TITLES[id] ?? ""} />
+        <PreviewBackBar onBack={onBack} title={meta.title} />
         {renderScreen()}
       </View>
     </MockFamilyProvider>
@@ -226,15 +119,7 @@ export default function PreviewIndex() {
     : null;
   const [activePreview, setActivePreview] = useState<ScreenKey | null>(initialScreen);
 
-  if (activePreview === "signup-phone") {
-    return (
-      <MockFamilyProvider disconnected>
-        <PhoneFormPreview onBack={() => setActivePreview(null)} />
-      </MockFamilyProvider>
-    );
-  }
-
-  if (activePreview && activePreview !== "signup-phone") {
+  if (activePreview) {
     return <WrappedScreen id={activePreview} onBack={() => setActivePreview(null)} />;
   }
 
@@ -349,71 +234,3 @@ const bb = StyleSheet.create({
   text: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
 });
 
-const ps = StyleSheet.create({
-  formContainer: { flex: 1, backgroundColor: "#FAFAFA" },
-  formHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E8E8",
-    backgroundColor: "#fff",
-  },
-  formHeaderTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#333" },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  scroll: { padding: 24 },
-  fSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#333", marginBottom: 16, marginTop: 8 },
-  fFieldLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", marginBottom: 6 },
-  fInput: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    color: "#333",
-    borderWidth: 1.5,
-    borderColor: "#E0E0E0",
-    marginBottom: 16,
-  },
-  phoneRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  phoneInput: { flex: 1, marginBottom: 0 },
-  otpInput: { letterSpacing: 6, textAlign: "center" },
-  fOtpBtn: {
-    backgroundColor: "#D4843A",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    minWidth: 110,
-  },
-  fOtpBtnDisabled: { backgroundColor: "#d1d5db" },
-  fOtpBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
-  fOtpBtnTextDisabled: { color: "#9ca3af" },
-  fDivider: { height: 1, backgroundColor: "#E8E8E8", marginVertical: 24 },
-  fJoinBtn: {
-    backgroundColor: "#D4843A",
-    borderRadius: 18,
-    paddingVertical: 18,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  fJoinBtnDisabled: { backgroundColor: "#d1d5db" },
-  fJoinBtnText: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#FFFFFF" },
-  fJoinBtnTextDisabled: { color: "#9ca3af" },
-  checkRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16 },
-  checkBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: "#D0D0D0",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  checkBoxActive: { backgroundColor: "#D4843A", borderColor: "#D4843A" },
-  checkLabel: { fontFamily: "Inter_400Regular", fontSize: 14, color: "#555", flex: 1, lineHeight: 20 },
-});

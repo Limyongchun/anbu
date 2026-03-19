@@ -26,6 +26,11 @@ const logoOrange = require("@/assets/images/logo-anbu-orange.png");
 type Mode = null | "create" | "join";
 type Step = "mode" | "form" | "complete";
 
+export type ChildSignupProps = {
+  initialStep?: Step;
+  initialMode?: Mode;
+};
+
 function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
   return (
     <Pressable style={s.checkRow} onPress={onPress}>
@@ -37,15 +42,15 @@ function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () =
   );
 }
 
-export default function ChildSignupScreen() {
+export default function ChildSignupScreen({ initialStep, initialMode }: ChildSignupProps = {}) {
   const insets = useSafeAreaInsets();
   const topInset    = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const familyCtx   = useFamilyContext();
   const { t } = useLang();
 
-  const [mode, setMode] = useState<Mode>(null);
-  const [step, setStep] = useState<Step>("mode");
+  const [mode, setMode] = useState<Mode>(initialMode ?? null);
+  const [step, setStep] = useState<Step>(initialStep ?? "mode");
 
   const [name,        setName]        = useState("");
   const [phone,       setPhone]       = useState("");
