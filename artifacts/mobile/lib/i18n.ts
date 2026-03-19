@@ -446,6 +446,9 @@ const translations = {
     locPermDeniedMsg: "설정에서 위치 권한을 허용해주세요.",
     locPermAlwaysAllow: "항상 허용으로 변경",
     locPermOpenSettings: "설정 열기",
+    locPermBgDeniedTitle: "항상 허용이 필요합니다",
+    locPermBgDeniedMsg: "위치를 항상 공유하려면 iPhone 설정 > 위치 서비스에서 '항상 허용'으로 변경해주세요.",
+    locPermSkip: "나중에 하기",
 
     // ── child-signup.tsx ──
     signupError: "오류가 발생했습니다",
@@ -922,6 +925,9 @@ const translations = {
     locPermDeniedMsg: "Please allow location permission in Settings.",
     locPermAlwaysAllow: "Change to Always Allow",
     locPermOpenSettings: "Open Settings",
+    locPermBgDeniedTitle: "Always Allow Required",
+    locPermBgDeniedMsg: "To always share your location, go to iPhone Settings > Location Services and change to 'Always Allow'.",
+    locPermSkip: "Do it later",
 
     signupError: "An error occurred",
     signupChildHeader: "Child Sign Up",
@@ -1394,6 +1400,9 @@ const translations = {
     locPermDeniedMsg: "設定から位置情報の許可をしてください。",
     locPermAlwaysAllow: "常に許可に変更",
     locPermOpenSettings: "設定を開く",
+    locPermBgDeniedTitle: "常に許可が必要です",
+    locPermBgDeniedMsg: "常に位置情報を共有するには、iPhone設定 > 位置情報サービスで「常に許可」に変更してください。",
+    locPermSkip: "後で設定する",
 
     signupError: "エラーが発生しました",
     signupChildHeader: "子ども登録",

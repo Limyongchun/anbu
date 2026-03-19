@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  AppState,
   Image,
   Linking,
   Platform,
@@ -40,6 +41,11 @@ export default function ParentLocationPermitScreen() {
       Animated.timing(slideUp, { toValue: 0, duration: 500, useNativeDriver: false }),
     ]).start();
     checkCurrentStatus();
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") checkCurrentStatus();
+    });
+    return () => sub.remove();
   }, []);
 
   const logStatus = (label: string, fg: PermStatus, bg: PermStatus) => {
@@ -102,10 +108,22 @@ export default function ParentLocationPermitScreen() {
       return;
     }
     try {
-      const { status } = await Location.requestBackgroundPermissionsAsync();
-      const val: PermStatus = status === "granted" ? "granted" : "denied";
-      setBgStatus(val);
-      logStatus("handleRequestBackground:after", fgStatus, val);
+      const { status, canAskAgain } = await Location.requestBackgroundPermissionsAsync();
+      if (status === "granted") {
+        setBgStatus("granted");
+        logStatus("handleRequestBackground:granted", fgStatus, "granted");
+      } else {
+        setBgStatus("denied");
+        logStatus("handleRequestBackground:denied", fgStatus, "denied");
+        Alert.alert(
+          (t as any).locPermBgDeniedTitle || "항상 허용이 필요합니다",
+          (t as any).locPermBgDeniedMsg || "위치를 항상 공유하려면 설정에서 '항상 허용'으로 변경해주세요.",
+          [
+            { text: t.cancel, style: "cancel" },
+            { text: (t as any).locPermOpenSettings, onPress: () => openSettings() },
+          ]
+        );
+      }
     } catch {
       setBgStatus("denied");
       logStatus("handleRequestBackground:error", fgStatus, "denied");
@@ -115,9 +133,11 @@ export default function ParentLocationPermitScreen() {
   const openSettings = () => {
     logStatus("openSettings", fgStatus, bgStatus);
     if (Platform.OS === "ios") {
-      Linking.openURL("app-settings:");
+      Linking.openURL("App-prefs:Privacy&path=LOCATION").catch(() => {
+        Linking.openURL("app-settings:").catch(() => {});
+      });
     } else {
-      Linking.openSettings();
+      Linking.openSettings().catch(() => {});
     }
   };
 
@@ -199,7 +219,7 @@ export default function ParentLocationPermitScreen() {
           </Pressable>
         )}
 
-        {fgOnly && (
+        {fgOnly && bgStatus !== "denied" && (
           <>
             <Pressable
               style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
@@ -210,6 +230,21 @@ export default function ParentLocationPermitScreen() {
             </Pressable>
             <Pressable style={st.settingsLink} onPress={openSettings}>
               <Text style={st.settingsLinkText}>{(t as any).locPermOpenSettings}</Text>
+            </Pressable>
+          </>
+        )}
+
+        {fgStatus === "granted" && bgStatus === "denied" && (
+          <>
+            <Pressable
+              style={({ pressed }) => [st.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={openSettings}
+            >
+              <Ionicons name="settings-outline" size={20} color="#D4843A" style={{ marginRight: 8 }} />
+              <Text style={st.primaryBtnText}>{(t as any).locPermOpenSettings}</Text>
+            </Pressable>
+            <Pressable style={st.settingsLink} onPress={handleNext}>
+              <Text style={st.settingsLinkText}>{(t as any).locPermSkip || "나중에 하기"}</Text>
             </Pressable>
           </>
         )}
