@@ -471,10 +471,10 @@ const s = StyleSheet.create({
 
   // ── 밝은 톤 폼 ──
   formContainer: { flex: 1, backgroundColor: "#FAFAFA" },
-  formHeader:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E8E8E8" },
+  formHeader:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#E8E8E8" },
   formHeaderTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#333" },
 
-  scroll:      { paddingHorizontal: 20, paddingTop: 24 },
+  scroll:      { paddingHorizontal: 20, paddingTop: 16 },
   fSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#333", marginBottom: 16, marginTop: 8 },
   fFieldLabel:   { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", marginBottom: 6 },
 
