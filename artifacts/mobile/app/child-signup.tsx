@@ -464,14 +464,14 @@ const s = StyleSheet.create({
   fSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#333", marginBottom: 16, marginTop: 8 },
   fFieldLabel:   { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", marginBottom: 6 },
 
-  fInput:      { backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 16, fontSize: 16, fontFamily: "Inter_500Medium", color: "#333", borderWidth: 1.5, borderColor: "#E0E0E0", marginBottom: 16 },
+  fInput:      { backgroundColor: "#FFFFFF", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Inter_500Medium", color: "#333", borderWidth: 1.5, borderColor: "#E0E0E0", marginBottom: 16 },
   codeInput:   { letterSpacing: 8, textAlign: "center", fontSize: 22, fontFamily: "Inter_700Bold" },
 
   phoneRow:    { flexDirection: "row", gap: 8, marginBottom: 0 },
   phoneInput:  { flex: 1, marginBottom: 0 },
   otpInput:    { letterSpacing: 6, textAlign: "center" },
 
-  fOtpBtn:          { backgroundColor: "#D4843A", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 14, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  fOtpBtn:          { backgroundColor: "#D4843A", borderRadius: 14, paddingHorizontal: 10, justifyContent: "center", alignItems: "center", marginBottom: 16 },
   fOtpBtnDisabled:  { backgroundColor: "#d1d5db" },
   fOtpBtnText:      { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFFFFF" },
   fOtpBtnTextDisabled: { color: "#9ca3af" },
