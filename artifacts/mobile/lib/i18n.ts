@@ -421,6 +421,9 @@ const translations = {
     parentCodeJoinBtn: "연결하기",
     parentCodeJoining: "연결 중...",
     parentCodeHint: "자녀 앱의 가족 설정에서 코드를 확인할 수 있어요",
+    parentCodeScanQR: "QR 스캔",
+    parentCodeScanTitle: "자녀의 QR 코드를 스캔하세요",
+    parentCodeCameraPermission: "카메라 권한이 필요합니다",
 
     // ── 부모 권한 안내 ──
     permMainTitle: "설정을 시작해 볼까요?",
@@ -901,6 +904,9 @@ const translations = {
     parentCodeJoinBtn: "Connect",
     parentCodeJoining: "Connecting...",
     parentCodeHint: "You can find the code in your child's app under Family Settings",
+    parentCodeScanQR: "Scan QR",
+    parentCodeScanTitle: "Scan your child's QR code",
+    parentCodeCameraPermission: "Camera permission is required",
 
     // ── Parent permissions ──
     permMainTitle: "Ready to set up\nANBU?",
@@ -1377,6 +1383,9 @@ const translations = {
     parentCodeJoinBtn: "接続する",
     parentCodeJoining: "接続中...",
     parentCodeHint: "お子さまのアプリの家族設定でコードを確認できます",
+    parentCodeScanQR: "QRスキャン",
+    parentCodeScanTitle: "お子さまのQRコードをスキャンしてください",
+    parentCodeCameraPermission: "カメラの許可が必要です",
 
     // ── 親権限案内 ──
     permMainTitle: "ANBUの設定を\n始めましょうか？",
