@@ -9,11 +9,9 @@ const SLIDE_INTERVAL = 6000;
 const SLIDE_DURATION = 900;
 const AUTO_RESUME_DELAY = 5000;
 const EASE_SLIDE = Easing.bezier(0.25, 0.1, 0.25, 1);
-const DEMO_SLIDE_BGS = ["#1a3a2a", "#1a2a3a", "#2a1a3a"];
-
 export type Slide =
   | { kind: "msg"; msg: FamilyMessage }
-  | { kind: "demo"; id: number; emoji: string; text: string; name: string; bg: string };
+  | { kind: "demo"; id: number; emoji: string; text: string; name: string };
 
 export function buildSlides(msgs: FamilyMessage[], demoSlides: any[]): Slide[] {
   if (msgs.length > 0) return msgs.map((msg) => ({ kind: "msg", msg }));
@@ -23,7 +21,6 @@ export function buildSlides(msgs: FamilyMessage[], demoSlides: any[]): Slide[] {
     emoji: d.emoji,
     text: d.text,
     name: d.name,
-    bg: DEMO_SLIDE_BGS[i] ?? "#1a2a3a",
   }));
 }
 
