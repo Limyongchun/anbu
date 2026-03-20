@@ -1105,7 +1105,7 @@ const s = StyleSheet.create({
   editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.06)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666" },
 
-  sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#999", letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
   privacyRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
   privacyIconWrap: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(139,92,246,0.1)", alignItems: "center", justifyContent: "center" },
   privacyTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: "#333", marginBottom: 2 },
