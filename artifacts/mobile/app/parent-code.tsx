@@ -186,7 +186,7 @@ export default function ParentCodeScreen() {
                   onPress={handleOpenScanner}
                   disabled={joining}
                 >
-                  <Ionicons name="qr-code-outline" size={22} color="#D4843A" />
+                  <Ionicons name="qr-code-outline" size={22} color="#fff" />
                 </Pressable>
               </View>
 
@@ -329,14 +329,15 @@ const st = StyleSheet.create({
     marginBottom: 12,
   },
   codeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     width: "100%",
     marginBottom: 16,
   },
   codeInput: {
     flex: 1,
+    minWidth: 0,
     height: 56,
     backgroundColor: "#F5F0EB",
     borderRadius: 14,
@@ -350,9 +351,10 @@ const st = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 14,
-    backgroundColor: "rgba(212,132,58,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#D4843A",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    flexShrink: 0,
   },
   errorText: {
     fontFamily: "Inter_400Regular",
