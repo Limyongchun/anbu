@@ -561,7 +561,7 @@ export default function ProfileScreen() {
         {myRole === "child" && isMasterChild && isConnected && familyCode && (
           <>
             <SectionHeader title={t.masterCode} />
-            <View style={s.card}>
+            <View style={[s.card, { borderWidth: 2, borderColor: "#FFD700" }]}>
               <View style={{ padding: 16, paddingBottom: 12 }}>
                 <View style={s.childCodeDisplay}>
                   {familyCode.split("").map((ch, i) => (
@@ -1105,7 +1105,7 @@ const s = StyleSheet.create({
   editBtn:      { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.06)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   editBtnText:  { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666" },
 
-  sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  sectionHeader:{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFFFFF", letterSpacing: 0.8, marginTop: 22, marginBottom: 8, marginLeft: 4 },
   privacyRow:   { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
   privacyIconWrap: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(139,92,246,0.1)", alignItems: "center", justifyContent: "center" },
   privacyTitle: { fontFamily: "Inter_500Medium", fontSize: 15, color: "#333", marginBottom: 2 },
@@ -1121,8 +1121,8 @@ const s = StyleSheet.create({
   divider:      { height: 1, backgroundColor: "#E8E8E8", marginLeft: 64 },
 
   codeDisplay:  { flexDirection: "row", justifyContent: "center", gap: 8, paddingVertical: 20 },
-  codeCell:     { width: 44, height: 52, borderRadius: 12, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center" },
-  codeCellText: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#555", letterSpacing: 2 },
+  codeCell:     { flex: 1, maxWidth: 44, height: 48, borderRadius: 12, backgroundColor: "#E8E8E8", alignItems: "center", justifyContent: "center" },
+  codeCellText: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#555" },
   codeHint:     { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999", textAlign: "center", marginBottom: 14 },
   copyBtn:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 40, marginBottom: 12, paddingVertical: 8, borderRadius: 50, backgroundColor: "rgba(0,0,0,0.06)" },
   copyBtnDone:  { backgroundColor: "#888" },
