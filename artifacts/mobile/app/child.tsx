@@ -275,12 +275,16 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 
   const markersJs = parentLocs.map((pl, i) => {
     const c = PIN_COLORS[i % PIN_COLORS.length];
+    const initial = (pl.memberName || "?").charAt(0);
     return `
 (function(){
-  var pinHtml='<div class="pin-wrap"><div class="pin-ring" style="background:${c.replace("#", "rgba(")
-    .replace(/(..)(..)(..)/, (_, r: string, g: string, b: string) => `${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)}`)},0.25)"></div><div class="pin-dot" style="background:${c}; box-shadow:0 2px 12px ${c}99"></div><div class="pin-label">${pl.memberName}</div></div>';
-  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
-  m.on('click',function(){window.parent.postMessage('markerClick:${i}','*');});
+  var pinHtml='<div class="profile-pin" id="pin-${i}"><div class="pin-body"><div class="pin-avatar" style="background:${c}">${initial}</div></div><div class="pin-tail"><svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#fff"/></svg></div></div>';
+  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[56,68],iconAnchor:[28,68]})}).addTo(map);
+  m.on('click',function(){
+    document.querySelectorAll('.profile-pin').forEach(function(el){el.classList.remove('selected')});
+    document.getElementById('pin-${i}').classList.add('selected');
+    window.parent.postMessage('markerClick:${i}','*');
+  });
 })();`;
   }).join("\n");
 
@@ -296,12 +300,12 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 *{margin:0;padding:0;box-sizing:border-box}
 #map{width:100vw;height:100vh}
 .leaflet-control-attribution{display:none}
-.pin-wrap{cursor:pointer;position:relative;width:22px;height:22px}
-.pin-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;animation:pulse 1.5s ease-out infinite}
-.pin-dot{width:22px;height:22px;border-radius:50%;border:3.5px solid #fff}
-.pin-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:#1C2430;color:#fff;font-size:11px;font-family:sans-serif;white-space:nowrap;padding:4px 10px;border-radius:12px;pointer-events:none;opacity:0;transition:opacity 0.2s}
-.pin-wrap:hover .pin-label{opacity:1}
-@keyframes pulse{0%{transform:translate(-50%,-50%) scale(0.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0}}
+.profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25))}
+.profile-pin.selected{transform:scale(1.25)}
+.pin-body{width:48px;height:48px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:#fff}
+.pin-avatar{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;font-family:sans-serif}
+.pin-tail{margin-top:-3px;line-height:0}
+.pin-tail svg path{filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
 </style>
 </head><body><div id="map"></div><script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${centerLat},${centerLon}],16);
@@ -332,10 +336,7 @@ ${boundsJs}
           {parentLocs.map((pl, i) => (
             <Pressable key={pl.deviceId} style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}
               onPress={() => openBannerFor(i)}>
-              <PulsingPin color={PIN_COLORS[i % PIN_COLORS.length]} />
-              <View style={mp.pinHint}>
-                <Text style={mp.pinHintText}>{pl.memberName}</Text>
-              </View>
+              <ProfilePin color={PIN_COLORS[i % PIN_COLORS.length]} initial={(pl.memberName || "?").charAt(0)} selected={selectedIdx === i && showBanner} />
             </Pressable>
           ))}
         </View>
@@ -436,6 +437,21 @@ ${boundsJs}
         </View>
       )}
     </View>
+  );
+}
+
+function ProfilePin({ color = "#7A5454", initial = "?", selected = false }: { color?: string; initial?: string; selected?: boolean }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: selected ? 1.25 : 1, useNativeDriver: false, tension: 120, friction: 8 }).start();
+  }, [selected]);
+  return (
+    <Animated.View style={{ alignItems: "center", transform: [{ scale }] }}>
+      <View style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: "#fff", backgroundColor: color, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 6 }}>
+        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff" }}>{initial}</Text>
+      </View>
+      <View style={{ marginTop: -2, width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 10, borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: "#fff" }} />
+    </Animated.View>
   );
 }
 
