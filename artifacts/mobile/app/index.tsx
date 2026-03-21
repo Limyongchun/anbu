@@ -99,7 +99,7 @@ export default function SplashScreen() {
   }, [loading, isConnected, myRole]);
 
   const handleTap = () => {
-    router.push("/role-select");
+    router.push("/lang-select");
   };
 
   return (
