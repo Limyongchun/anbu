@@ -275,6 +275,7 @@ router.get("/family/:code/locations", async (req, res) => {
         ...l,
         role: member?.role || "unknown",
         privacyMode: member?.privacyMode ?? false,
+        photoData: member?.photoData || null,
         updatedAt: l.updatedAt.toISOString(),
       };
     }));

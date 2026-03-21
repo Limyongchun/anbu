@@ -50,6 +50,7 @@ export interface LocationData {
   battery?: number;
   isSharing: boolean;
   privacyMode?: boolean;
+  photoData?: string | null;
   updatedAt: string;
 }
 
