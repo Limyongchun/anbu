@@ -1,0 +1,224 @@
+그 증상은 원인이 거의 확실합니다.
+
+지금 방식이
+"현재 사진 위에 다음 사진을 페이드로 올리는 구조"라서
+전환 순간에 **아래 깔린 이전 사진이 살짝 비쳐 보이는 것**입니다.
+
+즉, 깜빡임은 줄었는데
+이번엔 **고스트 현상**이 생긴 겁니다.
+
+해결은 아주 단순합니다.
+
+핵심:
+1. 다음 사진를 먼저 완전히 로드
+2. 전환 시작 직전에 현재 사진을 그대로 둠
+3. 다음 사진가 올라올 때 배경을 같이 덮어야 함
+4. 가장 중요한 건 `Animated.View` 와 `Image` 둘 다 `absoluteFill`로 완전히 덮기
+5. 이미지 자체가 투명 PNG거나 contain이면 아래 사진이 비칠 수 있으니 `cover` 유지
+
+import React, { memo, useEffect, useRef, useState } from "react";
+import {
+  View,
+  Image,
+  StyleSheet,
+  Animated,
+  Easing,
+} from "react-native";
+
+const SLIDE_INTERVAL = 5000;
+const FADE_DURATION = 250;
+
+type SlideItem = {
+  id: string;
+  image: any;
+};
+
+const ParentPhotoSlider = memo(function ParentPhotoSlider({
+  slides,
+}: {
+  slides: SlideItem[];
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [nextIndex, setNextIndex] = useState<number | null>(null);
+  const [nextLoaded, setNextLoaded] = useState(false);
+
+  const opacity = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const animatingRef = useRef(false);
+
+  const currentSlide = slides[currentIndex];
+  const upcomingSlide =
+    nextIndex !== null ? slides[nextIndex] : null;
+
+  useEffect(() => {
+    if (!slides?.length || slides.length <= 1) return;
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (animatingRef.current) return;
+      const target = (currentIndex + 1) % slides.length;
+      setNextLoaded(false);
+      setNextIndex(target);
+    }, SLIDE_INTERVAL);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [currentIndex, slides]);
+
+  useEffect(() => {
+    if (nextIndex === null || !nextLoaded || animatingRef.current) return;
+
+    animatingRef.current = true;
+    opacity.setValue(0);
+
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: FADE_DURATION,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentIndex(nextIndex);
+      setNextIndex(null);
+      setNextLoaded(false);
+      opacity.setValue(0);
+      animatingRef.current = false;
+    });
+  }, [nextIndex, nextLoaded, opacity]);
+
+  if (!slides?.length) return null;
+
+  return (
+    <View style={styles.container}>
+      {/* 현재 사진 */}
+      <View style={styles.layer}>
+        <Image
+          source={currentSlide.image}
+          style={styles.image}
+          resizeMode="cover"
+          fadeDuration={0}
+        />
+      </View>
+
+      {/* 다음 사진: 반드시 배경까지 덮어주는 레이어 */}
+      {upcomingSlide && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.overlayLayer, { opacity }]}
+        >
+          <View style={styles.overlayBg} />
+          <Image
+            source={upcomingSlide.image}
+            style={styles.image}
+            resizeMode="cover"
+            fadeDuration={0}
+            onLoad={() => setNextLoaded(true)}
+          />
+        </Animated.View>
+      )}
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    overflow: "hidden",
+    backgroundColor: "#000",
+    position: "relative",
+  },
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+  },
+  overlayLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+  },
+  overlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
+    width: undefined,
+    height: undefined,
+  },
+});
+
+export default ParentPhotoSlider;
+
+중요 포인트 1
+
+아래처럼 `overlayBg`를 하나 더 넣은 이유는
+전환 중 다음 이미지가 순간적으로 완전히 그려지기 전에도
+아래 이전 사진이 비치지 않게 하려는 겁니다.
+
+<Animated.View style={[styles.overlayLayer, { opacity }]}>
+  <View style={styles.overlayBg} />
+  <Image ... />
+</Animated.View>
+
+중요 포인트 2
+
+혹시 현재 사진이 완전히 사라지기 전에
+다음 사진이 반투명으로 올라오면서 이전 사진이 섞여 보이는 게 싫으면
+페이드 대신 "즉시 교체 + 아주 약한 확대" 방식이 더 깔끔합니다.
+
+즉,
+opacity 크로스페이드 자체를 없애는 방법입니다.
+이게 사진 액자형 UI에서는 더 고급스럽게 보일 때가 많습니다.
+
+// 페이드 없이 바로 교체
+if (nextLoaded) {
+  setCurrentIndex(nextIndex);
+  setNextIndex(null);
+}
+
+그리고 아래도 꼭 확인하세요.
+
+1. 이미지가 PNG 투명 배경이면 이전 사진이 보일 수 있음
+   -> JPG 사용 권장
+   -> 또는 배경 레이어 반드시 깔기
+
+2. `resizeMode="contain"` 쓰면 빈 공간 때문에 아래 사진 보임
+   -> `cover`로 유지
+
+3. 부모 영역 배경이 흰색이면 전환 중 더 티남
+   -> 슬라이드 컨테이너 배경을 검정 또는 진한 색 고정
+
+4. 이미지 래퍼에 borderRadius가 있는데 overflow hidden이 없으면 가장자리에서 비칠 수 있음
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+});
+
+가장 안정적인 결론
+
+전 사진이 살짝 비치는 게 싫으면
+"크로스페이드"보다
+"다음 사진 완전 로드 후 즉시 교체"
+가 제일 깔끔합니다.
+
+즉,
+부모님용 사진 뷰어는
+화려한 전환보다
+안정적으로 조용하게 바뀌는 게 더 좋습니다.
+
+추천 방식
+
+- 기본: 즉시 교체
+- 옵션: 1.02배 → 1.00배 아주 약한 줌 애니메이션만 사용
+- 페이드는 제거
+
+원하시는 방향이 “완전 안 비치게”라면 다음 버전으로 가시면 됩니다.
+
+전환 효과 없이:
+다음 이미지 preload 완료 → currentIndex 즉시 변경
+
+그 방식 코드도 바로 드리겠습니다.
