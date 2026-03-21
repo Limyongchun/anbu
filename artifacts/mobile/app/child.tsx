@@ -709,7 +709,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
 
       {subView === "messages" && familyCode && (
         <Pressable style={ab.fab} onPress={() => setShowCompose(true)}>
-          <Ionicons name="add" size={26} color="#FFFFFF" />
+          <Ionicons name="add" size={26} color="#000000" />
         </Pressable>
       )}
     </>
@@ -1525,7 +1525,7 @@ const ab = StyleSheet.create({
   heartN: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: COLORS.coral },
   cardText: { fontFamily: "Inter_400Regular", fontSize: 15, color: DS.textPrimary, lineHeight: 22 },
   cardPhoto: { width: "100%", height: 180, borderRadius: 14, marginTop: 8 },
-  fab: { position: "absolute", bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: DS.brand, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 10 },
+  fab: { position: "absolute", bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: "#FFD700", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 10 },
   photoPreviewRow: { width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.card, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: DS.brand + "33" },
   photoThumb: { width: 60, height: 60, borderRadius: 10 },
   photoLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
