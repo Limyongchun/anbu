@@ -648,7 +648,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
           <>
             {loading && <ActivityIndicator color={DS.info} style={{ marginVertical: 20 }} />}
             {!loading && msgs.length === 0 && familyCode && (
-              <View style={ab.empty}><Ionicons name="chatbubble-outline" size={32} color={DS.textTertiary} /><Text style={ab.emptyText}>{t.anbuNoMessages}</Text></View>
+              <View style={ab.empty}><Ionicons name="chatbubble-outline" size={32} color="#FFFFFF" /><Text style={[ab.emptyText, { color: "#FFFFFF" }]}>{t.anbuNoMessages}</Text></View>
             )}
             {msgs.map((msg) => (
               <View key={msg.id} style={ab.card}>
