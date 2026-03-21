@@ -456,7 +456,7 @@ const s = StyleSheet.create({
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: COLORS.child.text },
 
   modeBackBtn:   { position: "absolute", top: 0, right: 16, zIndex: 10, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  modeContent:   { flex: 1, paddingHorizontal: 28, justifyContent: "center", paddingBottom: 120 },
+  modeContent:   { flex: 1, paddingHorizontal: 28, justifyContent: "center", paddingBottom: 60 },
   modeLogo:      { width: 130, height: 52, marginBottom: 20 },
   modeHero:      { fontFamily: "Inter_400Regular", fontSize: 38, color: "#FFFFFF", lineHeight: 52 },
 
