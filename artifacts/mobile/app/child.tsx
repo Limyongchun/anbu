@@ -273,20 +273,39 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const TAB_BAR_H = 58 + Math.max(bottomInset, 12);
   const BOTTOM_SAFE = TAB_BAR_H;
 
+  const photoDataArr = parentLocs.map(pl => pl.photoData || "");
+  const photoSrcsJs = `var _photos=${JSON.stringify(photoDataArr)};`;
+
   const markersJs = parentLocs.map((pl, i) => {
     const c = PIN_COLORS[i % PIN_COLORS.length];
     const initial = (pl.memberName || "?").charAt(0);
-    const safeInitial = initial.replace(/'/g, "\\'");
-    const hasPhoto = !!pl.photoData;
-    const avatarContent = hasPhoto
-      ? `<img src="${pl.photoData}" class="pin-photo"/>`
-      : `<div class="pin-initial" style="background:${c}">${safeInitial}</div>`;
     return `
 (function(){
-  var pinHtml='<div class="profile-pin" id="pin-${i}"><div class="pin-body">${avatarContent.replace(/'/g, "\\'")}</div><div class="pin-tail"><svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#fff"/></svg></div></div>';
-  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[56,68],iconAnchor:[28,68]})}).addTo(map);
+  var wrap=document.createElement('div');
+  wrap.className='profile-pin';
+  wrap.id='pin-${i}';
+  var body=document.createElement('div');
+  body.className='pin-body';
+  if(_photos[${i}]){
+    var img=document.createElement('img');
+    img.src=_photos[${i}];
+    img.className='pin-photo';
+    body.appendChild(img);
+  }else{
+    var d=document.createElement('div');
+    d.className='pin-initial';
+    d.style.background='${c}';
+    d.textContent='${initial}';
+    body.appendChild(d);
+  }
+  wrap.appendChild(body);
+  var tail=document.createElement('div');
+  tail.className='pin-tail';
+  tail.innerHTML='<svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#fff"/></svg>';
+  wrap.appendChild(tail);
+  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:wrap.outerHTML,iconSize:[56,68],iconAnchor:[28,68]})}).addTo(map);
   m.on('click',function(){
-    document.querySelectorAll('.profile-pin').forEach(function(el){el.classList.remove('selected')});
+    document.querySelectorAll('.profile-pin').forEach(function(e){e.classList.remove('selected')});
     document.getElementById('pin-${i}').classList.add('selected');
     window.parent.postMessage('markerClick:${i}','*');
   });
@@ -316,6 +335,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 </head><body><div id="map"></div><script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${centerLat},${centerLon}],16);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
+${photoSrcsJs}
 ${markersJs}
 ${boundsJs}
 </script></body></html>`;
