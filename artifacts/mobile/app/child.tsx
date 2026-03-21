@@ -301,7 +301,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   wrap.appendChild(body);
   var tail=document.createElement('div');
   tail.className='pin-tail';
-  tail.innerHTML='<svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#fff"/></svg>';
+  tail.innerHTML='<svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#FFD700"/></svg>';
   wrap.appendChild(tail);
   var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:wrap.outerHTML,iconSize:[56,68],iconAnchor:[28,68]})}).addTo(map);
   m.on('click',function(){
@@ -324,12 +324,12 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 *{margin:0;padding:0;box-sizing:border-box}
 #map{width:100vw;height:100vh}
 .leaflet-control-attribution{display:none}
-.profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25))}
+.profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));width:56px}
 .profile-pin.selected{transform:scale(1.25)}
-.pin-body{width:48px;height:48px;border-radius:50%;border:3px solid #fff;overflow:hidden;background:#fff}
-.pin-photo{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.pin-initial{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;font-family:sans-serif}
-.pin-tail{margin-top:-3px;line-height:0}
+.pin-body{width:50px;height:50px;border-radius:50%;border:3px solid #FFD700;overflow:hidden;background:#FFD700;margin:0 auto;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.pin-photo{width:44px;height:44px;object-fit:cover;border-radius:50%;display:block}
+.pin-initial{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;font-family:sans-serif}
+.pin-tail{margin-top:-3px;line-height:0;text-align:center}
 .pin-tail svg path{filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
 </style>
 </head><body><div id="map"></div><script>
@@ -473,14 +473,14 @@ function ProfilePin({ color = "#7A5454", initial = "?", photoUri, selected = fal
   }, [selected]);
   return (
     <Animated.View style={{ alignItems: "center", transform: [{ scale }] }}>
-      <View style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: "#fff", backgroundColor: photoUri ? "#fff" : color, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 6 }}>
+      <View style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: "#FFD700", backgroundColor: photoUri ? "#FFD700" : color, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 6 }}>
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={{ width: 46, height: 46, borderRadius: 23 }} resizeMode="cover" />
         ) : (
           <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff" }}>{initial}</Text>
         )}
       </View>
-      <View style={{ marginTop: -2, width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 10, borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: "#fff" }} />
+      <View style={{ marginTop: -2, width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 10, borderLeftColor: "transparent", borderRightColor: "transparent", borderTopColor: "#FFD700" }} />
     </Animated.View>
   );
 }
