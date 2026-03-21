@@ -5,6 +5,7 @@ import type { FamilyMessage } from "@/lib/api";
 
 const SLIDE_INTERVAL = 6000;
 const AUTO_RESUME_DELAY = 5000;
+const PREFETCH_TIMEOUT = 3000;
 
 export type Slide =
   | { kind: "msg"; msg: FamilyMessage }
@@ -36,7 +37,6 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
   const total = slides.length;
   const [curIdx, setCurIdx] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [pendingIdx, setPendingIdx] = useState<number | null>(null);
   const transitioningRef = useRef(false);
   const autoResumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSlideChangeRef = useRef(onSlideChange);
@@ -61,10 +61,9 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
     }
   }, [curIdx, total, slides]);
 
-  const commitPending = useCallback((ni: number) => {
+  const commitSwap = useCallback((ni: number) => {
     onSlideChangeRef.current?.(ni, slides[ni]);
     setCurIdx(ni);
-    setPendingIdx(null);
     transitioningRef.current = false;
   }, [slides]);
 
@@ -74,24 +73,26 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
     progressAnim.stopAnimation();
 
     const ni = (curIdx + 1) % total;
-    const nextSlide = slides[ni];
-    const uri = getSlideImageUri(nextSlide);
+    const uri = getSlideImageUri(slides[ni]);
 
     if (!uri) {
-      commitPending(ni);
+      commitSwap(ni);
       return;
     }
 
-    setPendingIdx(ni);
+    let committed = false;
+    const commit = () => {
+      if (committed) return;
+      committed = true;
+      commitSwap(ni);
+    };
+
+    const timeout = setTimeout(commit, PREFETCH_TIMEOUT);
 
     ExpoImage.prefetch(uri)
-      .then(() => {
-        commitPending(ni);
-      })
-      .catch(() => {
-        commitPending(ni);
-      });
-  }, [total, curIdx, progressAnim, slides, commitPending]);
+      .then(() => { clearTimeout(timeout); commit(); })
+      .catch(() => { clearTimeout(timeout); commit(); });
+  }, [total, curIdx, progressAnim, slides, commitSwap]);
 
   const startProgress = useCallback(() => {
     progressAnim.setValue(0);
