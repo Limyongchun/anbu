@@ -614,8 +614,8 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
               <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
                 style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
                 {sending
-                  ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Ionicons name="send" size={17} color="#FFFFFF" />}
+                  ? <ActivityIndicator size="small" color="#000000" />
+                  : <Ionicons name="send" size={17} color="#000000" />}
               </Pressable>
             </View>
           </Pressable>
@@ -1501,7 +1501,7 @@ const ab = StyleSheet.create({
   input: { width: "100%", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.card, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular", color: DS.textPrimary, minHeight: 80, textAlignVertical: "top", marginBottom: 12, borderWidth: 1, borderColor: DS.border },
   sheetBar: { width: "100%", flexDirection: "row", alignItems: "center", gap: 8 },
   attachBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: DS.surfaceSoft, alignItems: "center", justifyContent: "center" },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: DS.brand, alignItems: "center", justifyContent: "center" },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFD700", alignItems: "center", justifyContent: "center" },
   screenTitle: { fontFamily: "Inter_700Bold", fontSize: 24, color: DS.textPrimary, marginBottom: 16 },
   seg: { flexDirection: "row", backgroundColor: DS.surfaceSoft, borderRadius: DS.radius.pill, padding: 4, marginBottom: 16, alignSelf: "flex-start" },
   segBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: DS.radius.pill },
