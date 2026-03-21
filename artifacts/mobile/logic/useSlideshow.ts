@@ -5,7 +5,6 @@ import type { FamilyMessage } from "@/lib/api";
 
 const SLIDE_INTERVAL = 6000;
 const AUTO_RESUME_DELAY = 5000;
-const PREFETCH_TIMEOUT = 3000;
 
 export type Slide =
   | { kind: "msg"; msg: FamilyMessage }
@@ -80,18 +79,9 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
       return;
     }
 
-    let committed = false;
-    const commit = () => {
-      if (committed) return;
-      committed = true;
+    ExpoImage.prefetch(uri).finally(() => {
       commitSwap(ni);
-    };
-
-    const timeout = setTimeout(commit, PREFETCH_TIMEOUT);
-
-    ExpoImage.prefetch(uri)
-      .then(() => { clearTimeout(timeout); commit(); })
-      .catch(() => { clearTimeout(timeout); commit(); });
+    });
   }, [total, curIdx, progressAnim, slides, commitSwap]);
 
   const startProgress = useCallback(() => {
