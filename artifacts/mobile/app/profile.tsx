@@ -411,15 +411,6 @@ export default function ProfileScreen() {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
 
-  // ── 가족방 만들기 ──
-  const [showCreateSheet, setShowCreateSheet] = useState(false);
-  const [createName, setCreateName] = useState("");
-  const [createRole, setCreateRole] = useState<FamilyRole | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const [createdCode, setCreatedCode] = useState<string | null>(null);
-  const [createCodeCopied, setCreateCodeCopied] = useState(false);
-
   const handleJoin = async () => {
     const code = joinCode.trim().toUpperCase();
     const name = joinName.trim();
@@ -435,34 +426,6 @@ export default function ProfileScreen() {
     } finally {
       setJoining(false);
     }
-  };
-
-  const handleCreate = async () => {
-    const name = createName.trim();
-    if (!name || !createRole) return;
-    setCreating(true); setCreateError("");
-    try {
-      const group = await api.createFamily(deviceId, name, createRole);
-      setCreatedCode(group.code);
-    } catch {
-      setCreateError(t.errorCreateRoom);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleCompleteCreate = async () => {
-    if (!createdCode || !createName.trim() || !createRole) return;
-    await connect(createdCode, createName.trim(), createRole);
-    setShowCreateSheet(false);
-    router.replace(createRole === "parent" ? "/parent" : "/child");
-  };
-
-  const copyCreatedCode = async () => {
-    if (!createdCode) return;
-    await Clipboard.setStringAsync(createdCode);
-    setCreateCodeCopied(true);
-    setTimeout(() => setCreateCodeCopied(false), 2000);
   };
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
@@ -656,26 +619,6 @@ export default function ProfileScreen() {
                 <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
               </Pressable>
 
-              <View style={s.connectOrRow}>
-                <View style={s.connectOrLine} />
-                <Text style={s.connectOrText}>{t.or}</Text>
-                <View style={s.connectOrLine} />
-              </View>
-
-              {/* 새 가족방 만들기 */}
-              <Pressable
-                style={s.connectBigBtn}
-                onPress={() => { setCreateName(""); setCreateRole(null); setCreateError(""); setCreatedCode(null); setShowCreateSheet(true); }}
-              >
-                <View style={[s.connectBigIcon, { backgroundColor: "rgba(0,0,0,0.05)" }]}>
-                  <Ionicons name="add-circle-outline" size={24} color="#888" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.connectBigLabel}>{t.createFamily}</Text>
-                  <Text style={s.connectBigDesc}>{t.createFamilyDesc}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.2)" />
-              </Pressable>
             </View>
           )}
         </View>
@@ -976,83 +919,6 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── 새 가족방 만들기 모달 ── */}
-      <Modal visible={showCreateSheet} transparent animationType="slide" onRequestClose={() => setShowCreateSheet(false)}>
-        <KeyboardAvoidingView style={{ flex: 1, justifyContent: "flex-end" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowCreateSheet(false)}>
-            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
-          </Pressable>
-          <Pressable onPress={() => {}} style={s.bigSheet}>
-            <View style={s.sheetHandle} />
-            {createdCode ? (
-              /* ── 코드 발급 완료 ── */
-              <>
-                <View style={{ alignItems: "center", marginBottom: 8 }}>
-                  <Ionicons name="checkmark-circle" size={52} color={COLORS.success} />
-                </View>
-                <Text style={[s.sheetTitle, { textAlign: "center" }]}>{t.roomCreated}</Text>
-                <Text style={[s.sheetSub, { textAlign: "center" }]}>{t.roomCreatedSub}</Text>
-                <View style={s.createdCodeBox}>
-                  <Text style={s.createdCodeText}>{createdCode}</Text>
-                </View>
-                <Pressable style={[s.copyBtn, createCodeCopied && s.copyBtnDone, { marginBottom: 16 }]} onPress={copyCreatedCode}>
-                  <Ionicons name={createCodeCopied ? "checkmark" : "copy-outline"} size={14} color={createCodeCopied ? "#333" : "#888"} />
-                  <Text style={[s.copyBtnText, createCodeCopied && { color: "#333" }]}>
-                    {createCodeCopied ? t.copied : t.copy}
-                  </Text>
-                </Pressable>
-                <Pressable style={s.saveBtn} onPress={handleCompleteCreate}>
-                  <Text style={s.saveBtnText}>{t.start}</Text>
-                </Pressable>
-              </>
-            ) : (
-              /* ── 입력 폼 ── */
-              <>
-                <Text style={s.sheetTitle}>{t.createRoomTitle}</Text>
-                <Text style={s.sheetSub}>{t.createRoomSub}</Text>
-
-                <Text style={s.fieldLabel}>{t.iAm}</Text>
-                <View style={s.roleRow}>
-                  {([["parent", t.roleParent], ["child", t.roleChild]] as [FamilyRole, string][]).map(([r, label]) => (
-                    <Pressable
-                      key={r}
-                      style={[s.roleChip, createRole === r && s.roleChipActive]}
-                      onPress={() => setCreateRole(r)}
-                    >
-                      <Text style={[s.roleChipText, createRole === r && s.roleChipTextActive]}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Text style={s.fieldLabel}>{t.nameLabel}</Text>
-                <TextInput
-                  style={s.sheetInput}
-                  value={createName}
-                  onChangeText={setCreateName}
-                  placeholder={t.nameDisplayPlaceholder}
-                  placeholderTextColor={"#999"}
-                  maxLength={20}
-                  autoFocus={false}
-                />
-
-                {!!createError && <Text style={s.errorText}>{createError}</Text>}
-
-                <Pressable
-                  style={[s.saveBtn, (!createName.trim() || !createRole || creating) && { opacity: 0.4 }]}
-                  disabled={!createName.trim() || !createRole || creating}
-                  onPress={handleCreate}
-                >
-                  {creating ? (
-                    <ActivityIndicator color={COLORS.white} size="small" />
-                  ) : (
-                    <Text style={s.saveBtnText}>{t.createRoomBtn}</Text>
-                  )}
-                </Pressable>
-              </>
-            )}
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
       {/* ── 연결 해제 확인 모달 ── */}
       {confirmModal && (
         <Modal visible transparent animationType="fade" onRequestClose={() => !confirming && setConfirmModal(null)}>
@@ -1150,9 +1016,6 @@ const s = StyleSheet.create({
   connectBigIcon:   { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   connectBigLabel:  { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#333", marginBottom: 2 },
   connectBigDesc:   { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
-  connectOrRow:     { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10, paddingHorizontal: 16 },
-  connectOrLine:    { flex: 1, height: 1, backgroundColor: "rgba(0,0,0,0.08)" },
-  connectOrText:    { fontFamily: "Inter_400Regular", fontSize: 12, color: "#999" },
 
   // ── 참가 / 만들기 시트 ──
   bigSheet:         { backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 },
@@ -1168,8 +1031,6 @@ const s = StyleSheet.create({
   errorText:        { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.danger, textAlign: "center", marginBottom: 12 },
 
   // ── 코드 발급 완료 ──
-  createdCodeBox:   { backgroundColor: "#E8E8E8", borderRadius: 18, paddingVertical: 22, marginBottom: 14, alignItems: "center" },
-  createdCodeText:  { fontFamily: "Inter_700Bold", fontSize: 34, color: "#555", letterSpacing: 10 },
 
   faqQ:         { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },
   faqQText:     { fontFamily: "Inter_500Medium", fontSize: 14, color: "#333", flex: 1, lineHeight: 20 },
