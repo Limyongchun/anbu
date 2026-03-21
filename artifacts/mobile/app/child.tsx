@@ -120,7 +120,7 @@ function AppHeader({ topInset, isMap }: { topInset: number; isMap: boolean }) {
       backgroundColor: isMap ? "rgba(180,100,50,0.92)" : "transparent",
       borderBottomWidth: isMap ? 0 : 0,
     }]}>
-      <Text style={[hdr.logo, { color: "#FFFFFF" }]}>A N B U</Text>
+      <Image source={require("@/assets/images/logo-anbu.png")} style={{ width: 80, height: 24 }} resizeMode="contain" />
       <View style={{ flex: 1 }} />
       {isMasterChild && (
         <View style={hdr.masterBadge}>
