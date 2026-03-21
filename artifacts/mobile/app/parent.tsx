@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Platform,
   StyleSheet,
   Text,
@@ -70,8 +69,8 @@ export default function ParentScreen() {
 
   const {
     curIdx, setCurIdx, isPaused, transitioningRef,
-    slideY, progressWidth,
-    activeSlide, nextSlideData, total,
+    progressWidth,
+    activeSlide, total,
     goNext, pause, resume,
   } = slideshow;
 
@@ -199,16 +198,9 @@ export default function ParentScreen() {
               <Text style={st.loadingText}>{t.parentLoadingPhotos}</Text>
             </View>
           ) : total > 0 ? (
-            <>
-              <View style={StyleSheet.absoluteFillObject}>
-                <RenderSlide slide={nextSlideData} />
-              </View>
-              <Animated.View
-                style={[StyleSheet.absoluteFillObject, { transform: [{ translateY: slideY }] }]}
-              >
-                <RenderSlide slide={activeSlide} />
-              </Animated.View>
-            </>
+            <View style={StyleSheet.absoluteFillObject}>
+              <RenderSlide slide={activeSlide} />
+            </View>
           ) : (
             <EmptyState
               noPhotosLabel={t.parentNoPhotos as string}
