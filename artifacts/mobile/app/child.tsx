@@ -276,9 +276,10 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const markersJs = parentLocs.map((pl, i) => {
     const c = PIN_COLORS[i % PIN_COLORS.length];
     const initial = (pl.memberName || "?").charAt(0);
+    const safeInitial = initial.replace(/'/g, "\\'");
     return `
 (function(){
-  var pinHtml='<div class="profile-pin" id="pin-${i}"><div class="pin-body"><div class="pin-avatar" style="background:${c}">${initial}</div></div><div class="pin-tail"><svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#fff"/></svg></div></div>';
+  var pinHtml='<div class="profile-pin" id="pin-${i}"><div class="pin-body"><div class="pin-avatar" style="background:${c}">${safeInitial}</div></div><div class="pin-tail"><svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#fff"/></svg></div></div>';
   var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:pinHtml,iconSize:[56,68],iconAnchor:[28,68]})}).addTo(map);
   m.on('click',function(){
     document.querySelectorAll('.profile-pin').forEach(function(el){el.classList.remove('selected')});
