@@ -37,6 +37,10 @@ export default function RoleSelectScreen() {
       colors={["#D4843A", "#C4692E", "#A85528"]}
       style={st.container}
     >
+      <Pressable style={[st.backBtn, { top: topInset + 6 }]} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </Pressable>
+
       <View style={[st.inner, { paddingTop: topInset + 40, paddingBottom: bottomInset + 24 }]}>
         <View style={st.topSection}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
@@ -79,6 +83,17 @@ export default function RoleSelectScreen() {
 
 const st = StyleSheet.create({
   container: { flex: 1 },
+  backBtn: {
+    position: "absolute",
+    left: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   inner: { flex: 1, paddingHorizontal: 28 },
   topSection: { alignItems: "center", marginTop: 30 },
   logo: { width: 140, height: 50, marginBottom: 20 },
