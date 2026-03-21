@@ -61,7 +61,7 @@ export default function WaitingRoom() {
           <div style={styles.sub}>아래 QR코드 또는 코드번호를{"\n"}부모님 기기에서 입력하면 연결됩니다</div>
 
           <div style={styles.qrWrap}>
-            <img src={QR_PLACEHOLDER} alt="QR Code" width={200} height={200} />
+            <img src={QR_PLACEHOLDER} alt="QR Code" style={{ width: 200, height: 200, display: "block", objectFit: "contain" }} />
           </div>
 
           <div style={styles.codeLabel}>코드 번호</div>
