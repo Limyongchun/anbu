@@ -21,6 +21,12 @@ export function buildSlides(msgs: FamilyMessage[], demoSlides: any[]): Slide[] {
   }));
 }
 
+function getSlideImageUri(slide: Slide | undefined): string | null {
+  if (!slide) return null;
+  if (slide.kind === "msg" && slide.msg.photoData) return slide.msg.photoData;
+  return null;
+}
+
 interface UseSlideshowOptions {
   slides: Slide[];
   onSlideChange?: (nextIdx: number, slide: Slide) => void;
@@ -30,6 +36,7 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
   const total = slides.length;
   const [curIdx, setCurIdx] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [pendingIdx, setPendingIdx] = useState<number | null>(null);
   const transitioningRef = useRef(false);
   const autoResumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSlideChangeRef = useRef(onSlideChange);
@@ -48,11 +55,18 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
   useEffect(() => {
     if (total <= 1) return;
     const ni = (curIdx + 1) % total;
-    const nextSlide = slides[ni];
-    if (nextSlide?.kind === "msg" && nextSlide.msg.photoData) {
-      ExpoImage.prefetch(nextSlide.msg.photoData);
+    const uri = getSlideImageUri(slides[ni]);
+    if (uri) {
+      ExpoImage.prefetch(uri);
     }
   }, [curIdx, total, slides]);
+
+  const commitPending = useCallback((ni: number) => {
+    onSlideChangeRef.current?.(ni, slides[ni]);
+    setCurIdx(ni);
+    setPendingIdx(null);
+    transitioningRef.current = false;
+  }, [slides]);
 
   const goNext = useCallback(() => {
     if (transitioningRef.current || total <= 1) return;
@@ -60,11 +74,24 @@ export function useSlideshow({ slides, onSlideChange }: UseSlideshowOptions) {
     progressAnim.stopAnimation();
 
     const ni = (curIdx + 1) % total;
-    onSlideChangeRef.current?.(ni, slides[ni]);
+    const nextSlide = slides[ni];
+    const uri = getSlideImageUri(nextSlide);
 
-    setCurIdx(ni);
-    transitioningRef.current = false;
-  }, [total, curIdx, progressAnim, slides]);
+    if (!uri) {
+      commitPending(ni);
+      return;
+    }
+
+    setPendingIdx(ni);
+
+    ExpoImage.prefetch(uri)
+      .then(() => {
+        commitPending(ni);
+      })
+      .catch(() => {
+        commitPending(ni);
+      });
+  }, [total, curIdx, progressAnim, slides, commitPending]);
 
   const startProgress = useCallback(() => {
     progressAnim.setValue(0);

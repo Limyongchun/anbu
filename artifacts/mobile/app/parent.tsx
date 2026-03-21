@@ -199,6 +199,7 @@ export default function ParentScreen() {
             </View>
           ) : total > 0 ? (
             <View style={StyleSheet.absoluteFillObject}>
+              <View style={st.overlayBg} />
               <RenderSlide slide={activeSlide} />
             </View>
           ) : (
@@ -257,6 +258,7 @@ export default function ParentScreen() {
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   slideArea: { flex: 1, overflow: "hidden", backgroundColor: "#000" },
+  overlayBg: { ...StyleSheet.absoluteFillObject, backgroundColor: "#000" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: "#000" },
   loadingText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.4)" },
 });
