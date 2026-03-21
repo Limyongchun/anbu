@@ -121,6 +121,7 @@ export default function SplashScreen() {
           resizeMode="contain"
         />
         <Text style={st.tagline}>부모를 섬기는 시간.</Text>
+        <Text style={st.taglineEn}>Time to care for your parents</Text>
       </Animated.View>
 
       <View style={st.creditWrap}>
@@ -152,6 +153,16 @@ const st = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  taglineEn: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.75)",
+    letterSpacing: 1,
+    marginTop: 6,
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
   creditWrap: {
     position: "absolute",
