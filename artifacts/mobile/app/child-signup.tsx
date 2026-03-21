@@ -265,9 +265,6 @@ export default function ChildSignupScreen({ initialStep, initialMode }: ChildSig
 
           <View style={s.modeFooter}>
             <Text style={s.modeFooterText}>
-              계정이 있으신가요? <Text style={s.modeFooterLink}>로그인</Text>
-            </Text>
-            <Text style={s.modeFooterText}>
               회원이 아니신가요? <Text style={s.modeFooterLink} onPress={() => handleSelectMode("create")}>지금 가입하세요</Text>
             </Text>
           </View>
