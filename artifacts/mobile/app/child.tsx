@@ -323,7 +323,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 #map{width:100vw;height:100vh}
-.leaflet-control-attribution{display:none}
+.leaflet-control-attribution{font-size:8px;opacity:0.6;background:rgba(255,255,255,0.5)!important}
 .profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));width:56px}
 .profile-pin.selected{transform:scale(1.25)}
 .pin-body{width:50px;height:50px;border-radius:50%;border:3px solid #FFD700;overflow:hidden;background:#FFD700;margin:0 auto;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
@@ -333,8 +333,12 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 .pin-tail svg path{filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
 </style>
 </head><body><div id="map"></div><script>
-var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${centerLat},${centerLon}],16);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+var map=L.map('map',{zoomControl:false}).setView([${centerLat},${centerLon}],16);
+var tileMain=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+var tileFallback=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',attribution:'&copy; OpenStreetMap &copy; CARTO'});
+var failCount=0;
+tileMain.on('tileerror',function(){failCount++;if(failCount>4){map.removeLayer(tileMain);tileFallback.addTo(map);}});
+tileMain.addTo(map);
 ${photoSrcsJs}
 ${markersJs}
 ${boundsJs}
