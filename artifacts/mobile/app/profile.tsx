@@ -570,6 +570,41 @@ export default function ProfileScreen() {
           </>
         )}
 
+        {/* ── 마스터 방 참여 (자녀, 연결된 상태) ── */}
+        {myRole === "child" && isConnected && (
+          <>
+            <SectionHeader title={t.profileJoinMaster} />
+            <View style={s.card}>
+              <View style={{ padding: 16 }}>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#888", marginBottom: 12 }}>{t.profileJoinMasterDesc}</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TextInput
+                    style={{ flex: 1, backgroundColor: "#F5F5F5", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Inter_700Bold", letterSpacing: 3, textAlign: "center", color: "#333", borderWidth: 1, borderColor: "#E8E8E8" }}
+                    placeholder={t.profileMasterCodeInput as string}
+                    placeholderTextColor="#bbb"
+                    value={masterJoinCode}
+                    onChangeText={v => { setMasterJoinCode(v.toUpperCase()); setMasterJoinError(""); }}
+                    autoCapitalize="characters"
+                    maxLength={6}
+                  />
+                  <Pressable
+                    style={({ pressed }) => [{ backgroundColor: "#FFD700", borderRadius: 12, paddingHorizontal: 20, justifyContent: "center", alignItems: "center", opacity: pressed ? 0.8 : 1 }]}
+                    onPress={handleJoinMasterRoom}
+                    disabled={masterJoining || masterJoinCode.trim().length < 4}
+                  >
+                    {masterJoining ? (
+                      <ActivityIndicator color="#000" size="small" />
+                    ) : (
+                      <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: "#000" }}>{t.profileJoinMasterBtn}</Text>
+                    )}
+                  </Pressable>
+                </View>
+                {masterJoinError ? <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: "#E53935", marginTop: 6 }}>{masterJoinError}</Text> : null}
+              </View>
+            </View>
+          </>
+        )}
+
         {/* ── 접속 코드 ── */}
         <SectionHeader title={t.sectionFamily} />
         <View style={s.card}>
@@ -697,41 +732,6 @@ export default function ProfileScreen() {
                   ))}
                 </View>
               )}
-            </View>
-          </>
-        )}
-
-        {/* ── 마스터 방 참여 (자녀, 연결된 상태) ── */}
-        {myRole === "child" && isConnected && (
-          <>
-            <SectionHeader title={t.profileJoinMaster} />
-            <View style={s.card}>
-              <View style={{ padding: 16 }}>
-                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#888", marginBottom: 12 }}>{t.profileJoinMasterDesc}</Text>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <TextInput
-                    style={{ flex: 1, backgroundColor: "#F5F5F5", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Inter_700Bold", letterSpacing: 3, textAlign: "center", color: "#333", borderWidth: 1, borderColor: "#E8E8E8" }}
-                    placeholder={t.profileMasterCodeInput as string}
-                    placeholderTextColor="#bbb"
-                    value={masterJoinCode}
-                    onChangeText={v => { setMasterJoinCode(v.toUpperCase()); setMasterJoinError(""); }}
-                    autoCapitalize="characters"
-                    maxLength={6}
-                  />
-                  <Pressable
-                    style={({ pressed }) => [{ backgroundColor: "#FFD700", borderRadius: 12, paddingHorizontal: 20, justifyContent: "center", alignItems: "center", opacity: pressed ? 0.8 : 1 }]}
-                    onPress={handleJoinMasterRoom}
-                    disabled={masterJoining || masterJoinCode.trim().length < 4}
-                  >
-                    {masterJoining ? (
-                      <ActivityIndicator color="#000" size="small" />
-                    ) : (
-                      <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: "#000" }}>{t.profileJoinMasterBtn}</Text>
-                    )}
-                  </Pressable>
-                </View>
-                {masterJoinError ? <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: "#E53935", marginTop: 6 }}>{masterJoinError}</Text> : null}
-              </View>
             </View>
           </>
         )}
