@@ -334,7 +334,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 </style>
 </head><body><div id="map"></div><script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${centerLat},${centerLon}],16);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
 ${photoSrcsJs}
 ${markersJs}
 ${boundsJs}
