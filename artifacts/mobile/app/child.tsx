@@ -336,8 +336,8 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 var map=L.map('map',{zoomControl:false}).setView([${centerLat},${centerLon}],16);
 var tileMain=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
 var tileFallback=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',attribution:'&copy; OpenStreetMap &copy; CARTO'});
-var failCount=0;
-tileMain.on('tileerror',function(){failCount++;if(failCount>4){map.removeLayer(tileMain);tileFallback.addTo(map);}});
+var failCount=0,switched=false;
+tileMain.on('tileerror',function(){if(switched)return;failCount++;if(failCount>4){switched=true;map.removeLayer(tileMain);tileFallback.addTo(map);}});
 tileMain.addTo(map);
 ${photoSrcsJs}
 ${markersJs}
