@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dZBQx3dyKRPuBrfg5ZFCB"
+uri = "file://expo-qr.png"
+type = "image"
+title = "Expo QR Code"
