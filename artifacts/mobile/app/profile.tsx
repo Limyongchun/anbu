@@ -989,8 +989,12 @@ export default function ProfileScreen() {
         <Modal visible transparent animationType="fade" onRequestClose={() => !confirming && setConfirmModal(null)}>
           <View style={s.confirmOverlay}>
             <View style={s.confirmBox}>
+              <View style={s.confirmIconWrap}>
+                <Ionicons name="warning" size={32} color="#E53935" />
+              </View>
               <Text style={s.confirmTitle}>{confirmModal.title}</Text>
               <Text style={s.confirmMessage}>{confirmModal.message}</Text>
+              <Text style={s.confirmSub}>{t.disconnectSub}</Text>
               <View style={s.confirmBtns}>
                 <Pressable
                   style={[s.confirmCancel, confirming && { opacity: 0.4 }]}
@@ -1008,7 +1012,11 @@ export default function ProfileScreen() {
                     finally { setConfirming(false); setConfirmModal(null); }
                   }}
                 >
-                  <Text style={s.confirmDangerText}>{confirming ? t.processing : t.disconnect}</Text>
+                  {confirming ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={s.confirmDangerText}>{t.disconnectConfirmBtn}</Text>
+                  )}
                 </Pressable>
               </View>
             </View>
@@ -1112,14 +1120,16 @@ const s = StyleSheet.create({
   saveBtnText:  { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
 
 
-  confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 32 },
-  confirmBox:        { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", gap: 12 },
+  confirmOverlay:    { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", padding: 28 },
+  confirmBox:        { backgroundColor: "#fff", borderRadius: 28, paddingTop: 28, paddingBottom: 22, paddingHorizontal: 24, width: "100%", alignItems: "center", gap: 8 },
+  confirmIconWrap:   { width: 60, height: 60, borderRadius: 30, backgroundColor: "#FDECEA", alignItems: "center", justifyContent: "center", marginBottom: 4 },
   confirmTitle:      { fontFamily: "Inter_700Bold", fontSize: 18, color: "#333", textAlign: "center" },
-  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "#777", textAlign: "center", lineHeight: 20 },
-  confirmBtns:       { flexDirection: "row", gap: 10, marginTop: 6 },
-  confirmCancel:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#F0F0F0", alignItems: "center" },
+  confirmMessage:    { fontFamily: "Inter_400Regular", fontSize: 14, color: "#777", textAlign: "center", lineHeight: 22 },
+  confirmSub:        { fontFamily: "Inter_500Medium", fontSize: 12, color: "#aaa", textAlign: "center", marginBottom: 4 },
+  confirmBtns:       { flexDirection: "row", gap: 10, marginTop: 8, width: "100%" },
+  confirmCancel:     { flex: 1, paddingVertical: 15, borderRadius: 16, backgroundColor: "#F0F0F0", alignItems: "center" },
   confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#777" },
-  confirmDanger:     { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: COLORS.danger, alignItems: "center" },
+  confirmDanger:     { flex: 1, paddingVertical: 15, borderRadius: 16, backgroundColor: COLORS.danger, alignItems: "center", justifyContent: "center" },
   confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 
   // ── 자녀 관리 섹션 ──
