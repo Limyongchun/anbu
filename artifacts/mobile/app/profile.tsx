@@ -845,7 +845,7 @@ export default function ProfileScreen() {
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
-              label={t.disconnectTitle}
+              label={t.disconnectLabel}
               onPress={handleDisconnect}
               danger
               rightIcon="chevron-forward"
