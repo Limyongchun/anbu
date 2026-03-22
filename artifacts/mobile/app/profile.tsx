@@ -142,7 +142,7 @@ export default function ProfileScreen() {
 
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
   const [childCodeCopied, setChildCodeCopied] = useState(false);
-  type ParentEntry = { name: string; deviceId: string; code: string };
+  type ParentEntry = { name: string; deviceId: string; code: string; photoData?: string | null };
   const [parentEntries, setParentEntries] = useState<ParentEntry[]>([]);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -231,10 +231,11 @@ export default function ProfileScreen() {
         api.getFamily(code)
           .then(data => {
             const parents = (data.members ?? []).filter((m: { role: string }) => m.role === "parent");
-            return parents.map((p: { memberName: string; deviceId?: string }) => ({
+            return parents.map((p: { memberName: string; deviceId?: string; photoData?: string | null }) => ({
               name: p.memberName,
               deviceId: p.deviceId ?? "",
               code,
+              photoData: p.photoData || null,
             }));
           })
           .catch(() => [] as ParentEntry[])
@@ -556,7 +557,11 @@ export default function ProfileScreen() {
                   return (
                     <View key={`${entry.code}_${entry.deviceId}`} style={[s.parentRow, idx > 0 && { borderTopWidth: 1, borderTopColor: "#E8E8E8" }]}>
                       <View style={s.parentAvatar}>
-                        <Text style={s.parentAvatarText}>{entry.name[0]?.toUpperCase()}</Text>
+                        {entry.photoData ? (
+                          <Image source={{ uri: entry.photoData }} style={{ width: 40, height: 40, borderRadius: 20 }} resizeMode="cover" />
+                        ) : (
+                          <Text style={s.parentAvatarText}>{entry.name[0]?.toUpperCase()}</Text>
+                        )}
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={s.parentRowLabel}>{entry.name}</Text>
