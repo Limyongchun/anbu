@@ -1047,12 +1047,59 @@ function HomeScreen({
 
   const randomCheckIdx = useMemo(() => Math.floor(Math.random() * 30), []);
 
+  const { connect } = useFamilyContext();
+  const [joinCode, setJoinCode] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState("");
+  const { myName, myRole } = useFamilyContext();
+
+  const handleJoinFromHome = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (!code || code.length < 4) return;
+    setJoining(true);
+    setJoinError("");
+    try {
+      const name = myName || "자녀";
+      await api.joinFamily(code, deviceId, name, "child");
+      await connect(code, name, "child");
+    } catch {
+      setJoinError(t.homeJoinError as string);
+    } finally {
+      setJoining(false);
+    }
+  };
+
   if (!familyCode) {
     return (
       <View style={[{ flex: 1, paddingTop: topBarH }, hm.centerEmpty]}>
         <View style={hm.emptyIconWrap}><Ionicons name="wifi-outline" size={28} color="rgba(255,255,255,0.6)" /></View>
         <Text style={hm.emptyTitle}>{t.homeNotConnected}</Text>
         <Text style={hm.emptySub}>{t.homeNotConnectedSub}</Text>
+
+        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 28, gap: 12 }}>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "rgba(255,255,255,0.85)", textAlign: "center" }}>{t.homeJoinFamily}</Text>
+          <TextInput
+            style={{ backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 14, fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff", textAlign: "center", letterSpacing: 4, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}
+            placeholder={t.homeEnterCode as string}
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            value={joinCode}
+            onChangeText={v => { setJoinCode(v.toUpperCase()); setJoinError(""); }}
+            autoCapitalize="characters"
+            maxLength={6}
+          />
+          {joinError ? <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: "#FF6B6B", textAlign: "center" }}>{joinError}</Text> : null}
+          <Pressable
+            style={({ pressed }) => [{ backgroundColor: "#FFD700", borderRadius: 14, paddingVertical: 14, alignItems: "center", opacity: pressed ? 0.8 : 1 }]}
+            onPress={handleJoinFromHome}
+            disabled={joining || joinCode.trim().length < 4}
+          >
+            {joining ? (
+              <ActivityIndicator color="#000" size="small" />
+            ) : (
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#000" }}>{t.homeJoinBtn}</Text>
+            )}
+          </Pressable>
+        </View>
       </View>
     );
   }
