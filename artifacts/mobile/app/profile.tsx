@@ -546,10 +546,10 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        {/* ── 마스터 코드 (마스터 자녀만) ── */}
-        {myRole === "child" && isMasterChild && isConnected && familyCode && (
+        {/* ── 마스터 코드 (모든 연결된 자녀) ── */}
+        {myRole === "child" && isConnected && familyCode && (
           <>
-            <SectionHeader title={t.masterCode} />
+            <SectionHeader title={isMasterChild ? t.masterCode : t.connectedCode} />
             <View style={[s.card, { borderWidth: 2, borderColor: "#FFD700" }]}>
               <View style={{ padding: 16, paddingBottom: 12 }}>
                 <View style={s.childCodeDisplay}>
