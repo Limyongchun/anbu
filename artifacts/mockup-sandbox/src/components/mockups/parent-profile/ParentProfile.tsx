@@ -79,7 +79,7 @@ export function ParentProfile() {
   return (
     <div style={{
       width: 393, minHeight: 852,
-      background: `linear-gradient(180deg, ${GRAD_TOP} 0%, ${GRAD_MID} 12%, ${GRAD_BOT} 22%, #F5F2ED 35%)`,
+      background: `linear-gradient(180deg, ${GRAD_TOP} 0%, ${GRAD_MID} 40%, ${GRAD_BOT} 100%)`,
       fontFamily: "'Inter', -apple-system, sans-serif",
       position: "relative",
     }}>
