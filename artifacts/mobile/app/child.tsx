@@ -10,6 +10,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  KeyboardAvoidingView,
   LayoutChangeEvent,
   Linking,
   Modal,
@@ -665,52 +666,59 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
       </Modal>
 
       <Modal visible={showCompose} transparent animationType="slide" onRequestClose={() => setShowCompose(false)}>
-        <View style={{ flex: 1, justifyContent: "flex-end" }}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowCompose(false)}>
-            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} />
-          </Pressable>
-          <Pressable onPress={() => {}} style={ab.sheet}>
-            <View style={ab.handle} />
-            <Text style={ab.sheetTitle}>{t.anbuCompose}</Text>
-            <TextInput
-              style={ab.input}
-              value={text}
-              onChangeText={setText}
-              placeholder={t.anbuPlaceholder}
-              placeholderTextColor={DS.textTertiary}
-              multiline
-              maxLength={200}
-            />
-            {photo && (
-              <View style={ab.photoPreviewRow}>
-                <Image source={{ uri: photo }} style={ab.photoThumb} resizeMode="cover" />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={ab.photoLabel}>{t.anbuPhotoAttached || "사진 첨부됨"}</Text>
-                  <Text style={ab.photoHint}>{t.anbuPhotoHint || "메시지와 함께 전송됩니다"}</Text>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          <View style={{ flex: 1, justifyContent: "flex-end" }}>
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowCompose(false)}>
+              <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} />
+            </Pressable>
+            <View style={ab.sheet}>
+              <View style={ab.handle} />
+              <Text style={ab.sheetTitle}>{t.anbuCompose}</Text>
+              <TextInput
+                style={ab.input}
+                value={text}
+                onChangeText={setText}
+                placeholder={t.anbuPlaceholder}
+                placeholderTextColor={DS.textTertiary}
+                multiline
+                maxLength={200}
+                autoFocus
+              />
+              {photo && (
+                <View style={ab.photoPreviewRow}>
+                  <Image source={{ uri: photo }} style={ab.photoThumb} resizeMode="cover" />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={ab.photoLabel}>{t.anbuPhotoAttached || "사진 첨부됨"}</Text>
+                    <Text style={ab.photoHint}>{t.anbuPhotoHint || "메시지와 함께 전송됩니다"}</Text>
+                  </View>
+                  <Pressable onPress={() => setPhoto(null)} style={ab.photoRemoveBtn}>
+                    <Ionicons name="close" size={16} color="#fff" />
+                  </Pressable>
                 </View>
-                <Pressable onPress={() => setPhoto(null)} style={ab.photoRemoveBtn}>
-                  <Ionicons name="close" size={16} color="#fff" />
+              )}
+              <View style={ab.sheetBar}>
+                <Pressable style={ab.attachBtn} onPress={pickCamera}>
+                  <Ionicons name="camera" size={18} color={DS.textSecondary} />
+                </Pressable>
+                <Pressable style={ab.attachBtn} onPress={pickLibrary}>
+                  <Ionicons name="images" size={18} color={DS.textSecondary} />
+                </Pressable>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, marginLeft: 4 }}>{text.length}/200</Text>
+                <View style={{ flex: 1 }} />
+                <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
+                  style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
+                  {sending
+                    ? <ActivityIndicator size="small" color="#000000" />
+                    : <Ionicons name="send" size={17} color="#000000" />}
                 </Pressable>
               </View>
-            )}
-            <View style={ab.sheetBar}>
-              <Pressable style={ab.attachBtn} onPress={pickCamera}>
-                <Ionicons name="camera" size={18} color={DS.textSecondary} />
-              </Pressable>
-              <Pressable style={ab.attachBtn} onPress={pickLibrary}>
-                <Ionicons name="images" size={18} color={DS.textSecondary} />
-              </Pressable>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textTertiary, marginLeft: 4 }}>{text.length}/200</Text>
-              <View style={{ flex: 1 }} />
-              <Pressable onPress={send} disabled={(!text.trim() && !photo) || sending || !familyCode}
-                style={[ab.sendBtn, ((!text.trim() && !photo) || sending || !familyCode) && { opacity: 0.35 }]}>
-                {sending
-                  ? <ActivityIndicator size="small" color="#000000" />
-                  : <Ionicons name="send" size={17} color="#000000" />}
-              </Pressable>
             </View>
-          </Pressable>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: topBarH + 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
