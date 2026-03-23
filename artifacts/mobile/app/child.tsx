@@ -1119,68 +1119,110 @@ function HomeScreen({
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={hm.summaryTitleRow}>
-        <Ionicons name="calendar-outline" size={22} color="#FFFFFF" />
-        <Text style={hm.summaryTitleText}>{t.todayAnbu}</Text>
-      </View>
-
-      {/* Today Summary Card */}
+      {/* ── Summary Bar ── */}
       {(() => {
-        const anyLongIdle = parentActivityStats.some(ps => {
+        const dangerCount = parentActivityStats.filter(ps => {
           const st = getParentStatus(ps.loc);
-          return st.level !== "good" && ps.lastMinsAgo !== null && ps.lastMinsAgo >= 720;
-        });
-        const cardShadow = anyLongIdle ? {
-          shadowColor: "#c0392b",
-          shadowOpacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.25] }),
-          shadowRadius: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 18] }),
-        } : {};
-        const CardWrap = anyLongIdle ? Animated.View : View;
+          return st.level === "alert" || st.level === "none";
+        }).length;
         return (
-      <CardWrap style={[hm.summaryCard, cardShadow]}>
-        <View style={hm.summaryBody}>
-          <View style={hm.parentStatsRow}>
-            {parentActivityStats.map((ps, i) => {
-              const status = getParentStatus(ps.loc);
-              const isActive = status.level === "good";
-              const nowHr = new Date().getHours();
-              const isNightTime = nowHr >= 22 || nowHr < 7;
-              const isResting = !isActive && isNightTime;
-              const isLongIdle = !isActive && !isResting && ps.lastMinsAgo !== null && ps.lastMinsAgo >= 720;
-              const activityText = ps.lastMinsAgo !== null
-                ? (t.summaryActivityDetected as string).replace("{m}", String(ps.lastMinsAgo))
-                : (t.summaryNoActivity as string);
-              const badgeScale = (!isActive && !isResting) ? breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) : undefined;
-              const badgeOpacity = (!isActive && !isResting) ? breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.7, 1] }) : undefined;
-              const badgeColor = isActive ? DS.success : isResting ? DS.warning : DS.danger;
-              const badgeText = isActive ? t.parentStatusActive : isResting ? t.parentStatusResting : t.parentStatusIdle;
-              return (
-                <React.Fragment key={ps.deviceId || i}>
-                  {i > 0 && <View style={hm.parentStatsVerticalLine} />}
-                  <View style={hm.parentStatsCol}>
-                    <Text style={hm.parentStatsName} numberOfLines={1}>{ps.name}</Text>
-                    {(isActive || isResting) ? (
-                      <View style={[hm.statusBadge, { backgroundColor: badgeColor }]}>
-                        <Text style={hm.statusBadgeText}>{badgeText}</Text>
-                      </View>
-                    ) : (
-                      <Animated.View style={[hm.statusBadge, { backgroundColor: DS.danger, transform: [{ scale: badgeScale! }], opacity: badgeOpacity }]}>
-                        <Text style={hm.statusBadgeText}>{t.parentStatusIdle}</Text>
-                      </Animated.View>
-                    )}
-                    <Text style={[hm.parentStatsLastTime, { color: isActive ? DS.success : DS.textTertiary }]}>{activityText}</Text>
-                    <Text style={hm.parentStatsCountText}>
-                      {(t.summaryLocationCount as string).replace("{n}", String(ps.locCount))}{"   "}{(t.summaryTouchCount as string).replace("{n}", String(ps.touchCount))}
-                    </Text>
-                  </View>
-                </React.Fragment>
-              );
-            })}
+          <View style={hm.summaryBar}>
+            <Ionicons
+              name={dangerCount > 0 ? "alert-circle" : "checkmark-circle"}
+              size={22}
+              color={dangerCount > 0 ? DS.danger : DS.success}
+            />
+            <Text style={[hm.summaryBarText, dangerCount > 0 && { color: DS.danger }]}>
+              {dangerCount > 0
+                ? (t.summaryDangerCount as string).replace("{n}", String(dangerCount))
+                : t.summaryAllSafe}
+            </Text>
           </View>
-        </View>
-        
-      </CardWrap>
         );
+      })()}
+
+      {/* ── Parent Card List ── */}
+      {(() => {
+        const statusPriority = { alert: 0, none: 0, warn: 1, good: 2 };
+        const sorted = [...parentActivityStats].sort((a, b) => {
+          const sa = getParentStatus(a.loc).level;
+          const sb = getParentStatus(b.loc).level;
+          return (statusPriority[sa] ?? 2) - (statusPriority[sb] ?? 2);
+        });
+
+        const getCardStatus = (ps: typeof parentActivityStats[0]) => {
+          const st = getParentStatus(ps.loc);
+          if (st.level === "good") return "safe" as const;
+          if (st.level === "warn") return "warning" as const;
+          return "danger" as const;
+        };
+
+        const getLocationText = (ps: typeof parentActivityStats[0]) => {
+          const st = getParentStatus(ps.loc);
+          if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
+          const loc = ps.loc;
+          if (loc?.locationLabel === "이동중") return t.cardMoving as string;
+          if (loc?.locationLabel) return (t.cardLocationAt as string).replace("{place}", loc.locationLabel);
+          return st.msg.title;
+        };
+
+        const getLastActivityText = (ps: typeof parentActivityStats[0]) => {
+          if (ps.lastMinsAgo === null) return t.summaryNoActivity as string;
+          if (ps.lastMinsAgo < 1) return (t.cardLastActivity as string).replace("{time}", "1분");
+          if (ps.lastMinsAgo < 60) return (t.cardLastActivity as string).replace("{time}", `${ps.lastMinsAgo}분`);
+          const hrs = Math.floor(ps.lastMinsAgo / 60);
+          return (t.cardLastActivity as string).replace("{time}", `${hrs}시간`);
+        };
+
+        const statusColors = { safe: "#4CAF50", warning: "#FFC107", danger: "#F44336" };
+        const statusLabels = { safe: t.cardStatusSafe, warning: t.cardStatusWarning, danger: t.cardStatusDanger };
+        const statusBadgeBg = { safe: "rgba(76,175,80,0.12)", warning: "rgba(255,193,7,0.15)", danger: "rgba(244,67,54,0.12)" };
+
+        return sorted.map((ps, i) => {
+          const cardStatus = getCardStatus(ps);
+          const parent = parentInfos.find(p => p.deviceId === ps.deviceId || p.name === ps.name);
+          const isDanger = cardStatus === "danger";
+
+          const cardBorder = isDanger ? {
+            shadowColor: "#F44336",
+            shadowOpacity: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.2] }),
+            shadowRadius: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [4, 12] }),
+          } : {};
+          const CardContainer = isDanger ? Animated.View : View;
+
+          return (
+            <CardContainer key={ps.deviceId || i} style={[hm.parentCard, { borderLeftColor: statusColors[cardStatus] }, cardBorder]}>
+              <View style={hm.parentCardInner}>
+                {parent?.photo ? (
+                  <Image source={{ uri: parent.photo }} style={hm.parentCardAvatar} />
+                ) : (
+                  <View style={[hm.parentCardAvatar, { backgroundColor: "#F0EDE8", alignItems: "center", justifyContent: "center" }]}>
+                    <Ionicons name="person" size={22} color="#bbb" />
+                  </View>
+                )}
+                <View style={hm.parentCardTextBox}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text style={hm.parentCardName} numberOfLines={1}>{ps.name}</Text>
+                    <View style={[hm.parentCardBadge, { backgroundColor: statusBadgeBg[cardStatus] }]}>
+                      <View style={[hm.parentCardBadgeDot, { backgroundColor: statusColors[cardStatus] }]} />
+                      <Text style={[hm.parentCardBadgeText, { color: statusColors[cardStatus] }]}>{statusLabels[cardStatus]}</Text>
+                    </View>
+                  </View>
+                  <Text style={hm.parentCardMainText}>{getLocationText(ps)}</Text>
+                  <Text style={hm.parentCardSubText}>{getLastActivityText(ps)}</Text>
+                </View>
+                <View style={hm.parentCardActions}>
+                  <Pressable style={hm.parentCardActionBtn} onPress={() => { if (parent?.deviceId) Linking.openURL(`tel:`); }}>
+                    <Ionicons name="call-outline" size={20} color={DS.brand} />
+                  </Pressable>
+                  <Pressable style={hm.parentCardActionBtn} onPress={onGoToAnbu}>
+                    <Ionicons name="location-outline" size={20} color={DS.info} />
+                  </Pressable>
+                </View>
+              </View>
+            </CardContainer>
+          );
+        });
       })()}
 
       {/* Anbu Interpretation Card */}
@@ -1536,19 +1578,19 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 3, marginTop: 2 },
-  summaryTitleText: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#FFFFFF" },
-  summaryCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", borderWidth: 1, borderColor: DS.border },
-  summaryBody: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 17 },
-  parentStatsRow: { flexDirection: "row", alignItems: "flex-start" },
-  parentStatsVerticalLine: { width: 1, backgroundColor: DS.border, alignSelf: "stretch", marginHorizontal: 8 },
-  parentStatsCol: { flex: 1, alignItems: "flex-start", gap: 6 },
-  parentStatsName: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, marginTop: 2 },
-  statusBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
-  parentStatsLastTime: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
-  parentStatsCountText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary, marginTop: 4 },
-  summaryExpandRow: { alignItems: "center", paddingBottom: 10, paddingTop: 2 },
+  summaryBar: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 14, marginTop: 4, backgroundColor: DS.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: DS.border },
+  summaryBarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.success },
+  parentCardInner: { flexDirection: "row", alignItems: "center", padding: 16, flex: 1 },
+  parentCardAvatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12, overflow: "hidden" },
+  parentCardTextBox: { flex: 1, gap: 2 },
+  parentCardName: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.textPrimary },
+  parentCardBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  parentCardBadgeDot: { width: 7, height: 7, borderRadius: 4 },
+  parentCardBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  parentCardMainText: { fontFamily: "Inter_500Medium", fontSize: 15, color: DS.textPrimary, marginTop: 4 },
+  parentCardSubText: { fontFamily: "Inter_400Regular", fontSize: 13, color: DS.textTertiary, marginTop: 2 },
+  parentCardActions: { marginLeft: 8, flexDirection: "row", gap: 10 },
+  parentCardActionBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: DS.surfaceSoft, alignItems: "center", justifyContent: "center" },
   interpretCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, padding: 16, borderWidth: 1, borderColor: DS.border, overflow: "hidden" },
   interpretLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: DS.textTertiary, marginBottom: 6, letterSpacing: 0.5 },
   interpretMsg: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DS.textPrimary, lineHeight: 22, marginBottom: 4 },
@@ -1558,7 +1600,7 @@ const hm = StyleSheet.create({
   chartLabelRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 8, paddingHorizontal: 4 },
   chartLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: DS.textTertiary },
 
-  parentCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: DS.radius.cardLg, backgroundColor: DS.surface, overflow: "hidden", flexDirection: "row", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 4, borderWidth: 1, borderColor: DS.border },
+  parentCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 16, backgroundColor: DS.surface, overflow: "hidden", borderLeftWidth: 6, borderLeftColor: "#4CAF50", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 },
   parentIndicator: { width: 5, borderTopLeftRadius: DS.radius.cardLg, borderBottomLeftRadius: DS.radius.cardLg },
   parentContent: { flex: 1, padding: 18 },
   parentHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
