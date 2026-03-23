@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Stop, Rect } from "react-native-svg";
+import { WebView } from "react-native-webview";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
@@ -336,7 +337,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   m.on('click',function(){
     document.querySelectorAll('.profile-pin').forEach(function(e){e.classList.remove('selected')});
     document.getElementById('pin-${i}').classList.add('selected');
-    window.parent.postMessage('markerClick:${i}','*');
+    if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerClick',index:${i}}));}else{window.parent.postMessage('markerClick:${i}','*');}
   });
 })();`;
   }).join("\n");
@@ -383,20 +384,31 @@ ${boundsJs}
         <MapIframe mapHtml={mapHtml} title={t.mapIframeTitle as string} />
       
       ) : (
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED" }]}>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <View key={`r${i}`} style={{ position: "absolute", left: 0, right: 0, top: `${12 + i * 11}%` as any, height: i % 3 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
-          ))}
-          {Array.from({ length: 6 }).map((_, i) => (
-            <View key={`c${i}`} style={{ position: "absolute", top: 0, bottom: 0, left: `${10 + i * 16}%` as any, width: i % 2 === 0 ? 3 : 1.5, backgroundColor: "#fff" }} />
-          ))}
-          {parentLocs.map((pl, i) => (
-            <Pressable key={pl.deviceId} style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}
-              onPress={() => openBannerFor(i)}>
-              <ProfilePin color={PIN_COLORS[i % PIN_COLORS.length]} initial={(pl.memberName || "?").charAt(0)} photoUri={pl.photoData || undefined} selected={selectedIdx === i && showBanner} />
-            </Pressable>
-          ))}
-        </View>
+        <WebView
+          originWhitelist={["*"]}
+          source={{ html: mapHtml }}
+          style={StyleSheet.absoluteFillObject}
+          javaScriptEnabled
+          domStorageEnabled
+          startInLoadingState
+          renderLoading={() => (
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED", alignItems: "center", justifyContent: "center" }]}>
+              <ActivityIndicator size="large" color="#A85528" />
+            </View>
+          )}
+          scrollEnabled={false}
+          bounces={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          onMessage={(event) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === "markerClick" && typeof data.index === "number") {
+                openBannerFor(data.index);
+              }
+            } catch {}
+          }}
+        />
       )}
 
       {!loading && !hasAnyParent && (
