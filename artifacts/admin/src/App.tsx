@@ -445,12 +445,12 @@ function InquiriesTab({ api, onCountChange }: { api: ReturnType<typeof useApi>; 
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ whiteSpace: "nowrap" }}>
           <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>고객 문의</h2>
           <p style={{ color: "#556677", fontSize: 13 }}>총 {inquiries.length}건 · 미답변 {pendingCount}건 · 답변완료 {repliedCount}건</p>
         </div>
-        <div style={{ display: "flex", gap: 4, background: "#152030", borderRadius: 8, padding: 3, border: "1px solid #1e2d3d" }}>
+        <div style={{ display: "flex", gap: 4, background: "#152030", borderRadius: 8, padding: 3, border: "1px solid #1e2d3d", whiteSpace: "nowrap", flexShrink: 0 }}>
           {([["all", "전체"], ["pending", "미답변"], ["replied", "답변완료"]] as [typeof filter, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -459,7 +459,7 @@ function InquiriesTab({ api, onCountChange }: { api: ReturnType<typeof useApi>; 
                 padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500,
                 background: filter === key ? "#1a2535" : "transparent",
                 color: filter === key ? (key === "pending" ? "#ffc107" : key === "replied" ? "#4caf50" : "#d4f200") : "#8899aa",
-                position: "relative",
+                position: "relative", whiteSpace: "nowrap",
               }}
             >
               {label}
@@ -495,23 +495,19 @@ function InquiriesTab({ api, onCountChange }: { api: ReturnType<typeof useApi>; 
               <div style={{ width: 36, height: 36, borderRadius: 18, background: inq.reply ? "rgba(76,175,80,0.12)" : "rgba(255,193,7,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
                 {inq.reply ? "✅" : "📩"}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14, color: "#e2e8f0" }}>{inq.title}</span>
+              <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, whiteSpace: "nowrap" }}>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis" }}>{inq.title}</span>
                   {!inq.reply && (
-                    <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: "rgba(255,193,7,0.15)", color: "#ffc107" }}>NEW</span>
+                    <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: "rgba(255,193,7,0.15)", color: "#ffc107", flexShrink: 0 }}>NEW</span>
                   )}
                 </div>
                 <div style={{ color: "#8899aa", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {inq.content.slice(0, 80)}{inq.content.length > 80 ? "..." : ""}
+                  {inq.userName} · {timeAgo(inq.createdAt)} · {inq.content.slice(0, 60)}{inq.content.length > 60 ? "..." : ""}
                 </div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 12, color: "#8899aa", marginBottom: 2 }}>{inq.userName}</div>
-                <div style={{ fontSize: 11, color: "#556677" }}>{timeAgo(inq.createdAt)}</div>
-              </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                <button onClick={() => openMailto(inq)} style={{ padding: "4px 10px", background: "rgba(59,130,246,0.12)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 6, fontSize: 11, cursor: "pointer" }}>
+                <button onClick={() => openMailto(inq)} style={{ padding: "4px 10px", background: "rgba(59,130,246,0.12)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 6, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
                   ✉
                 </button>
                 <DangerBtn onClick={() => deleteInquiry(inq.id)}>✕</DangerBtn>
@@ -571,20 +567,20 @@ function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f1923" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 56, borderBottom: "1px solid #1e2d3d", background: "#0c1520", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 4, color: "#d4f200", lineHeight: 1 }}>ANBU</span>
-            <span style={{ fontSize: 11, color: "#556677", fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>Admin</span>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", height: 48, borderBottom: "1px solid #1e2d3d", background: "#0c1520", position: "sticky", top: 0, zIndex: 100, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, overflow: "hidden", whiteSpace: "nowrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: 3, color: "#d4f200", lineHeight: 1 }}>ANBU</span>
+            <span style={{ fontSize: 10, color: "#556677", fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>Admin</span>
           </div>
-          <div style={{ width: 1, height: 24, background: "#1e2d3d" }} />
-          <nav style={{ display: "flex", gap: 2 }}>
+          <div style={{ width: 1, height: 20, background: "#1e2d3d", flexShrink: 0 }} />
+          <nav style={{ display: "flex", gap: 2, whiteSpace: "nowrap" }}>
             {TABS.map(t => (
               <button
                 key={t.key}
                 onClick={() => { setTab(t.key); if (t.key === "inquiries") fetchPendingCount(); }}
                 style={{
-                  padding: "7px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500,
+                  padding: "6px 12px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap",
                   background: tab === t.key ? "#1a2535" : "transparent",
                   color: tab === t.key ? "#d4f200" : "#8899aa",
                   position: "relative",
@@ -614,7 +610,7 @@ function App() {
           Logout
         </button>
       </header>
-      <main style={{ padding: 32, maxWidth: 1200, margin: "0 auto" }}>
+      <main style={{ padding: "24px 16px", maxWidth: 1200, margin: "0 auto" }}>
         {tab === "dashboard" && <DashboardTab api={api} />}
         {tab === "families" && <FamiliesTab api={api} />}
         {tab === "members" && <MembersTab api={api} />}
