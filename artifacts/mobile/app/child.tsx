@@ -192,6 +192,33 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// MAP IFRAME (blob URL for web)
+// ═══════════════════════════════════════════════════════════════════════════════
+function MapIframe({ mapHtml, title }: { mapHtml: string; title: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const blob = new Blob([mapHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [mapHtml]);
+
+  if (!blobUrl) return <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED" }]} />;
+
+  return (
+    <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
+      {/* @ts-ignore */}
+      <iframe
+        src={blobUrl}
+        style={{ width: "100%", height: "100%", border: "none" }}
+        title={title}
+      />
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAP SCREEN (Forest style)
 // ═══════════════════════════════════════════════════════════════════════════════
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
@@ -352,10 +379,8 @@ ${boundsJs}
   return (
     <View style={StyleSheet.absoluteFillObject}>
       {Platform.OS === "web" ? (
-        <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
-          {/* @ts-ignore */}
-          <iframe srcDoc={mapHtml} style={{ width: "100%", height: "100%", border: "none" }} title={t.mapIframeTitle as string} />
-        </View>
+        <MapIframe mapHtml={mapHtml} title={t.mapIframeTitle as string} />
+      
       ) : (
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED" }]}>
           {Array.from({ length: 8 }).map((_, i) => (
