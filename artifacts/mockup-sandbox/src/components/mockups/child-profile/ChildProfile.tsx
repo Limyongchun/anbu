@@ -303,7 +303,7 @@ export function ChildProfile() {
         {/* Support */}
         <SectionHeader title="고객센터" />
         <div style={{ backgroundColor: SURFACE, borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-          <InfoRow icon="mail-outline" label="이메일 문의" value="support@dugo.app" />
+          <InfoRow icon="mail-outline" label="문의하기" value="1:1 문의" />
           <Divider />
           <InfoRow icon="chatbubble-ellipses-outline" label="앱 사용 가이드" value="기능 안내" />
         </div>
