@@ -86,9 +86,9 @@ export function HomeConnected() {
       {/* Header */}
       <div style={{ padding: "54px 20px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <img src={logoAnbu} alt="ANBU" style={{ height: 24 }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 4, border: "1.5px solid #D4A843", borderRadius: 999, padding: "4px 10px" }}>
-          <IonSvg name="shield-checkmark" size={11} color="#D4A843" />
-          <span style={{ fontWeight: 700, fontSize: 10, color: "#D4A843", letterSpacing: 0.5 }}>MASTER</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, border: "1.5px solid #FFD700", borderRadius: 999, padding: "4px 10px" }}>
+          <IonSvg name="shield-checkmark" size={11} color="#FFD700" />
+          <span style={{ fontWeight: 700, fontSize: 10, color: "#FFD700", letterSpacing: 0.5 }}>MASTER</span>
         </div>
       </div>
 

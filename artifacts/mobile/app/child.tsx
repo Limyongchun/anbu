@@ -126,7 +126,7 @@ function AppHeader({ topInset, isMap }: { topInset: number; isMap: boolean }) {
       <View style={{ flex: 1 }} />
       {isMasterChild && (
         <View style={hdr.masterBadge}>
-          <Ionicons name="shield-checkmark" size={11} color="#D4A843" />
+          <Ionicons name="shield-checkmark" size={11} color="#FFD700" />
           <Text style={hdr.masterText}>{t.masterLabel}</Text>
         </View>
       )}
@@ -1613,8 +1613,8 @@ export default function ChildScreen() {
 const hdr = StyleSheet.create({
   wrap: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 200, flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 20, paddingBottom: 12 },
   logo: { fontFamily: "Inter_700Bold", fontSize: 18, letterSpacing: 3 },
-  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "transparent", borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1.5, borderColor: "#D4A843" },
-  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#D4A843", letterSpacing: 0.5 },
+  masterBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "transparent", borderRadius: DS.radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1.5, borderColor: "#FFD700" },
+  masterText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#FFD700", letterSpacing: 0.5 },
 });
 
 const nav = StyleSheet.create({

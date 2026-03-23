@@ -46,7 +46,7 @@ export default function WaitingRoomCopyPpHYBDP() {
         <div style={styles.topBar}>
           <span style={styles.topBarTitle}>A N B U</span>
           <div style={styles.masterBadge}>
-            <IonIcon name="shield-checkmark" size={11} color="#D4A843" />
+            <IonIcon name="shield-checkmark" size={11} color="#FFD700" />
             <span style={styles.masterText}>마스터</span>
           </div>
         </div>
@@ -161,12 +161,12 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: "transparent",
     borderRadius: 50,
     padding: "4px 10px",
-    border: "1.5px solid #D4A843",
+    border: "1.5px solid #FFD700",
   },
   masterText: {
     fontWeight: 700,
     fontSize: 10,
-    color: "#D4A843",
+    color: "#FFD700",
     letterSpacing: 0.5,
   },
   scrollContent: {
