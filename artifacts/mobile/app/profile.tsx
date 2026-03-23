@@ -10,7 +10,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Linking,
+
   Modal,
   Platform,
   Pressable,
@@ -37,7 +37,7 @@ type ChildMember = {
 };
 
 const APP_VERSION = "1.0.0";
-const SUPPORT_EMAIL = "support@dugo.app";
+
 
 
 function SectionHeader({ title }: { title: string }) {
@@ -502,12 +502,7 @@ export default function ProfileScreen() {
     });
   };
 
-  const openEmail = () => {
-    const body = t.emailBody.replace("{deviceId}", shortId).replace("{version}", APP_VERSION);
-    Linking.openURL(
-      `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t.emailSubject)}&body=${encodeURIComponent(body)}`
-    );
-  };
+
 
   return (
     <LinearGradient colors={["#D4843A", "#C4692E", "#A85528"]} style={[s.container, { paddingTop: topInset }]}>
@@ -784,14 +779,13 @@ export default function ProfileScreen() {
         <SectionHeader title={t.sectionSupport} />
         <View style={s.card}>
           <InfoRow
-            icon="mail-outline"
-            label={t.labelEmail}
-            value={SUPPORT_EMAIL}
+            icon="chatbubble-ellipses-outline"
+            label={t.labelInquiry}
             onPress={() => router.push("/inquiry")}
           />
           <Divider />
           <InfoRow
-            icon="chatbubble-ellipses-outline"
+            icon="book-outline"
             label={t.labelGuide}
             value={t.labelGuideVal}
             onPress={() => Alert.alert(t.appGuideTitle, t.appGuideContent)}
