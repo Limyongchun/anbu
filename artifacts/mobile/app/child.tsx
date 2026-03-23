@@ -531,7 +531,22 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   const [viewerMid, setViewerMid] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [parentPhotos, setParentPhotos] = useState<Record<string, string>>({});
   const photos = msgs.filter(m => !!m.photoData);
+
+  useEffect(() => {
+    if (!allFamilyCodes.length) return;
+    Promise.all(allFamilyCodes.map(c => api.getFamily(c).catch(() => null))).then(results => {
+      const map: Record<string, string> = {};
+      results.forEach(g => {
+        if (!g) return;
+        g.members.forEach(m => {
+          if (m.role === "parent" && m.photoData) map[m.memberName] = m.photoData;
+        });
+      });
+      setParentPhotos(map);
+    });
+  }, [allFamilyCodes]);
   const GAL_GAP = 6;
   const GAL_COLS = 3;
   const THUMB = (width - 40 - GAL_GAP * (GAL_COLS - 1)) / GAL_COLS;
@@ -703,6 +718,13 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
             {msgs.map((msg) => (
               <View key={msg.id} style={ab.card}>
                 <View style={ab.cardTop}>
+                  {parentPhotos[msg.fromName] ? (
+                    <Image source={{ uri: parentPhotos[msg.fromName] }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }} />
+                  ) : (
+                    <View style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10, backgroundColor: "#F0EDE8", alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="person" size={16} color="#bbb" />
+                    </View>
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={ab.cardName}>{msg.fromName}</Text>
                     <Text style={ab.cardTime}>{formatTimeI18n(msg.createdAt, t)}</Text>
@@ -849,6 +871,7 @@ type ActivityItem = {
   label: string;
   time: string;
   timestamp: number;
+  parentName?: string;
 };
 
 function HomeScreen({
@@ -991,6 +1014,7 @@ function HomeScreen({
         label,
         time: formatTimeI18n(a.createdAt, t),
         timestamp: new Date(a.createdAt).getTime(),
+        parentName: a.parentName || undefined,
       };
     });
   }, [parentActivities, showAll, t]);
@@ -1282,9 +1306,13 @@ function HomeScreen({
             <React.Fragment key={item.id}>
               {i > 0 && <View style={hm.activityDivider} />}
               <View style={hm.activityRow}>
-                <View style={[hm.activityIconBg, { backgroundColor: item.iconBg }]}>
-                  <Ionicons name={item.icon} size={14} color={item.iconColor} />
-                </View>
+                {item.parentName && parentInfos.find(p => p.name === item.parentName)?.photo ? (
+                  <Image source={{ uri: parentInfos.find(p => p.name === item.parentName)!.photo! }} style={{ width: 32, height: 32, borderRadius: 16 }} />
+                ) : (
+                  <View style={[hm.activityIconBg, { backgroundColor: item.iconBg }]}>
+                    <Ionicons name={item.icon} size={14} color={item.iconColor} />
+                  </View>
+                )}
                 <Text style={hm.activityLabel}>{item.label}</Text>
                 <Text style={hm.activityTime}>{item.time}</Text>
               </View>
@@ -1360,6 +1388,7 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
   const [messages, setMessages] = useState<FamilyMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<NotifFilter>("all");
+  const [parentPhotos, setParentPhotos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!allFamilyCodes.length) { setLoading(false); return; }
@@ -1369,6 +1398,16 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
       ))
       .catch(() => {})
       .finally(() => setLoading(false));
+    Promise.all(allFamilyCodes.map(c => api.getFamily(c).catch(() => null))).then(results => {
+      const map: Record<string, string> = {};
+      results.forEach(g => {
+        if (!g) return;
+        g.members.forEach(m => {
+          if (m.role === "parent" && m.photoData) map[m.memberName] = m.photoData;
+        });
+      });
+      setParentPhotos(map);
+    });
   }, [allFamilyCodes]);
 
   const filters: { key: NotifFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -1420,13 +1459,17 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
             <React.Fragment key={m.id}>
               {i > 0 && <View style={hm.activityDivider} />}
               <View style={hm.activityRow}>
-                <View style={[hm.activityIconBg, { backgroundColor: m.fromRole === "parent" ? COLORS.blueSoft : COLORS.greenSoft }]}>
-                  <Ionicons
-                    name={m.photoData ? "image" : m.fromRole === "parent" ? "chatbubble" : "paper-plane"}
-                    size={14}
-                    color={m.fromRole === "parent" ? DS.info : DS.success}
-                  />
-                </View>
+                {parentPhotos[m.fromName] ? (
+                  <Image source={{ uri: parentPhotos[m.fromName] }} style={{ width: 32, height: 32, borderRadius: 16 }} />
+                ) : (
+                  <View style={[hm.activityIconBg, { backgroundColor: m.fromRole === "parent" ? COLORS.blueSoft : COLORS.greenSoft }]}>
+                    <Ionicons
+                      name={m.photoData ? "image" : m.fromRole === "parent" ? "chatbubble" : "paper-plane"}
+                      size={14}
+                      color={m.fromRole === "parent" ? DS.info : DS.success}
+                    />
+                  </View>
+                )}
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={hm.activityLabel}>{m.fromName}</Text>
                   <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary }} numberOfLines={1}>
