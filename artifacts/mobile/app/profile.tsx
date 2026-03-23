@@ -781,6 +781,7 @@ export default function ProfileScreen() {
           <InfoRow
             icon="chatbubble-ellipses-outline"
             label={t.labelInquiry}
+            value={t.labelInquiryVal}
             onPress={() => router.push("/inquiry")}
           />
           <Divider />
