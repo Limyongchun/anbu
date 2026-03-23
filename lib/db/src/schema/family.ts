@@ -62,6 +62,29 @@ export const parentActivityLogsTable = pgTable("parent_activity_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const statusChangeLogsTable = pgTable("status_change_logs", {
+  id: serial("id").primaryKey(),
+  familyCode: text("family_code").notNull().references(() => familyGroupsTable.code),
+  deviceId: text("device_id").notNull(),
+  parentName: text("parent_name").notNull(),
+  previousStatus: text("previous_status").notNull(),
+  newStatus: text("new_status").notNull(),
+  place: text("place"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const parentScheduleTable = pgTable("parent_schedule", {
+  id: serial("id").primaryKey(),
+  familyCode: text("family_code").notNull().references(() => familyGroupsTable.code),
+  deviceId: text("device_id").notNull(),
+  wakeHour: integer("wake_hour").notNull().default(7),
+  wakeMinute: integer("wake_minute").notNull().default(0),
+  sleepHour: integer("sleep_hour").notNull().default(22),
+  sleepMinute: integer("sleep_minute").notNull().default(0),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertAccountSchema = createInsertSchema(accountsTable);
 export const insertFamilyGroupSchema = createInsertSchema(familyGroupsTable);
 export const insertFamilyMemberSchema = createInsertSchema(familyMembersTable);
@@ -74,3 +97,5 @@ export type FamilyMember = typeof familyMembersTable.$inferSelect;
 export type FamilyLocation = typeof familyLocationsTable.$inferSelect;
 export type FamilyMessage = typeof familyMessagesTable.$inferSelect;
 export type ParentActivityLog = typeof parentActivityLogsTable.$inferSelect;
+export type StatusChangeLog = typeof statusChangeLogsTable.$inferSelect;
+export type ParentSchedule = typeof parentScheduleTable.$inferSelect;

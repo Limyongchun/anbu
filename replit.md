@@ -128,6 +128,17 @@ Expo React Native app called A N B U. Korean family safety app.
   - **평상시 (safe/quiet/check/sleep)**: border tracer 없음, 붉은 라인 없음
   - 오늘 날짜 활동만 집계 (`todayStr` 필터), 과거 기록은 레벨 판정에 포함하지 않음
   - 랜덤 문구: `anbuCheckMessages` (check, 30개) / `anbuAlertMessages` (alert, 30개) — ko/en/ja 각각
+- **Status Engine**: `lib/status/` — 2-phase status computation (candidate → confirmed) with configurable waiting times
+  - `statusTypes.ts`: StatusLevel (SAFE/CHECK_CANDIDATE/CHECK/DANGER_CANDIDATE/DANGER), PlaceType, ParentSignals, ScheduleConfig
+  - `statusConfig.ts`: Default timing constants (activityUiDelay=2m, placeEnterDelay=3m, checkNeedDelay=20m, dangerDelay=40m, sleepApplyDelay=30m, wakeCheckDelay=60m)
+  - `statusEngine.ts`: Core computation — resolvePlace (GPS jitter protection via candidate place), computeRawStatus (time-based + sleep/wake), promoteStatus (candidate → confirmed with waiting)
+  - `statusMessages.ts`: Localized messages (ko/en/ja) for each status level + place + sleep state
+  - `useParentStatus.ts`: React hook `useParentStatusEngine(lang)` — manages per-parent signal state, computes all parent statuses from parentInfos + activities
+  - **Status escalation**: SAFE → CHECK_CANDIDATE (20m wait) → CHECK → DANGER_CANDIDATE (40m wait) → DANGER; never skips steps
+  - **Notifications**: Only on confirmed status changes (CHECK, DANGER); never on candidate states
+  - **Sleep/wake logic**: Child sets wake/sleep hours; sleep applies 30m after set time; wake check after 1h inactivity post-wake
+  - **DB tables**: `status_change_logs` (status transition history), `parent_schedule` (wake/sleep hours per parent)
+  - **API endpoints**: `GET/PUT /api/family/:code/schedule/:deviceId`, `POST /api/family/:code/status-log`, `GET /api/family/:code/status-logs`
 - **Privacy Policy Screen**: `app/privacy.tsx` — dedicated scrollable screen with shield icon, accessible from profile settings
 - **EAS Build**: `eas.json` — development (simulator), preview (internal), production (auto-increment) profiles; uses `EXPO_PUBLIC_API_URL` env var pointing to production API
 - **Deployment**: API server builds to `dist/index.cjs` via esbuild; health check at `/api/healthz`; splash background matches brand color (#7A5454)

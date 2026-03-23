@@ -7,6 +7,8 @@ import {
   familyLocationsTable,
   familyMessagesTable,
   parentActivityLogsTable,
+  statusChangeLogsTable,
+  parentScheduleTable,
 } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -459,6 +461,83 @@ router.get("/account/:accountId/families", async (req, res) => {
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to fetch account families" });
+  }
+});
+
+// GET /api/family/:code/schedule/:deviceId — get parent schedule
+router.get("/family/:code/schedule/:deviceId", async (req, res) => {
+  try {
+    const { code, deviceId } = req.params;
+    const [schedule] = await db.select().from(parentScheduleTable)
+      .where(and(eq(parentScheduleTable.familyCode, code), eq(parentScheduleTable.deviceId, deviceId)))
+      .limit(1);
+    if (!schedule) {
+      return res.json({ wakeHour: 7, wakeMinute: 0, sleepHour: 22, sleepMinute: 0 });
+    }
+    return res.json({
+      wakeHour: schedule.wakeHour,
+      wakeMinute: schedule.wakeMinute,
+      sleepHour: schedule.sleepHour,
+      sleepMinute: schedule.sleepMinute,
+    });
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to fetch schedule" });
+  }
+});
+
+// PUT /api/family/:code/schedule/:deviceId — update parent schedule
+router.put("/family/:code/schedule/:deviceId", async (req, res) => {
+  try {
+    const { code, deviceId } = req.params;
+    const { wakeHour, wakeMinute, sleepHour, sleepMinute } = req.body;
+    const existing = await db.select().from(parentScheduleTable)
+      .where(and(eq(parentScheduleTable.familyCode, code), eq(parentScheduleTable.deviceId, deviceId)))
+      .limit(1);
+    if (existing.length > 0) {
+      await db.update(parentScheduleTable)
+        .set({ wakeHour, wakeMinute, sleepHour, sleepMinute, updatedAt: new Date() })
+        .where(and(eq(parentScheduleTable.familyCode, code), eq(parentScheduleTable.deviceId, deviceId)));
+    } else {
+      await db.insert(parentScheduleTable).values({
+        familyCode: code, deviceId, wakeHour, wakeMinute, sleepHour, sleepMinute,
+      });
+    }
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to update schedule" });
+  }
+});
+
+// POST /api/family/:code/status-log — record status change
+router.post("/family/:code/status-log", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { deviceId, parentName, previousStatus, newStatus, place, reason } = req.body;
+    if (!deviceId || !parentName || !previousStatus || !newStatus) {
+      return res.status(400).json({ error: "deviceId, parentName, previousStatus, newStatus required" });
+    }
+    const [log] = await db.insert(statusChangeLogsTable).values({
+      familyCode: code, deviceId, parentName, previousStatus, newStatus,
+      place: place || null, reason: reason || null,
+    }).returning();
+    return res.json(log);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to log status change" });
+  }
+});
+
+// GET /api/family/:code/status-logs — get status change history
+router.get("/family/:code/status-logs", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const logs = await db.select().from(statusChangeLogsTable)
+      .where(eq(statusChangeLogsTable.familyCode, code))
+      .orderBy(desc(statusChangeLogsTable.createdAt))
+      .limit(limit);
+    return res.json(logs);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to fetch status logs" });
   }
 });
 

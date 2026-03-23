@@ -192,6 +192,26 @@ export const api = {
 
   getParentActivities: (code: string, limit = 30): Promise<ParentActivityLog[]> =>
     request(`/family/${code}/activities?limit=${limit}`),
+
+  getParentSchedule: (code: string, deviceId: string): Promise<ScheduleResponse> =>
+    request(`/family/${code}/schedule/${deviceId}`),
+
+  updateParentSchedule: (code: string, deviceId: string, schedule: ScheduleResponse) =>
+    request(`/family/${code}/schedule/${deviceId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(schedule),
+    }),
+
+  logStatusChange: (code: string, data: { deviceId: string; parentName: string; previousStatus: string; newStatus: string; place?: string; reason?: string }) =>
+    request(`/family/${code}/status-log`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  getStatusLogs: (code: string, limit = 50): Promise<StatusChangeLogEntry[]> =>
+    request(`/family/${code}/status-logs?limit=${limit}`),
 };
 
 export interface ParentActivityLog {
@@ -201,6 +221,25 @@ export interface ParentActivityLog {
   parentName: string;
   activityType: string;
   detail?: string | null;
+  createdAt: string;
+}
+
+export interface ScheduleResponse {
+  wakeHour: number;
+  wakeMinute: number;
+  sleepHour: number;
+  sleepMinute: number;
+}
+
+export interface StatusChangeLogEntry {
+  id: number;
+  familyCode: string;
+  deviceId: string;
+  parentName: string;
+  previousStatus: string;
+  newStatus: string;
+  place?: string | null;
+  reason?: string | null;
   createdAt: string;
 }
 

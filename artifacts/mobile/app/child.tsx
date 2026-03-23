@@ -28,6 +28,7 @@ import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
 import { api, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
+import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
 
 const { width, height } = Dimensions.get("window");
 type Tab = "home" | "photo" | "map" | "alarm";
@@ -884,9 +885,10 @@ function HomeScreen({
   bottomInset: number;
   onGoToAnbu: () => void;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   type ParentInfo = { name: string; photo: string | null; loc: LocationData | null; deviceId: string };
   const [parentInfos, setParentInfos] = useState<ParentInfo[]>([]);
+  const statusEngine = useParentStatusEngine(lang as "ko" | "en" | "ja");
   const [messages, setMessages] = useState<FamilyMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -966,20 +968,53 @@ function HomeScreen({
     return () => clearInterval(t);
   }, [load]);
 
-  const STATUS_COLOR = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary } as const;
+  const parentStatusResults = useMemo(() => {
+    return statusEngine.computeAll(parentInfos, parentActivities);
+  }, [parentInfos, parentActivities, statusEngine]);
 
-  const getParentStatus = (loc: LocationData | null) => {
-    const minsAgo = loc ? Math.floor((Date.now() - new Date(loc.updatedAt).getTime()) / 60000) : null;
-    const level = minsAgo === null ? "none" : minsAgo < 60 ? "good" : minsAgo < 180 ? "warn" : "alert";
-    const color = STATUS_COLOR[level];
-    const msgs: Record<string, { title: string; sub: string }> = {
-      good:  { title: t.statusMsgGoodTitle, sub: (t.statusMsgGoodSub as string).replace("{m}", String(minsAgo)) },
-      warn:  { title: t.statusMsgWarnTitle, sub: (t.statusMsgWarnSub as string).replace("{m}", String(minsAgo)) },
-      alert: { title: t.statusMsgAlertTitle, sub: (t.statusMsgAlertSub as string).replace("{h}", String(Math.floor((minsAgo ?? 0) / 60))) },
-      none:  { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub },
+  const getParentStatusNew = useCallback((deviceId: string, name: string) => {
+    const found = parentStatusResults.find(
+      (r: ParentStatusInfo) => r.deviceId === deviceId || r.parentName === name
+    );
+    if (!found) {
+      return { level: "none" as const, color: DS.textTertiary, msg: { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub }, minsAgo: null, isActive: false, engineResult: null };
+    }
+    const r = found.result;
+    const minsAgo = Math.floor((Date.now() - r.lastActiveAt) / 60000);
+    const levelMap: Record<string, "good" | "warn" | "alert"> = { SAFE: "good", CHECK: "warn", DANGER: "alert" };
+    const level = levelMap[r.level] || "none";
+    const colorMap = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary };
+    return {
+      level: level as "good" | "warn" | "alert" | "none",
+      color: colorMap[level],
+      msg: { title: r.message, sub: "" },
+      minsAgo,
+      isActive: level === "good",
+      engineResult: r,
     };
-    return { level: level as "good" | "warn" | "alert" | "none", color, msg: msgs[level], minsAgo, isActive: level === "good" };
-  };
+  }, [parentStatusResults, t]);
+
+  const prevStatusRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    if (!allFamilyCodes.length) return;
+    parentStatusResults.forEach((ps: ParentStatusInfo) => {
+      const key = ps.deviceId || ps.parentName;
+      const prev = prevStatusRef.current[key];
+      const curr = ps.result.level;
+      if (prev && prev !== curr) {
+        const code = allFamilyCodes[0];
+        api.logStatusChange(code, {
+          deviceId: ps.deviceId,
+          parentName: ps.parentName,
+          previousStatus: prev,
+          newStatus: curr,
+          place: ps.result.place,
+          reason: ps.result.isSleeping ? "sleep" : undefined,
+        }).catch(() => {});
+      }
+      prevStatusRef.current[key] = curr;
+    });
+  }, [parentStatusResults, allFamilyCodes]);
 
   const ACTIVITY_ICON_MAP: Record<string, { icon: keyof typeof Ionicons.glyphMap; iconColor: string; iconBg: string }> = {
     heart:      { icon: "heart",           iconColor: "#C0766E", iconBg: "rgba(192,118,110,0.10)" },
@@ -1146,7 +1181,7 @@ function HomeScreen({
       {/* ── Summary Bar ── */}
       {(() => {
         const dangerCount = parentActivityStats.filter(ps => {
-          const st = getParentStatus(ps.loc);
+          const st = getParentStatusNew(ps.deviceId, ps.name);
           return st.level === "alert" || st.level === "none";
         }).length;
         return (
@@ -1169,21 +1204,22 @@ function HomeScreen({
       {(() => {
         const statusPriority = { alert: 0, none: 0, warn: 1, good: 2 };
         const sorted = [...parentActivityStats].sort((a, b) => {
-          const sa = getParentStatus(a.loc).level;
-          const sb = getParentStatus(b.loc).level;
+          const sa = getParentStatusNew(a.deviceId, a.name).level;
+          const sb = getParentStatusNew(b.deviceId, b.name).level;
           return (statusPriority[sa] ?? 2) - (statusPriority[sb] ?? 2);
         });
 
         const getCardStatus = (ps: typeof parentActivityStats[0]) => {
-          const st = getParentStatus(ps.loc);
+          const st = getParentStatusNew(ps.deviceId, ps.name);
           if (st.level === "good") return "safe" as const;
           if (st.level === "warn") return "warning" as const;
           return "danger" as const;
         };
 
         const getLocationText = (ps: typeof parentActivityStats[0]) => {
-          const st = getParentStatus(ps.loc);
+          const st = getParentStatusNew(ps.deviceId, ps.name);
           if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
+          if (st.engineResult) return st.msg.title;
           const loc = ps.loc;
           if (loc?.locationLabel === "이동중") return t.cardMoving as string;
           if (loc?.locationLabel) return (t.cardLocationAt as string).replace("{place}", loc.locationLabel);
@@ -1260,7 +1296,7 @@ function HomeScreen({
         const todayLoc = todayActs.filter(a => a.activityType === "location").length;
         const todayTouch = todayActs.filter(a => a.activityType === "app_open" || a.activityType === "view_slide" || a.activityType === "heart").length;
         const allParentsAlert = parentActivityStats.length > 0 && parentActivityStats.every(ps => {
-          const st = getParentStatus(ps.loc);
+          const st = getParentStatusNew(ps.deviceId, ps.name);
           return st.level === "alert" || st.level === "none";
         });
         const level = isNight ? "sleep" : allParentsAlert ? "alert" : (todayLoc >= 2 && todayTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
