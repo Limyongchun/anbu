@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import {
   familyGroupsTable,
   familyMembersTable,
+  inquiriesTable,
 } from "@workspace/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -130,6 +131,45 @@ router.delete("/admin/members/:id", adminAuth, async (req: Request, res: Respons
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ error: "Failed to delete member" });
+  }
+});
+
+// GET /api/admin/inquiries — list all inquiries
+router.get("/admin/inquiries", adminAuth, async (req: Request, res: Response) => {
+  try {
+    const inquiries = await db.select().from(inquiriesTable)
+      .orderBy(desc(inquiriesTable.createdAt));
+    return res.json(inquiries);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to fetch inquiries" });
+  }
+});
+
+// POST /api/admin/inquiries/:id/reply — save reply text
+router.post("/admin/inquiries/:id/reply", adminAuth, async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { reply } = req.body;
+    if (!reply) return res.status(400).json({ error: "reply required" });
+    const [updated] = await db.update(inquiriesTable)
+      .set({ reply, repliedAt: new Date() })
+      .where(eq(inquiriesTable.id, id))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Inquiry not found" });
+    return res.json(updated);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to save reply" });
+  }
+});
+
+// DELETE /api/admin/inquiries/:id — delete an inquiry
+router.delete("/admin/inquiries/:id", adminAuth, async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(inquiriesTable).where(eq(inquiriesTable.id, id));
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to delete inquiry" });
   }
 });
 

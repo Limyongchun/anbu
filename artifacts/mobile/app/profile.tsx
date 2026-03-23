@@ -787,7 +787,7 @@ export default function ProfileScreen() {
             icon="mail-outline"
             label={t.labelEmail}
             value={SUPPORT_EMAIL}
-            onPress={openEmail}
+            onPress={() => router.push("/inquiry")}
           />
           <Divider />
           <InfoRow

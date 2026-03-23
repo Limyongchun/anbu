@@ -85,6 +85,18 @@ export const parentScheduleTable = pgTable("parent_schedule", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const inquiriesTable = pgTable("inquiries", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id"),
+  userName: text("user_name").notNull(),
+  userEmail: text("user_email").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  reply: text("reply"),
+  repliedAt: timestamp("replied_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertAccountSchema = createInsertSchema(accountsTable);
 export const insertFamilyGroupSchema = createInsertSchema(familyGroupsTable);
 export const insertFamilyMemberSchema = createInsertSchema(familyMembersTable);
@@ -99,3 +111,4 @@ export type FamilyMessage = typeof familyMessagesTable.$inferSelect;
 export type ParentActivityLog = typeof parentActivityLogsTable.$inferSelect;
 export type StatusChangeLog = typeof statusChangeLogsTable.$inferSelect;
 export type ParentSchedule = typeof parentScheduleTable.$inferSelect;
+export type Inquiry = typeof inquiriesTable.$inferSelect;

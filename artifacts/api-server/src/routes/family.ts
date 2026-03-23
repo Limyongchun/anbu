@@ -9,6 +9,7 @@ import {
   parentActivityLogsTable,
   statusChangeLogsTable,
   parentScheduleTable,
+  inquiriesTable,
 } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -538,6 +539,26 @@ router.get("/family/:code/status-logs", async (req, res) => {
     return res.json(logs);
   } catch (e) {
     return res.status(500).json({ error: "Failed to fetch status logs" });
+  }
+});
+
+// POST /api/inquiry — submit a user inquiry
+router.post("/inquiry", async (req, res) => {
+  try {
+    const { userId, userName, userEmail, title, content } = req.body;
+    if (!userName || !userEmail || !title || !content) {
+      return res.status(400).json({ error: "userName, userEmail, title, content required" });
+    }
+    const [inquiry] = await db.insert(inquiriesTable).values({
+      userId: userId || null,
+      userName,
+      userEmail,
+      title,
+      content,
+    }).returning();
+    return res.json(inquiry);
+  } catch (e) {
+    return res.status(500).json({ error: "Failed to submit inquiry" });
   }
 });
 

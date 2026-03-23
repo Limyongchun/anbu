@@ -10,7 +10,7 @@ function decodeJwtExp(token: string): number | null {
   } catch { return null; }
 }
 
-type Tab = "dashboard" | "families" | "members";
+type Tab = "dashboard" | "families" | "members" | "inquiries";
 
 interface Stats {
   families: number;
@@ -52,8 +52,8 @@ function useApi(token: string) {
     return r.json();
   }, [token]);
 
-  const post = useCallback(async (path: string) => {
-    const r = await fetch(`${API}${path}`, { method: "POST", headers });
+  const post = useCallback(async (path: string, body?: unknown) => {
+    const r = await fetch(`${API}${path}`, { method: "POST", headers, body: body ? JSON.stringify(body) : undefined });
     if (r.status === 401) { sessionStorage.removeItem("admin_token"); window.location.reload(); }
     return r.json();
   }, [token]);
@@ -279,10 +279,182 @@ function DangerBtn({ onClick, children }: { onClick: () => void; children: React
   );
 }
 
+interface InquiryRow {
+  id: number;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  title: string;
+  content: string;
+  reply: string | null;
+  repliedAt: string | null;
+  createdAt: string;
+}
+
+function InquiriesTab({ api }: { api: ReturnType<typeof useApi> }) {
+  const [inquiries, setInquiries] = useState<InquiryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<InquiryRow | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.get("/admin/inquiries").then(d => { setInquiries(Array.isArray(d) ? d : []); setLoading(false); });
+  }, [api]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const deleteInquiry = async (id: number) => {
+    if (!confirm("Delete this inquiry?")) return;
+    await api.del(`/admin/inquiries/${id}`);
+    if (selected?.id === id) setSelected(null);
+    load();
+  };
+
+  const saveReply = async () => {
+    if (!selected || !replyText.trim()) return;
+    setSaving(true);
+    await api.post(`/admin/inquiries/${selected.id}/reply`, { reply: replyText.trim() });
+    setSaving(false);
+    setSelected(null);
+    setReplyText("");
+    load();
+  };
+
+  const copyContent = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const openMailto = (inq: InquiryRow) => {
+    const subject = encodeURIComponent(`[ANBU] ${inq.title} - 문의 답변드립니다`);
+    const body = encodeURIComponent(`안녕하세요 ${inq.userName}님,\n\nANBU를 이용해주셔서 감사합니다.\n\n문의하신 내용에 대해 답변드립니다:\n\n---\n\n\n\n---\n\n추가 문의사항이 있으시면 언제든 연락해주세요.\n\n감사합니다.\nANBU 팀`);
+    window.open(`mailto:${inq.userEmail}?subject=${subject}&body=${body}`);
+  };
+
+  if (loading) return <p style={{ color: "#8899aa" }}>Loading...</p>;
+
+  if (selected) {
+    return (
+      <div>
+        <button onClick={() => { setSelected(null); setReplyText(""); }} style={{ padding: "6px 16px", background: "transparent", color: "#8899aa", border: "1px solid #1e2d3d", borderRadius: 6, fontSize: 13, cursor: "pointer", marginBottom: 20 }}>
+          &larr; Back to list
+        </button>
+        <div style={{ background: "#152030", borderRadius: 12, padding: 24, border: "1px solid #1e2d3d" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+            <div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{selected.title}</h3>
+              <div style={{ color: "#8899aa", fontSize: 13 }}>
+                {selected.userName} &middot; {new Date(selected.createdAt).toLocaleString("ko-KR")}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => openMailto(selected)} style={{ padding: "8px 16px", background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 8, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                ✉ Reply via Email
+              </button>
+              <DangerBtn onClick={() => deleteInquiry(selected.id)}>Delete</DangerBtn>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "10px 14px", background: "#1a2535", borderRadius: 8, border: "1px solid #1e2d3d" }}>
+            <span style={{ color: "#8899aa", fontSize: 13 }}>Email:</span>
+            <a href={`mailto:${selected.userEmail}`} style={{ color: "#d4f200", fontSize: 14, textDecoration: "none" }}>{selected.userEmail}</a>
+            <button onClick={() => copyContent(selected.userEmail)} style={{ padding: "2px 8px", background: "rgba(212,242,0,0.1)", color: "#d4f200", border: "1px solid rgba(212,242,0,0.2)", borderRadius: 4, fontSize: 11, cursor: "pointer", marginLeft: "auto" }}>
+              Copy
+            </button>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ color: "#8899aa", fontSize: 12, textTransform: "uppercase" }}>Inquiry Content</span>
+              <button onClick={() => copyContent(selected.content)} style={{ padding: "2px 8px", background: "rgba(212,242,0,0.1)", color: "#d4f200", border: "1px solid rgba(212,242,0,0.2)", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>
+                Copy
+              </button>
+            </div>
+            <div style={{ padding: 16, background: "#1a2535", borderRadius: 8, border: "1px solid #1e2d3d", whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.6 }}>
+              {selected.content}
+            </div>
+          </div>
+
+          {selected.userId && (
+            <div style={{ color: "#8899aa", fontSize: 12, marginBottom: 16 }}>
+              Device ID: <span style={{ fontFamily: "monospace" }}>{selected.userId}</span>
+            </div>
+          )}
+
+          {selected.reply && (
+            <div style={{ marginBottom: 20, padding: 16, background: "rgba(76,175,80,0.08)", borderRadius: 8, border: "1px solid rgba(76,175,80,0.2)" }}>
+              <div style={{ color: "#4caf50", fontSize: 12, textTransform: "uppercase", marginBottom: 8 }}>Saved Reply ({selected.repliedAt ? new Date(selected.repliedAt).toLocaleString("ko-KR") : ""})</div>
+              <div style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{selected.reply}</div>
+            </div>
+          )}
+
+          <div style={{ borderTop: "1px solid #1e2d3d", paddingTop: 16 }}>
+            <div style={{ color: "#8899aa", fontSize: 12, textTransform: "uppercase", marginBottom: 8 }}>Save Reply (optional)</div>
+            <textarea
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              placeholder="Paste or type your email reply here to save a record..."
+              style={{ width: "100%", minHeight: 100, padding: 12, background: "#1a2535", border: "1px solid #1e2d3d", borderRadius: 8, color: "#e2e8f0", fontSize: 14, resize: "vertical" }}
+            />
+            <button
+              onClick={saveReply}
+              disabled={!replyText.trim() || saving}
+              style={{ marginTop: 8, padding: "8px 20px", background: replyText.trim() ? "#d4f200" : "#1e2d3d", color: replyText.trim() ? "#0f1923" : "#555", border: "none", borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: replyText.trim() ? "pointer" : "default" }}
+            >
+              {saving ? "Saving..." : "Save Reply"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>Inquiries ({inquiries.length})</h2>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid #1e2d3d" }}>
+            <Th>Date</Th><Th>Name</Th><Th>Email</Th><Th>Title</Th><Th>Status</Th><Th>Actions</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {inquiries.map(inq => (
+            <tr key={inq.id} style={{ borderBottom: "1px solid #1e2d3d", cursor: "pointer" }} onClick={() => { setSelected(inq); setReplyText(inq.reply || ""); }}>
+              <Td>{new Date(inq.createdAt).toLocaleDateString("ko-KR")}</Td>
+              <Td>{inq.userName}</Td>
+              <Td><span style={{ color: "#60a5fa", fontSize: 13 }}>{inq.userEmail}</span></Td>
+              <Td>{inq.title}</Td>
+              <Td>
+                {inq.reply ? (
+                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 500, background: "rgba(76,175,80,0.15)", color: "#4caf50" }}>Replied</span>
+                ) : (
+                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 500, background: "rgba(255,193,7,0.15)", color: "#ffc107" }}>Pending</span>
+                )}
+              </Td>
+              <Td>
+                <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+                  <button onClick={() => openMailto(inq)} style={{ padding: "4px 10px", background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.3)", borderRadius: 6, fontSize: 11, cursor: "pointer" }}>
+                    ✉ Mail
+                  </button>
+                  <DangerBtn onClick={() => deleteInquiry(inq.id)}>Delete</DangerBtn>
+                </div>
+              </Td>
+            </tr>
+          ))}
+          {inquiries.length === 0 && <tr><Td colSpan={6}>No inquiries yet</Td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const TABS: { key: Tab; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
   { key: "families", label: "Families" },
   { key: "members", label: "Members" },
+  { key: "inquiries", label: "Inquiries" },
 ];
 
 function App() {
@@ -335,6 +507,7 @@ function App() {
         {tab === "dashboard" && <DashboardTab api={api} />}
         {tab === "families" && <FamiliesTab api={api} />}
         {tab === "members" && <MembersTab api={api} />}
+        {tab === "inquiries" && <InquiriesTab api={api} />}
       </main>
     </div>
   );

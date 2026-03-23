@@ -212,6 +212,13 @@ export const api = {
 
   getStatusLogs: (code: string, limit = 50): Promise<StatusChangeLogEntry[]> =>
     request(`/family/${code}/status-logs?limit=${limit}`),
+
+  submitInquiry: (data: { userId?: string; userName: string; userEmail: string; title: string; content: string }) =>
+    request("/inquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
 };
 
 export interface ParentActivityLog {

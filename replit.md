@@ -139,6 +139,7 @@ Expo React Native app called A N B U. Korean family safety app.
   - **Sleep/wake logic**: Child sets wake/sleep hours; sleep applies 30m after set time; wake check after 1h inactivity post-wake
   - **DB tables**: `status_change_logs` (status transition history), `parent_schedule` (wake/sleep hours per parent)
   - **API endpoints**: `GET/PUT /api/family/:code/schedule/:deviceId`, `POST /api/family/:code/status-log`, `GET /api/family/:code/status-logs`
+- **Inquiry System**: `app/inquiry.tsx` — form screen (name, email, subject, content) with success state; profile "이메일 문의" button routes to inquiry screen; `POST /api/inquiry` persists to `inquiriesTable`; DB: `inquiriesTable` (userId, userName, userEmail, title, content, reply, repliedAt)
 - **Privacy Policy Screen**: `app/privacy.tsx` — dedicated scrollable screen with shield icon, accessible from profile settings
 - **EAS Build**: `eas.json` — development (simulator), preview (internal), production (auto-increment) profiles; uses `EXPO_PUBLIC_API_URL` env var pointing to production API
 - **Deployment**: API server builds to `dist/index.cjs` via esbuild; health check at `/api/healthz`; splash background matches brand color (#7A5454)
@@ -153,6 +154,7 @@ React + Vite admin dashboard for A N B U. Dark-themed management UI at `/admin/`
 - **Members tab**: List all members with search, delete members
 - **API routes**: `artifacts/api-server/src/routes/admin.ts` — JWT-protected admin endpoints
 - **Env vars**: `ADMIN_PASSWORD` (required), `JWT_SECRET` (required) — admin is disabled if either is missing
+- **Inquiries tab**: List all user inquiries with reply/delete; detail view with mailto integration and reply saving
 - **Packages**: `jsonwebtoken` + `@types/jsonwebtoken` in api-server
 
 ### `scripts` (`@workspace/scripts`)
