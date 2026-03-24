@@ -30,6 +30,7 @@ import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import NaverMapView, { type NaverMapHandle } from "@/features/location/map/NaverMapView";
 import { getStatusText, getFreshnessColor } from "@/features/location/map/mapUtils";
+import SavePlaceSheet from "@/features/places/components/SavePlaceSheet";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -282,6 +283,8 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
 
   const safeIdx = parentLocs.length > 0 ? Math.min(selectedIdx, parentLocs.length - 1) : 0;
 
+  const [savePlaceVisible, setSavePlaceVisible] = useState(false);
+
   const selectParent = useCallback((idx: number) => {
     setSelectedIdx(idx);
   }, []);
@@ -448,6 +451,28 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
             <Text style={mp.privacyLabel}>{t.mapPrivacyMode}</Text>
           </View>
         </View>
+      )}
+
+      {!immersive && hasParents && (
+        <Pressable
+          style={[mp.savePlaceBtn, { bottom: BOTTOM_SAFE + (hasParents ? 170 : 14) }]}
+          onPress={() => setSavePlaceVisible(true)}
+        >
+          <Ionicons name="bookmark-outline" size={15} color="#FFFFFF" />
+          <Text style={mp.savePlaceBtnText}>{t.mapSavePlace}</Text>
+        </Pressable>
+      )}
+
+      {savePlaceVisible && parentLocs[safeIdx] && (
+        <SavePlaceSheet
+          visible={savePlaceVisible}
+          parentId={parentLocs[safeIdx].deviceId}
+          latitude={parentLocs[safeIdx].latitude}
+          longitude={parentLocs[safeIdx].longitude}
+          lang={lang as "ko" | "en" | "ja"}
+          onClose={() => setSavePlaceVisible(false)}
+          onSaved={() => setSavePlaceVisible(false)}
+        />
       )}
 
       {loading && (
@@ -1635,6 +1660,8 @@ const mp = StyleSheet.create({
   privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
   privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.brand, marginTop: 2 },
+  savePlaceBtn: { position: "absolute", right: 16, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.brand, paddingHorizontal: 14, paddingVertical: 10, borderRadius: DS.radius.pill, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  savePlaceBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
   summaryCardsWrap: { position: "absolute", left: 0, right: 0, zIndex: 10 },
   summaryCardsScroll: { paddingHorizontal: 14 },
   summaryCard: { width: 300, backgroundColor: "#FFFFFF", borderRadius: 22, paddingVertical: 16, paddingHorizontal: 18, marginRight: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 6 },
