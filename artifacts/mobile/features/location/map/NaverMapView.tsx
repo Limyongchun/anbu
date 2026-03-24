@@ -1,28 +1,59 @@
-import React, { useMemo, useRef, useCallback, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import type { ParentLocation } from "./mapTypes";
-import { getStatusText, getNoDataLabel, MOCK_PARENT_LOCATION } from "./mapUtils";
+import { getStatusText, getNoDataLabel } from "./mapUtils";
 
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID || "rg1fro3mez";
 
-const USE_MOCK = true;
+const MARKER_COLORS = ["#34C759", "#FF9500", "#AF52DE"];
 
 interface NaverMapViewProps {
-  location: ParentLocation | null;
+  locations: ParentLocation[];
+  selectedIndex?: number;
   lang: string;
+  onMarkerPress?: (index: number) => void;
 }
 
-function buildMapHtml(loc: ParentLocation, lang: string): string {
-  const status = getStatusText(loc.motionState, loc.capturedAt, lang);
-  const diffMin = (Date.now() - new Date(loc.capturedAt).getTime()) / 60000;
-  const isDelayed = diffMin > 5;
-  const isMoving = loc.motionState === "moving";
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
+function buildMapHtml(locs: ParentLocation[], selectedIdx: number, lang: string): string {
+  const sel = locs[selectedIdx] || locs[0];
+  if (!sel) return "";
+
+  const markersJs = locs.map((loc, i) => {
+    const isMoving = loc.motionState === "moving";
+    const dotColor = isMoving ? "#34C759" : "#FF9500";
+    const pulseClass = isMoving ? "marker-ring" : "";
+    return `
+(function(){
+  var el = document.createElement('div');
+  el.className = '${pulseClass}';
+  el.style.cssText = 'width:28px;height:28px;border-radius:50%;background:${dotColor};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;';
+  var m = new naver.maps.Marker({
+    position: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
+    map: map,
+    icon: { content: el.outerHTML, anchor: new naver.maps.Point(14, 14) }
+  });
+  var c = new naver.maps.Circle({
+    map: map, center: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
+    radius: ${loc.accuracy}, fillColor: '${dotColor}', fillOpacity: 0.08,
+    strokeColor: '${dotColor}', strokeOpacity: 0.2, strokeWeight: 1
+  });
+  _markers.push({marker:m,circle:c});
+  naver.maps.Event.addListener(m, 'click', function(){
+    if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerClick',index:${i}}));}
+    else{window.parent.postMessage(JSON.stringify({type:'markerClick',index:${i}}),'*');}
+  });
+})();`;
+  }).join("\n");
+
+  const status = getStatusText(sel.motionState, sel.capturedAt, lang);
+  const diffMin = (Date.now() - new Date(sel.capturedAt).getTime()) / 60000;
+  const isDelayed = diffMin > 5;
+  const isMoving = sel.motionState === "moving";
   const dotColor = isMoving ? "#34C759" : "#FF9500";
-  const freshnessColor = isDelayed ? "#E85D3A" : "#999";
-  const pulseAnim = isMoving
-    ? `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,0.5)}70%{box-shadow:0 0 0 12px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}} .marker-ring{animation:pulse 2s infinite}`
-    : "";
 
   return `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
@@ -30,7 +61,8 @@ function buildMapHtml(loc: ParentLocation, lang: string): string {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body,#map{width:100%;height:100%}
-${pulseAnim}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,0.5)}70%{box-shadow:0 0 0 12px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}
+.marker-ring{animation:pulse 2s infinite}
 .info-card{
   position:absolute;bottom:24px;left:16px;right:16px;
   background:#fff;border-radius:16px;
@@ -43,65 +75,43 @@ ${pulseAnim}
 .info-status{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .info-dot{width:8px;height:8px;border-radius:50%;background:${dotColor}}
 .info-motion{font-size:14px;color:#555}
-.info-freshness{font-size:13px;color:${freshnessColor};margin-top:2px}
+.info-freshness{font-size:13px;color:${isDelayed ? "#E85D3A" : "#999"};margin-top:2px}
 </style>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_CLIENT_ID}"></script>
 </head><body>
 <div id="map"></div>
 <div class="info-card">
-  <div class="info-name">${escapeHtml(loc.parentName)}</div>
+  <div class="info-name">${escapeHtml(sel.parentName)}</div>
   ${status.motion ? `<div class="info-status"><div class="info-dot"></div><span class="info-motion">${escapeHtml(status.motion)}</span></div>` : ""}
   <div class="info-freshness">${escapeHtml(status.freshness)}</div>
 </div>
 <script>
 var map = new naver.maps.Map('map', {
-  center: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
+  center: new naver.maps.LatLng(${sel.lat}, ${sel.lng}),
   zoom: 16,
   zoomControl: true,
-  zoomControlOptions: {
-    position: naver.maps.Position.RIGHT_CENTER,
-    style: naver.maps.ZoomControlStyle.SMALL
-  },
-  mapTypeControl: false,
-  scaleControl: false,
-  logoControl: true,
+  zoomControlOptions: { position: naver.maps.Position.RIGHT_CENTER, style: naver.maps.ZoomControlStyle.SMALL },
+  mapTypeControl: false, scaleControl: false, logoControl: true,
   logoControlOptions: { position: naver.maps.Position.BOTTOM_LEFT }
 });
-
-var markerEl = document.createElement('div');
-markerEl.className = 'marker-ring';
-markerEl.style.cssText = 'width:28px;height:28px;border-radius:50%;background:${dotColor};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;';
-
-var marker = new naver.maps.Marker({
-  position: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
-  map: map,
-  icon: {
-    content: markerEl.outerHTML,
-    anchor: new naver.maps.Point(14, 14)
-  }
-});
-
-var circle = new naver.maps.Circle({
-  map: map,
-  center: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
-  radius: ${loc.accuracy},
-  fillColor: '${dotColor}',
-  fillOpacity: 0.08,
-  strokeColor: '${dotColor}',
-  strokeOpacity: 0.2,
-  strokeWeight: 1
-});
-
+var _markers = [];
+${markersJs}
+${locs.length > 1 ? `
+var bounds = new naver.maps.LatLngBounds();
+${locs.map(l => `bounds.extend(new naver.maps.LatLng(${l.lat}, ${l.lng}));`).join("\n")}
+map.fitBounds(bounds, { top:60, right:60, bottom:160, left:60 });
+` : ""}
 window.addEventListener('message', function(e) {
   try {
     var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
     if (msg.type === 'updateLocation') {
       var p = msg.data;
       var pos = new naver.maps.LatLng(p.lat, p.lng);
-      marker.setPosition(pos);
-      circle.setCenter(pos);
-      if (p.accuracy) circle.setRadius(p.accuracy);
-      map.panTo(pos);
+      if (_markers[p.index]) {
+        _markers[p.index].marker.setPosition(pos);
+        _markers[p.index].circle.setCenter(pos);
+        if (p.accuracy) _markers[p.index].circle.setRadius(p.accuracy);
+      }
     }
   } catch(ex) {}
 });
@@ -110,10 +120,6 @@ if(window.ReactNativeWebView){
 }
 </script>
 </body></html>`;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function NoDataView({ lang }: { lang: string }) {
@@ -125,13 +131,17 @@ function NoDataView({ lang }: { lang: string }) {
   );
 }
 
-function WebNaverMap({ loc, lang }: { loc: ParentLocation; lang: string }) {
+function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
+  locs: ParentLocation[];
+  selectedIdx: number;
+  lang: string;
+  onMarkerPress?: (index: number) => void;
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const circleRef = useRef<any>(null);
+  const markersRef = useRef<Array<{ marker: any; circle: any }>>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -156,44 +166,53 @@ function WebNaverMap({ loc, lang }: { loc: ParentLocation; lang: string }) {
   useEffect(() => {
     if (!loaded || !mapRef.current || !(window as any).naver?.maps) return;
     const N = (window as any).naver.maps;
-    const center = new N.LatLng(loc.lat, loc.lng);
 
     if (!mapInstanceRef.current) {
+      const center = locs.length > 0
+        ? new N.LatLng(locs[0].lat, locs[0].lng)
+        : new N.LatLng(37.5665, 126.978);
+
       mapInstanceRef.current = new N.Map(mapRef.current, {
         center,
         zoom: 16,
         zoomControl: true,
-        zoomControlOptions: {
-          position: N.Position.RIGHT_CENTER,
-          style: N.ZoomControlStyle.SMALL,
-        },
+        zoomControlOptions: { position: N.Position.RIGHT_CENTER, style: N.ZoomControlStyle.SMALL },
         mapTypeControl: false,
         scaleControl: false,
         logoControl: true,
         logoControlOptions: { position: N.Position.BOTTOM_LEFT },
       });
 
-      const isMoving = loc.motionState === "moving";
-      const dotColor = isMoving ? "#34C759" : "#FF9500";
-      const pulseClass = isMoving ? "marker-ring" : "";
-
       const style = document.createElement("style");
       style.textContent = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,0.5)}70%{box-shadow:0 0 0 12px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}.marker-ring{animation:pulse 2s infinite}`;
       document.head.appendChild(style);
+    }
+
+    markersRef.current.forEach(m => {
+      m.marker.setMap(null);
+      m.circle.setMap(null);
+    });
+    markersRef.current = [];
+
+    locs.forEach((loc, i) => {
+      const isMoving = loc.motionState === "moving";
+      const dotColor = isMoving ? "#34C759" : "#FF9500";
+      const pulseClass = isMoving ? "marker-ring" : "";
 
       const markerEl = document.createElement("div");
       markerEl.className = pulseClass;
       markerEl.style.cssText = `width:28px;height:28px;border-radius:50%;background:${dotColor};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;`;
 
-      markerRef.current = new N.Marker({
-        position: center,
+      const pos = new N.LatLng(loc.lat, loc.lng);
+      const marker = new N.Marker({
+        position: pos,
         map: mapInstanceRef.current,
         icon: { content: markerEl.outerHTML, anchor: new N.Point(14, 14) },
       });
 
-      circleRef.current = new N.Circle({
+      const circle = new N.Circle({
         map: mapInstanceRef.current,
-        center,
+        center: pos,
         radius: loc.accuracy,
         fillColor: dotColor,
         fillOpacity: 0.08,
@@ -201,24 +220,39 @@ function WebNaverMap({ loc, lang }: { loc: ParentLocation; lang: string }) {
         strokeOpacity: 0.2,
         strokeWeight: 1,
       });
-    } else {
-      markerRef.current?.setPosition(center);
-      circleRef.current?.setCenter(center);
-      mapInstanceRef.current?.panTo(center);
-    }
-  }, [loaded, loc.lat, loc.lng]);
 
-  const status = getStatusText(loc.motionState, loc.capturedAt, lang);
-  const diffMin = (Date.now() - new Date(loc.capturedAt).getTime()) / 60000;
+      N.Event.addListener(marker, "click", () => {
+        onMarkerPress?.(i);
+      });
+
+      markersRef.current.push({ marker, circle });
+    });
+
+    if (locs.length > 1) {
+      const bounds = new N.LatLngBounds(
+        new N.LatLng(Math.min(...locs.map(l => l.lat)), Math.min(...locs.map(l => l.lng))),
+        new N.LatLng(Math.max(...locs.map(l => l.lat)), Math.max(...locs.map(l => l.lng)))
+      );
+      mapInstanceRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 160, left: 60 });
+    } else if (locs.length === 1) {
+      mapInstanceRef.current.panTo(new N.LatLng(locs[0].lat, locs[0].lng));
+    }
+  }, [loaded, locs]);
+
+  const sel = locs[selectedIdx] || locs[0];
+  if (!sel) return <NoDataView lang={lang} />;
+
+  const status = getStatusText(sel.motionState, sel.capturedAt, lang);
+  const diffMin = (Date.now() - new Date(sel.capturedAt).getTime()) / 60000;
   const isDelayed = diffMin > 5;
-  const isMoving = loc.motionState === "moving";
+  const isMoving = sel.motionState === "moving";
   const dotColor = isMoving ? "#34C759" : "#FF9500";
 
   if (error) {
     return (
       <View style={styles.noData}>
         <Text style={styles.noDataIcon}>🗺️</Text>
-        <Text style={styles.noDataText}>지도를 불러올 수 없습니다</Text>
+        <Text style={styles.noDataText}>{getNoDataLabel(lang)}</Text>
       </View>
     );
   }
@@ -247,7 +281,7 @@ function WebNaverMap({ loc, lang }: { loc: ParentLocation; lang: string }) {
       }}>
         {/* @ts-ignore */}
         <div style={{ fontSize: 17, fontWeight: 700, color: "#2D2D2D", marginBottom: 6 }}>
-          {loc.parentName}
+          {sel.parentName}
         </div>
         {status.motion && (
           // @ts-ignore
@@ -267,16 +301,14 @@ function WebNaverMap({ loc, lang }: { loc: ParentLocation; lang: string }) {
   );
 }
 
-export default function NaverMapView({ location: externalLoc, lang }: NaverMapViewProps) {
-  const loc = USE_MOCK ? MOCK_PARENT_LOCATION : externalLoc;
-
-  if (!loc) return <NoDataView lang={lang} />;
+export default function NaverMapView({ locations, selectedIndex = 0, lang, onMarkerPress }: NaverMapViewProps) {
+  if (locations.length === 0) return <NoDataView lang={lang} />;
 
   if (Platform.OS === "web") {
-    return <WebNaverMap loc={loc} lang={lang} />;
+    return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} />;
   }
 
-  const mapHtml = buildMapHtml(loc, lang);
+  const mapHtml = buildMapHtml(locations, selectedIndex, lang);
   const WebView = require("react-native-webview").default;
   return (
     <View style={styles.container}>
@@ -293,8 +325,8 @@ export default function NaverMapView({ location: externalLoc, lang }: NaverMapVi
         onMessage={(event: any) => {
           try {
             const msg = JSON.parse(event.nativeEvent.data);
-            if (msg.type === "mapReady") {
-              console.log("[NaverMap] ready");
+            if (msg.type === "markerClick") {
+              onMarkerPress?.(msg.index);
             }
           } catch {}
         }}

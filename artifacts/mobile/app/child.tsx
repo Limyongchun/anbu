@@ -195,90 +195,25 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAP IFRAME (blob URL for web)
-// ═══════════════════════════════════════════════════════════════════════════════
-function MapIframe({ mapHtml, title, iframeRef }: { mapHtml: string; title: string; iframeRef?: React.MutableRefObject<HTMLIFrameElement | null> }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    const blob = new Blob([mapHtml], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    setBlobUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [mapHtml]);
-
-  if (!blobUrl) return <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED" }]} />;
-
-  return (
-    <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
-      {/* @ts-ignore */}
-      <iframe
-        ref={iframeRef}
-        src={blobUrl}
-        style={{ width: "100%", height: "100%", border: "none" }}
-        title={title}
-      />
-    </View>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAP SCREEN (Forest style)
+// MAP SCREEN (Naver Map)
 // ═══════════════════════════════════════════════════════════════════════════════
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
   const { t, lang } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
-  const [initialLocs, setInitialLocs] = useState<LocationData[]>([]);
-  const [mapReady, setMapReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const webViewRef = useRef<any>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const bannerY = useRef(new Animated.Value(120)).current;
   const bannerAlpha = useRef(new Animated.Value(0)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sendToMap = useCallback((locData: LocationData) => {
-    const msg = JSON.stringify({
-      type: "locationUpdate",
-      data: {
-        deviceId: locData.deviceId,
-        lat: locData.latitude,
-        lon: locData.longitude,
-        name: locData.memberName,
-        photo: locData.photoData || "",
-        heading: locData.heading ?? null,
-        speed: locData.speed ?? null,
-      },
-    });
-    if (Platform.OS === "web") {
-      iframeRef.current?.contentWindow?.postMessage(msg, "*");
-    } else {
-      webViewRef.current?.injectJavaScript(`
-        try{var d=${msg};
-        var p=d.data;var idx=Object.keys(_markers).indexOf(p.deviceId);
-        if(idx<0)idx=Object.keys(_markers).length;
-        p.color=_colors[p.deviceId]||'#7A5454';
-        addOrUpdateMarker(p,idx);}catch(e){}true;
-      `);
-    }
-  }, []);
-
   const load = useCallback(async () => {
     if (!familyCode) return;
     try {
-      const data = await api.getAllLocations(familyCode);
-      setLocs(data);
-      if (!mapReady) {
-        setInitialLocs(data);
-        setMapReady(true);
-      } else {
-        data.forEach((loc: LocationData) => sendToMap(loc));
-      }
+      setLocs(await api.getAllLocations(familyCode));
     } catch {}
-  }, [familyCode, mapReady, sendToMap]);
+  }, [familyCode]);
 
   useEffect(() => {
     if (!familyCode) return;
@@ -293,48 +228,28 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       try {
         es = new EventSource(sseUrl);
         es.onopen = () => {
-          if (fallbackTimer) {
-            clearInterval(fallbackTimer);
-            fallbackTimer = null;
-          }
+          if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = null; }
         };
         es.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
             if (msg.type === "init") {
-              if (fallbackTimer) {
-                clearInterval(fallbackTimer);
-                fallbackTimer = null;
-              }
+              if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = null; }
               setLocs(msg.locations);
-              if (!mapReady) {
-                setInitialLocs(msg.locations);
-                setMapReady(true);
-              } else {
-                msg.locations.forEach((loc: LocationData) => sendToMap(loc));
-              }
               setLoading(false);
             } else if (msg.type === "update") {
               const updated = msg.location;
-              sendToMap(updated);
               setLocs(prev => {
                 const idx = prev.findIndex(l => l.deviceId === updated.deviceId);
-                if (idx >= 0) {
-                  const next = [...prev];
-                  next[idx] = updated;
-                  return next;
-                }
+                if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
                 return [...prev, updated];
               });
             }
           } catch {}
         };
         es.onerror = () => {
-          es?.close();
-          es = null;
-          if (!fallbackTimer) {
-            fallbackTimer = setInterval(() => { load(); }, 30000);
-          }
+          es?.close(); es = null;
+          if (!fallbackTimer) { fallbackTimer = setInterval(() => { load(); }, 30000); }
           setTimeout(connectSSE, 5000);
         };
       } catch {
@@ -363,13 +278,6 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const hasAnyParent = allParentLocs.length > 0;
   const activeLoc = parentLocs[selectedIdx] ?? parentLocs[0] ?? null;
 
-  const initParentLocs = useMemo(() => {
-    const all = initialLocs.filter(l => l.role === "parent" && l.isSharing && !l.privacyMode);
-    return all;
-  }, [initialLocs]);
-  const centerLat = initParentLocs.length > 0 ? initParentLocs.reduce((s, l) => s + l.latitude, 0) / initParentLocs.length : 37.5665;
-  const centerLon = initParentLocs.length > 0 ? initParentLocs.reduce((s, l) => s + l.longitude, 0) / initParentLocs.length : 126.978;
-
   const PIN_COLORS = [DS.brand, "#C0766E"];
 
   const openBannerFor = useCallback((idx: number) => {
@@ -391,18 +299,6 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     ]).start(() => setShowBanner(false));
   }, []);
 
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    const handler = (e: MessageEvent) => {
-      if (typeof e.data === "string" && e.data.startsWith("markerClick:")) {
-        const idx = parseInt(e.data.split(":")[1], 10);
-        if (!isNaN(idx) && idx < parentLocs.length) openBannerFor(idx);
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [parentLocs.length, openBannerFor]);
-
   const openMapsFor = (loc: LocationData) => {
     const { latitude: la, longitude: lo } = loc;
     const url = Platform.OS === "ios"
@@ -416,118 +312,6 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 
   const TAB_BAR_H = 58 + Math.max(bottomInset, 12);
   const BOTTOM_SAFE = TAB_BAR_H;
-
-  const mapDataJson = useMemo(() => JSON.stringify(initParentLocs.map((pl, i) => ({
-    deviceId: pl.deviceId,
-    lat: pl.latitude,
-    lon: pl.longitude,
-    name: pl.memberName,
-    photo: pl.photoData || "",
-    heading: pl.heading ?? null,
-    speed: pl.speed ?? null,
-    color: PIN_COLORS[i % PIN_COLORS.length],
-  }))), [initParentLocs]);
-
-  const mapHtml = useMemo(() => `<!DOCTYPE html><html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-#map{width:100vw;height:100vh}
-.leaflet-control-attribution{font-size:8px;opacity:0.6;background:rgba(255,255,255,0.5)!important}
-.profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));width:80px;position:relative}
-.profile-pin.selected{transform:scale(1.25)}
-.pin-body{width:50px;height:50px;border-radius:50%;border:3px solid #FFD700;overflow:hidden;background:#FFD700;margin:0 auto;box-sizing:border-box;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
-.pin-photo{width:44px;height:44px;object-fit:cover;border-radius:50%;display:block}
-.pin-initial{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;font-family:sans-serif}
-.pin-tail{margin-top:-3px;line-height:0;text-align:center}
-.pin-tail svg path{filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
-.heading-arrow{position:absolute;top:-8px;left:50%;width:24px;height:24px;margin-left:-12px;z-index:3;transform-origin:center 40px;transition:transform 0.5s ease}
-.heading-arrow.moving svg path{animation:pulse-arrow 1.5s infinite}
-@keyframes pulse-arrow{0%,100%{opacity:1}50%{opacity:0.5}}
-.speed-badge{margin-top:2px;background:rgba(76,175,80,0.9);color:#fff;font-size:10px;font-weight:700;font-family:sans-serif;padding:2px 6px;border-radius:8px;text-align:center;white-space:nowrap;line-height:14px}
-</style>
-</head><body><div id="map"></div><script>
-var map=L.map('map',{zoomControl:false}).setView([${centerLat},${centerLon}],16);
-var tileMain=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
-var tileFallback=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',attribution:'&copy; OpenStreetMap &copy; CARTO'});
-var failCount=0,switched=false;
-tileMain.on('tileerror',function(){if(switched)return;failCount++;if(failCount>4){switched=true;map.removeLayer(tileMain);tileFallback.addTo(map);}});
-tileMain.addTo(map);
-
-var _markers={};
-var _colors={};
-
-function buildPinHtml(p,idx){
-  var hasH=p.heading!=null&&p.heading>=0;
-  var hdeg=hasH?Math.round(p.heading):0;
-  var spd=p.speed!=null&&p.speed>=0?p.speed:0;
-  var mov=spd>0.5;
-  var c=p.color||'#7A5454';
-  var ini=(p.name||'?').charAt(0);
-  var h='<div class="profile-pin" id="pin-'+idx+'">';
-  if(hasH){h+='<div class="heading-arrow'+(mov?' moving':'')+'" style="transform:rotate('+hdeg+'deg)"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2 L16 10 L12 7 L8 10 Z" fill="'+(mov?'#4CAF50':'#2196F3')+'" stroke="#fff" stroke-width="1"/></svg></div>';}
-  h+='<div class="pin-body">';
-  if(p.photo){h+='<img src="'+p.photo+'" class="pin-photo"/>';}
-  else{h+='<div class="pin-initial" style="background:'+c+'">'+ini+'</div>';}
-  h+='</div>';
-  if(mov){h+='<div class="speed-badge">'+(spd*3.6).toFixed(0)+' km/h</div>';}
-  else{h+='<div class="pin-tail"><svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#FFD700"/></svg></div>';}
-  h+='</div>';
-  return h;
-}
-
-function addOrUpdateMarker(p,idx){
-  var did=p.deviceId;
-  if(_markers[did]){
-    var m=_markers[did];
-    m.setLatLng([p.lat,p.lon]);
-    m.setIcon(L.divIcon({className:'',html:buildPinHtml(p,idx),iconSize:[80,100],iconAnchor:[40,80]}));
-  }else{
-    var m=L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:buildPinHtml(p,idx),iconSize:[80,100],iconAnchor:[40,80]})}).addTo(map);
-    m.on('click',function(){
-      document.querySelectorAll('.profile-pin').forEach(function(e){e.classList.remove('selected')});
-      var el=document.getElementById('pin-'+idx);if(el)el.classList.add('selected');
-      if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerClick',index:idx}));}
-      else{window.parent.postMessage('markerClick:'+idx,'*');}
-    });
-    _markers[did]=m;
-    _colors[did]=p.color;
-  }
-}
-
-var initData=${mapDataJson};
-initData.forEach(function(p,i){addOrUpdateMarker(p,i);});
-${initParentLocs.length > 1 ? `map.fitBounds([${initParentLocs.map(p => `[${p.latitude},${p.longitude}]`).join(",")}],{padding:[60,60]});` : ""}
-
-window.addEventListener('message',function(e){
-  try{
-    var msg=typeof e.data==='string'?JSON.parse(e.data):e.data;
-    if(msg.type==='locationUpdate'){
-      var p=msg.data;
-      var idx=Object.keys(_markers).indexOf(p.deviceId);
-      if(idx<0)idx=Object.keys(_markers).length;
-      p.color=_colors[p.deviceId]||'#7A5454';
-      addOrUpdateMarker(p,idx);
-    }
-  }catch(ex){}
-});
-if(window.ReactNativeWebView){
-  document.addEventListener('message',function(e){
-    try{
-      var msg=typeof e.data==='string'?JSON.parse(e.data):e.data;
-      if(msg.type==='locationUpdate'){
-        var p=msg.data;
-        var idx=Object.keys(_markers).indexOf(p.deviceId);
-        if(idx<0)idx=Object.keys(_markers).length;
-        p.color=_colors[p.deviceId]||'#7A5454';
-        addOrUpdateMarker(p,idx);
-      }
-    }catch(ex){}
-  });
-}
-</script></body></html>`, [mapDataJson, centerLat, centerLon, initParentLocs]);
 
   const bannerLoc = activeLoc;
   const bannerMinsAgo = bannerLoc ? Math.floor((Date.now() - new Date(bannerLoc.updatedAt).getTime()) / 60000) : 0;
@@ -556,24 +340,25 @@ if(window.ReactNativeWebView){
     return null;
   };
 
-  const naverLoc = useMemo(() => {
-    if (!hasParents) return null;
-    const p = parentLocs[0];
-    const diffMin = (Date.now() - new Date(p.updatedAt).getTime()) / 60000;
-    const ms: "moving" | "stationary" = (p.speed != null && p.speed > 0.5) ? "moving" : "stationary";
-    return {
+  const naverLocs = useMemo(() => {
+    return parentLocs.map(p => ({
       lat: p.latitude,
       lng: p.longitude,
       accuracy: p.accuracy ?? 15,
       capturedAt: p.updatedAt,
-      motionState: ms as const,
+      motionState: ((p.speed != null && p.speed > 0.5) ? "moving" : "stationary") as "moving" | "stationary",
       parentName: p.memberName,
-    };
-  }, [hasParents, parentLocs]);
+    }));
+  }, [parentLocs]);
 
   return (
     <View style={StyleSheet.absoluteFillObject}>
-      <NaverMapView location={naverLoc} lang={lang} />
+      <NaverMapView
+        locations={naverLocs}
+        selectedIndex={selectedIdx}
+        lang={lang}
+        onMarkerPress={openBannerFor}
+      />
 
       {!loading && !hasAnyParent && (
         <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + 16 }]}>
