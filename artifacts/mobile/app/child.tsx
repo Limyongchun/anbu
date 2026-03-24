@@ -1281,18 +1281,43 @@ function HomeScreen({
           const st = getParentStatusNew(ps.deviceId, ps.name);
           return st.level === "alert" || st.level === "none";
         }).length;
+
+        let detailLine = "";
+        if (dangerCount === 0 && parentActivityStats.length > 0) {
+          const snippets: string[] = [];
+          for (const ps of parentActivityStats) {
+            const loc = ps.loc;
+            const currentLoc = (loc?.latitude != null && loc?.longitude != null)
+              ? { latitude: loc.latitude, longitude: loc.longitude }
+              : null;
+            const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
+            const label = getParentLocationLabel(
+              currentLoc, parentPlaces,
+              loc?.locationLabel === "이동중" ? (t.cardMoving as string) : "",
+              lang as "ko" | "en" | "ja",
+            );
+            if (label) snippets.push(`${ps.name}: ${label}`);
+          }
+          if (snippets.length > 0) detailLine = snippets.join(" · ");
+        }
+
         return (
           <View style={hm.summaryBar}>
-            <Ionicons
-              name={dangerCount > 0 ? "alert-circle" : "checkmark-circle"}
-              size={22}
-              color={dangerCount > 0 ? DS.danger : DS.success}
-            />
-            <Text style={[hm.summaryBarText, dangerCount > 0 && { color: DS.danger }]}>
-              {dangerCount > 0
-                ? (t.summaryDangerCount as string).replace("{n}", String(dangerCount))
-                : t.summaryAllSafe}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons
+                name={dangerCount > 0 ? "alert-circle" : "checkmark-circle"}
+                size={22}
+                color={dangerCount > 0 ? DS.danger : DS.success}
+              />
+              <Text style={[hm.summaryBarText, dangerCount > 0 && { color: DS.danger }]}>
+                {dangerCount > 0
+                  ? (t.summaryDangerCount as string).replace("{n}", String(dangerCount))
+                  : t.summaryAllSafe}
+              </Text>
+            </View>
+            {detailLine ? (
+              <Text style={hm.summaryBarSub} numberOfLines={1}>{detailLine}</Text>
+            ) : null}
           </View>
         );
       })()}
@@ -1792,8 +1817,9 @@ const hm = StyleSheet.create({
   centerEmpty: { alignItems: "center", justifyContent: "center", flex: 1 },
   greeting: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: DS.textPrimary, marginHorizontal: 20, marginBottom: 16 },
 
-  summaryBar: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginBottom: 14, marginTop: 4, backgroundColor: DS.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: DS.border },
+  summaryBar: { marginHorizontal: 20, marginBottom: 14, marginTop: 4, backgroundColor: DS.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: DS.border, gap: 6 },
   summaryBarText: { fontFamily: "Inter_700Bold", fontSize: 16, color: DS.success },
+  summaryBarSub: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textSecondary, marginLeft: 30 },
   parentCardInner: { flexDirection: "row", alignItems: "center", padding: 16, flex: 1 },
   parentCardAvatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12, overflow: "hidden" },
   parentCardTextBox: { flex: 1, gap: 2 },
