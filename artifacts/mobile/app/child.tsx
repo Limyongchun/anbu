@@ -28,7 +28,7 @@ import { WebView } from "react-native-webview";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
-import NaverMapView from "@/features/location/map/NaverMapView";
+import NaverMapView, { type NaverMapHandle } from "@/features/location/map/NaverMapView";
 import { getStatusText, getFreshnessColor } from "@/features/location/map/mapUtils";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
@@ -203,6 +203,7 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const mapRef = useRef<NaverMapHandle>(null);
 
   const load = useCallback(async () => {
     if (!familyCode) return;
@@ -285,6 +286,13 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
     setSelectedIdx(idx);
   }, []);
 
+  const zoomToParent = useCallback((idx: number) => {
+    const pl = parentLocs[idx];
+    if (pl && mapRef.current) {
+      mapRef.current.zoomTo(pl.latitude, pl.longitude, 18);
+    }
+  }, [parentLocs]);
+
   const openMapsFor = (loc: LocationData) => {
     const { latitude: la, longitude: lo } = loc;
     const url = Platform.OS === "ios"
@@ -335,6 +343,7 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
   return (
     <View style={StyleSheet.absoluteFillObject}>
       <NaverMapView
+        ref={mapRef}
         locations={naverLocs}
         selectedIndex={safeIdx}
         lang={lang}
@@ -388,8 +397,8 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
                       <Ionicons name="call" size={15} color={DS.success} />
                       <Text style={[mp.summaryActionLabel, { color: DS.success }]}>{t.mapCall}</Text>
                     </Pressable>
-                    <Pressable style={mp.summaryActionBtn} onPress={() => selectParent(i)}>
-                      <Ionicons name="locate" size={15} color={DS.info} />
+                    <Pressable style={mp.summaryActionBtn} onPress={() => { selectParent(i); zoomToParent(i); }}>
+                      <Ionicons name="search" size={15} color={DS.info} />
                       <Text style={[mp.summaryActionLabel, { color: DS.info }]}>{t.mapViewOnMap}</Text>
                     </Pressable>
                   </View>

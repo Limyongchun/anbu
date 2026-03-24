@@ -1,9 +1,13 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import type { ParentLocation } from "./mapTypes";
 import { getNoDataLabel, getMarkerColor } from "./mapUtils";
 
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID || "rg1fro3mez";
+
+export interface NaverMapHandle {
+  zoomTo: (lat: number, lng: number, zoom?: number) => void;
+}
 
 interface NaverMapViewProps {
   locations: ParentLocation[];
@@ -122,19 +126,29 @@ function NoDataView({ lang }: { lang: string }) {
   );
 }
 
-function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress, onMapTap }: {
+const WebNaverMap = forwardRef<NaverMapHandle, {
   locs: ParentLocation[];
   selectedIdx: number;
   lang: string;
   onMarkerPress?: (index: number) => void;
   onMapTap?: () => void;
-}) {
+}>(function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress, onMapTap }, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<Array<{ marker: any; circle: any }>>([]);
   const prevSelectedRef = useRef(selectedIdx);
+
+  useImperativeHandle(ref, () => ({
+    zoomTo(lat: number, lng: number, zoom = 18) {
+      if (mapInstanceRef.current && (window as any).naver?.maps) {
+        const N = (window as any).naver.maps;
+        mapInstanceRef.current.setCenter(new N.LatLng(lat, lng));
+        mapInstanceRef.current.setZoom(zoom);
+      }
+    },
+  }));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -261,17 +275,27 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress, onMapTap }: {
       <div ref={mapRef} style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }} />
     </View>
   );
-}
+});
 
-function NativeNaverMap({ locs, selectedIdx, onMarkerPress, onMapTap }: {
+const NativeNaverMap = forwardRef<NaverMapHandle, {
   locs: ParentLocation[];
   selectedIdx: number;
   onMarkerPress?: (index: number) => void;
   onMapTap?: () => void;
-}) {
+}>(function NativeNaverMap({ locs, selectedIdx, onMarkerPress, onMapTap }, ref) {
   const webViewRef = useRef<any>(null);
   const WebView = require("react-native-webview").default;
   const mapHtml = buildMapHtml(locs, selectedIdx);
+
+  useImperativeHandle(ref, () => ({
+    zoomTo(lat: number, lng: number, zoom = 18) {
+      if (webViewRef.current) {
+        webViewRef.current.injectJavaScript(`
+          try{map.setCenter(new naver.maps.LatLng(${lat},${lng}));map.setZoom(${zoom});}catch(e){}true;
+        `);
+      }
+    },
+  }));
 
   useEffect(() => {
     const sel = locs[selectedIdx];
@@ -309,17 +333,19 @@ function NativeNaverMap({ locs, selectedIdx, onMarkerPress, onMapTap }: {
       />
     </View>
   );
-}
+});
 
-export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress, onMapTap }: NaverMapViewProps) {
+const NaverMapView = forwardRef<NaverMapHandle, NaverMapViewProps>(function NaverMapView({ locations, selectedIndex, lang, onMarkerPress, onMapTap }, ref) {
   if (locations.length === 0) return <NoDataView lang={lang} />;
 
   if (Platform.OS === "web") {
-    return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
+    return <WebNaverMap ref={ref} locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
   }
 
-  return <NativeNaverMap locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
-}
+  return <NativeNaverMap ref={ref} locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
+});
+
+export default NaverMapView;
 
 const styles = StyleSheet.create({
   container: {
