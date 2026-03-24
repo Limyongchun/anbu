@@ -203,9 +203,6 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const sheetY = useRef(new Animated.Value(300)).current;
-  const sheetAlpha = useRef(new Animated.Value(0)).current;
-  const [sheetVisible, setSheetVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!familyCode) return;
@@ -283,22 +280,9 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   }, [parentLocs.length, selectedIdx]);
 
   const safeIdx = parentLocs.length > 0 ? Math.min(selectedIdx, parentLocs.length - 1) : 0;
-  const activeLoc = parentLocs[safeIdx] ?? null;
 
   const selectParent = useCallback((idx: number) => {
     setSelectedIdx(idx);
-    setSheetVisible(true);
-    Animated.parallel([
-      Animated.spring(sheetY, { toValue: 0, useNativeDriver: false, tension: 80, friction: 12 }),
-      Animated.timing(sheetAlpha, { toValue: 1, duration: 200, useNativeDriver: false }),
-    ]).start();
-  }, []);
-
-  const closeSheet = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(sheetY, { toValue: 300, duration: 250, useNativeDriver: false }),
-      Animated.timing(sheetAlpha, { toValue: 0, duration: 200, useNativeDriver: false }),
-    ]).start(() => setSheetVisible(false));
   }, []);
 
   const openMapsFor = (loc: LocationData) => {
@@ -358,35 +342,56 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       />
 
       {hasParents && (
-        <View style={[mp.topCardsContainer, { bottom: BOTTOM_SAFE + 8 }]}>
+        <View style={[mp.summaryCardsWrap, { bottom: BOTTOM_SAFE + 14 }]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={mp.topCardsScroll}
+            contentContainerStyle={mp.summaryCardsScroll}
+            pagingEnabled={false}
+            decelerationRate="fast"
+            snapToInterval={320}
           >
             {parentLocs.map((pl, i) => {
               const freshColor = getFreshnessColor(pl.updatedAt);
               const isSel = i === safeIdx;
-              const ms = (pl.speed != null && pl.speed > 0.5) ? "moving" : "stationary";
-              const status = getStatusText(ms as any, pl.updatedAt, lang);
+              const isMoving = pl.speed != null && pl.speed > 0.5;
+              const diffMin = Math.floor((Date.now() - new Date(pl.updatedAt).getTime()) / 60000);
+              const statusLabel = isMoving ? t.mapOnTheMove : (diffMin <= 5 ? t.mapNearHome : t.mapStationary);
+              const timeLabel = diffMin < 1
+                ? (t.mapLastActivity + " · " + (t.timeJustNow || "방금"))
+                : (t.mapLastActivity + " · " + diffMin + (lang === "ko" ? "분 " : lang === "ja" ? "分" : "m ") + t.mapAgo);
               return (
                 <Pressable
                   key={pl.deviceId}
-                  style={[mp.topCard, isSel && mp.topCardSelected]}
+                  style={[mp.summaryCard, isSel && mp.summaryCardSelected]}
                   onPress={() => selectParent(i)}
                 >
-                  <View style={mp.topCardHeader}>
-                    <View style={[mp.topCardDot, { backgroundColor: freshColor }]} />
-                    <Text style={[mp.topCardName, isSel && mp.topCardNameSelected]} numberOfLines={1}>
-                      {pl.memberName}
+                  <View style={mp.summaryCardTop}>
+                    <View style={mp.summaryCardNameRow}>
+                      <View style={[mp.summaryDot, { backgroundColor: freshColor }]} />
+                      <Text style={mp.summaryName} numberOfLines={1}>{pl.memberName}</Text>
+                    </View>
+                    <Text style={[mp.summaryStatus, { color: isMoving ? DS.success : DS.textSecondary }]}>
+                      {statusLabel}
                     </Text>
                   </View>
-                  <Text style={mp.topCardStatus} numberOfLines={1}>
-                    {status.motion || status.freshness}
-                  </Text>
-                  <Text style={[mp.topCardFresh, { color: freshColor }]} numberOfLines={1}>
-                    {status.freshness}
-                  </Text>
+
+                  <Text style={mp.summaryTime}>{timeLabel}</Text>
+
+                  {diffMin <= 5 && (
+                    <Text style={mp.summaryCalm}>{t.mapCalm}</Text>
+                  )}
+
+                  <View style={mp.summaryActions}>
+                    <Pressable style={mp.summaryActionBtn} onPress={() => Linking.openURL("tel:")}>
+                      <Ionicons name="call" size={15} color={DS.success} />
+                      <Text style={[mp.summaryActionLabel, { color: DS.success }]}>{t.mapCall}</Text>
+                    </Pressable>
+                    <Pressable style={mp.summaryActionBtn} onPress={() => selectParent(i)}>
+                      <Ionicons name="locate" size={15} color={DS.info} />
+                      <Text style={[mp.summaryActionLabel, { color: DS.info }]}>{t.mapViewOnMap}</Text>
+                    </Pressable>
+                  </View>
                 </Pressable>
               );
             })}
@@ -395,7 +400,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       )}
 
       {!loading && !hasAnyParent && (
-        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + 16 }]}>
+        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + 14 }]}>
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.blueSoft, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="location-outline" size={18} color={DS.info} />
           </View>
@@ -412,7 +417,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       )}
 
       {!loading && privacyParents.length > 0 && (
-        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + (hasParents ? 100 : 16), borderColor: "rgba(122,84,84,0.2)" }]}>
+        <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + (hasParents ? 170 : 14), borderColor: "rgba(122,84,84,0.2)" }]}>
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(122,84,84,0.10)", alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="eye-off" size={18} color={DS.brand} />
           </View>
@@ -439,72 +444,6 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
         <View style={{ position: "absolute", bottom: BOTTOM_SAFE + 60, left: 0, right: 0, alignItems: "center" }}>
           <ActivityIndicator color={DS.info} />
         </View>
-      )}
-
-      {sheetVisible && activeLoc && (
-        <Animated.View style={[mp.bottomSheet, { bottom: BOTTOM_SAFE + 100, transform: [{ translateY: sheetY }], opacity: sheetAlpha }]}>
-          <View style={mp.sheetHandle}>
-            <View style={mp.sheetHandleBar} />
-          </View>
-          <Pressable style={mp.sheetClose} onPress={closeSheet}>
-            <Ionicons name="close" size={18} color={DS.textTertiary} />
-          </Pressable>
-
-          <View style={mp.sheetHeader}>
-            <View style={[mp.sheetDot, { backgroundColor: getFreshnessColor(activeLoc.updatedAt) }]} />
-            <Text style={mp.sheetName}>{activeLoc.memberName}</Text>
-          </View>
-
-          <View style={mp.sheetBody}>
-            <View style={mp.sheetRow}>
-              <Ionicons name="location" size={15} color={DS.textSecondary} />
-              <Text style={mp.sheetAddr} numberOfLines={1}>
-                {activeLoc.address || `${activeLoc.latitude.toFixed(4)}, ${activeLoc.longitude.toFixed(4)}`}
-              </Text>
-            </View>
-
-            {(() => {
-              const ms = (activeLoc.speed != null && activeLoc.speed > 0.5) ? "moving" : "stationary";
-              const status = getStatusText(ms as any, activeLoc.updatedAt, lang);
-              return (
-                <>
-                  {status.motion ? (
-                    <View style={mp.sheetRow}>
-                      <Ionicons name={ms === "moving" ? "walk" : "flag"} size={15} color={ms === "moving" ? DS.success : DS.textSecondary} />
-                      <Text style={[mp.sheetDetail, ms === "moving" && { color: DS.success }]}>{status.motion}</Text>
-                    </View>
-                  ) : null}
-                  <View style={mp.sheetRow}>
-                    <Ionicons name="time" size={15} color={DS.textTertiary} />
-                    <Text style={[mp.sheetFresh, { color: getFreshnessColor(activeLoc.updatedAt) }]}>{status.freshness}</Text>
-                  </View>
-                </>
-              );
-            })()}
-
-            {getSpeedInfo(activeLoc) && (
-              <View style={mp.sheetRow}>
-                <Ionicons name="speedometer" size={15} color={DS.info} />
-                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: DS.info }}>{getSpeedInfo(activeLoc)}</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={mp.sheetActions}>
-            <Pressable style={[mp.sheetActionBtn, { backgroundColor: DS.success + "15" }]} onPress={() => Linking.openURL("tel:")}>
-              <Ionicons name="call" size={16} color={DS.success} />
-              <Text style={[mp.sheetActionText, { color: DS.success }]}>{t.mapCall || "전화"}</Text>
-            </Pressable>
-            <Pressable style={[mp.sheetActionBtn, { backgroundColor: DS.info + "15" }]} onPress={() => openMapsFor(activeLoc)}>
-              <Ionicons name="navigate" size={16} color={DS.info} />
-              <Text style={[mp.sheetActionText, { color: DS.info }]}>{t.mapNavigate || "길안내"}</Text>
-            </Pressable>
-            <Pressable style={[mp.sheetActionBtn, { backgroundColor: "rgba(0,0,0,0.05)" }]} onPress={() => { load(); closeSheet(); }}>
-              <Ionicons name="refresh" size={16} color={DS.textSecondary} />
-              <Text style={[mp.sheetActionText, { color: DS.textSecondary }]}>{t.mapRefresh || "새로고침"}</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
       )}
     </View>
   );
@@ -1673,32 +1612,21 @@ const mp = StyleSheet.create({
   privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
   privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.brand, marginTop: 2 },
-  topCardsContainer: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10, paddingBottom: 8 },
-  topCardsScroll: { paddingHorizontal: 12, gap: 8 },
-  topCard: { backgroundColor: DS.surface, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, minWidth: 130, borderWidth: 1.5, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
-  topCardSelected: { borderColor: DS.brand, backgroundColor: "#FFF8F2" },
-  topCardHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-  topCardDot: { width: 9, height: 9, borderRadius: 5 },
-  topCardName: { fontFamily: "Inter_700Bold", fontSize: 15, color: DS.textPrimary },
-  topCardNameSelected: { color: DS.brand },
-  topCardStatus: { fontFamily: "Inter_500Medium", fontSize: 12, color: DS.textSecondary, marginBottom: 2 },
-  topCardFresh: { fontFamily: "Inter_400Regular", fontSize: 11 },
+  summaryCardsWrap: { position: "absolute", left: 0, right: 0, zIndex: 10 },
+  summaryCardsScroll: { paddingHorizontal: 14 },
+  summaryCard: { width: 300, backgroundColor: "#FFFFFF", borderRadius: 22, paddingVertical: 16, paddingHorizontal: 18, marginRight: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 6 },
+  summaryCardSelected: { borderColor: DS.brand, borderWidth: 1.5 },
+  summaryCardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  summaryCardNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  summaryDot: { width: 10, height: 10, borderRadius: 5 },
+  summaryName: { fontFamily: "Inter_700Bold", fontSize: 17, color: DS.textPrimary },
+  summaryStatus: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  summaryTime: { fontFamily: "Inter_400Regular", fontSize: 13, color: DS.textTertiary, marginBottom: 4 },
+  summaryCalm: { fontFamily: "Inter_500Medium", fontSize: 13, color: DS.success, marginBottom: 6 },
+  summaryActions: { flexDirection: "row", gap: 16, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.05)" },
+  summaryActionBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
+  summaryActionLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
 
-  bottomSheet: { position: "absolute", left: 12, right: 12, backgroundColor: DS.surface, borderRadius: 20, paddingTop: 8, paddingBottom: 16, paddingHorizontal: 20, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10, borderWidth: 1, borderColor: DS.border },
-  sheetHandle: { alignItems: "center", marginBottom: 10 },
-  sheetHandleBar: { width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.12)" },
-  sheetClose: { position: "absolute", top: 12, right: 16, padding: 4, zIndex: 5 },
-  sheetHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  sheetDot: { width: 10, height: 10, borderRadius: 5 },
-  sheetName: { fontFamily: "Inter_700Bold", fontSize: 18, color: DS.textPrimary },
-  sheetBody: { gap: 8, marginBottom: 14 },
-  sheetRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sheetAddr: { fontFamily: "Inter_400Regular", fontSize: 13, color: DS.textSecondary, flex: 1 },
-  sheetDetail: { fontFamily: "Inter_500Medium", fontSize: 13, color: DS.textSecondary },
-  sheetFresh: { fontFamily: "Inter_500Medium", fontSize: 13 },
-  sheetActions: { flexDirection: "row", gap: 8 },
-  sheetActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 12 },
-  sheetActionText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
 });
 
 const wr = StyleSheet.create({
