@@ -206,7 +206,7 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAP SCREEN (Naver Map)
 // ═══════════════════════════════════════════════════════════════════════════════
-function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive, focusParentDeviceId }: { familyCode: string | null; bottomInset: number; immersive: boolean; onToggleImmersive: () => void; focusParentDeviceId?: string | null }) {
+function MapScreen({ familyCode, bottomInset, topInset, immersive, onToggleImmersive, focusParentDeviceId, onGoBack }: { familyCode: string | null; bottomInset: number; topInset: number; immersive: boolean; onToggleImmersive: () => void; focusParentDeviceId?: string | null; onGoBack: () => void }) {
   const { t, lang } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -407,6 +407,22 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive, focu
         places={savedPlaces}
       />
 
+      {!immersive && (
+        <View style={[mp.topActionBar, { top: topInset + 8 }]}>
+          <Pressable style={mp.topBackBtn} onPress={onGoBack}>
+            <Ionicons name="chevron-back" size={22} color={DS.textPrimary} />
+          </Pressable>
+          <Pressable style={mp.topPlacesBtn} onPress={() => setPlaceListVisible(true)}>
+            <Ionicons name="folder-open-outline" size={16} color={DS.brand} />
+            <Text style={mp.topPlacesBtnText}>{t.mapSavedPlaces} ({savedPlaces.length})</Text>
+          </Pressable>
+          <Pressable style={mp.topSaveBtn} onPress={() => setSavePlaceVisible(true)}>
+            <Ionicons name="bookmark-outline" size={14} color="#FFFFFF" />
+            <Text style={mp.topSaveBtnText}>{t.mapSavePlace}</Text>
+          </Pressable>
+        </View>
+      )}
+
       {!immersive && hasParents && (
         <View style={[mp.summaryCardsWrap, { bottom: BOTTOM_SAFE + 14 }]}>
           <ScrollView
@@ -511,7 +527,7 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive, focu
       )}
 
       {!immersive && suggestion && (
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: BOTTOM_SAFE + (hasParents ? 200 : 14) }}>
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: BOTTOM_SAFE + (hasParents ? 170 : 14) }}>
           <PlaceSuggestionBanner
             suggestion={suggestion}
             lang={lang as "ko" | "en" | "ja"}
@@ -520,27 +536,6 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive, focu
             onSaved={() => { setSuggestion(null); loadPlaces(); }}
             onDismissed={() => setSuggestion(null)}
           />
-        </View>
-      )}
-
-      {!immersive && hasParents && (
-        <View style={[mp.placeBtnsRow, { bottom: BOTTOM_SAFE + (hasParents ? 170 : 14) }]}>
-          {savedPlaces.length > 0 && (
-            <Pressable
-              style={mp.placeListBtn}
-              onPress={() => setPlaceListVisible(true)}
-            >
-              <Ionicons name="list" size={15} color="#7A5454" />
-              <Text style={mp.placeListBtnText}>{t.mapSavedPlaces} ({savedPlaces.length})</Text>
-            </Pressable>
-          )}
-          <Pressable
-            style={mp.savePlaceBtn}
-            onPress={() => setSavePlaceVisible(true)}
-          >
-            <Ionicons name="bookmark-outline" size={15} color="#FFFFFF" />
-            <Text style={mp.savePlaceBtnText}>{t.mapSavePlace}</Text>
-          </Pressable>
         </View>
       )}
 
@@ -1716,14 +1711,14 @@ export default function ChildScreen() {
       )}
       {isMap && (
         <View style={StyleSheet.absoluteFillObject}>
-          <MapScreen familyCode={familyCode} bottomInset={bottomInset} immersive={mapImmersive} onToggleImmersive={toggleImmersive} focusParentDeviceId={mapFocusParent} />
+          <MapScreen familyCode={familyCode} bottomInset={bottomInset} topInset={topInset} immersive={mapImmersive} onToggleImmersive={toggleImmersive} focusParentDeviceId={mapFocusParent} onGoBack={() => { setMapFocusParent(null); setTab("home"); }} />
         </View>
       )}
       {tab === "alarm" && (
         <NotificationScreen allFamilyCodes={allFamilyCodes} topBarH={TOP_H} bottomInset={bottomInset} />
       )}
 
-      {!hideChrome && <AppHeader topInset={topInset} isMap={isMap} />}
+      {!hideChrome && !isMap && <AppHeader topInset={topInset} isMap={isMap} />}
       {!hideChrome && (
         <BottomTabBar
           tab={tab}
@@ -1790,11 +1785,12 @@ const mp = StyleSheet.create({
   privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
   privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.brand, marginTop: 2 },
-  placeBtnsRow: { position: "absolute", right: 16, flexDirection: "row", alignItems: "center", gap: 8 },
-  savePlaceBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.brand, paddingHorizontal: 14, paddingVertical: 10, borderRadius: DS.radius.pill, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
-  savePlaceBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
-  placeListBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.surface, paddingHorizontal: 14, paddingVertical: 10, borderRadius: DS.radius.pill, borderWidth: 1, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
-  placeListBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
+  topActionBar: { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 16, paddingVertical: 8, paddingHorizontal: 10, zIndex: 100, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 5 },
+  topBackBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.05)", alignItems: "center", justifyContent: "center" },
+  topPlacesBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 6 },
+  topPlacesBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
+  topSaveBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: DS.brand, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  topSaveBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFFFFF" },
   summaryCardsWrap: { position: "absolute", left: 0, right: 0, zIndex: 10 },
   summaryCardsScroll: { paddingHorizontal: 14 },
   summaryCard: { width: 300, backgroundColor: "#FFFFFF", borderRadius: 22, paddingVertical: 16, paddingHorizontal: 18, marginRight: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 6 },
