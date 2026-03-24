@@ -1,4 +1,5 @@
 import { PlacePreset, PLACE_PRESET_LABELS, PLACE_PRESETS, ParentPlace } from "./types";
+import { getDistanceMeters } from "./distance";
 
 export function getPresetLabel(preset: PlacePreset, lang: "ko" | "en" | "ja"): string {
   return PLACE_PRESET_LABELS[preset]?.[lang] ?? PLACE_PRESET_LABELS[preset]?.ko ?? preset;
@@ -8,20 +9,15 @@ export function getPresetOptions(lang: "ko" | "en" | "ja"): Array<{ value: Place
   return PLACE_PRESETS.map((p) => ({ value: p, label: getPresetLabel(p, lang) }));
 }
 
+export { getDistanceMeters };
+
 export function distanceBetween(
   lat1: number,
   lng1: number,
   lat2: number,
   lng2: number,
 ): number {
-  const R = 6371e3;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return getDistanceMeters(lat1, lng1, lat2, lng2);
 }
 
 export function isInsidePlace(
