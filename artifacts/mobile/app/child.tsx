@@ -28,6 +28,7 @@ import { WebView } from "react-native-webview";
 
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
+import NaverMapView from "@/features/location/map/NaverMapView";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -225,7 +226,7 @@ function MapIframe({ mapHtml, title, iframeRef }: { mapHtml: string; title: stri
 // MAP SCREEN (Forest style)
 // ═══════════════════════════════════════════════════════════════════════════════
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [initialLocs, setInitialLocs] = useState<LocationData[]>([]);
   const [mapReady, setMapReady] = useState(false);
@@ -555,39 +556,24 @@ if(window.ReactNativeWebView){
     return null;
   };
 
+  const naverLoc = useMemo(() => {
+    if (!hasParents) return null;
+    const p = parentLocs[0];
+    const diffMin = (Date.now() - new Date(p.updatedAt).getTime()) / 60000;
+    const ms: "moving" | "stationary" = (p.speed != null && p.speed > 0.5) ? "moving" : "stationary";
+    return {
+      lat: p.latitude,
+      lng: p.longitude,
+      accuracy: p.accuracy ?? 15,
+      capturedAt: p.updatedAt,
+      motionState: ms as const,
+      parentName: p.memberName,
+    };
+  }, [hasParents, parentLocs]);
+
   return (
     <View style={StyleSheet.absoluteFillObject}>
-      {Platform.OS === "web" ? (
-        <MapIframe mapHtml={mapHtml} title={t.mapIframeTitle as string} iframeRef={iframeRef} />
-      
-      ) : (
-        <WebView
-          ref={webViewRef}
-          originWhitelist={["*"]}
-          source={{ html: mapHtml }}
-          style={StyleSheet.absoluteFillObject}
-          javaScriptEnabled
-          domStorageEnabled
-          startInLoadingState
-          renderLoading={() => (
-            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#F5EDED", alignItems: "center", justifyContent: "center" }]}>
-              <ActivityIndicator size="large" color="#A85528" />
-            </View>
-          )}
-          scrollEnabled={false}
-          bounces={false}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          onMessage={(event) => {
-            try {
-              const data = JSON.parse(event.nativeEvent.data);
-              if (data.type === "markerClick" && typeof data.index === "number") {
-                openBannerFor(data.index);
-              }
-            } catch {}
-          }}
-        />
-      )}
+      <NaverMapView location={naverLoc} lang={lang} />
 
       {!loading && !hasAnyParent && (
         <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + 16 }]}>
