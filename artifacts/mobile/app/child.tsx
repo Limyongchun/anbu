@@ -34,6 +34,7 @@ import SavePlaceSheet from "@/features/places/components/SavePlaceSheet";
 import PlaceListSheet from "@/features/places/components/PlaceListSheet";
 import { getAllPlaces } from "@/features/places/store";
 import type { ParentPlace } from "@/features/places/types";
+import { matchParentPlace } from "@/features/places/matchPlace";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -386,7 +387,11 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
               const isSel = i === safeIdx;
               const isMoving = pl.speed != null && pl.speed > 0.5;
               const diffMin = Math.floor((Date.now() - new Date(pl.updatedAt).getTime()) / 60000);
-              const statusLabel = isMoving ? t.mapOnTheMove : (diffMin <= 5 ? t.mapNearHome : t.mapStationary);
+              const plPlaces = savedPlaces.filter(sp => sp.parentId === pl.deviceId);
+              const placeMatch = matchParentPlace(pl.latitude, pl.longitude, plPlaces, lang as "ko" | "en" | "ja");
+              const statusLabel = placeMatch
+                ? (t.cardLocationAt as string).replace("{place}", placeMatch.displayName)
+                : isMoving ? t.mapOnTheMove : (diffMin <= 5 ? t.mapNearHome : t.mapStationary);
               const timeLabel = diffMin < 1
                 ? (t.mapLastActivity + " · " + (t.timeJustNow || "방금"))
                 : (t.mapLastActivity + " · " + diffMin + (lang === "ko" ? "분 " : lang === "ja" ? "分" : "m ") + t.mapAgo);
@@ -951,6 +956,7 @@ function HomeScreen({
   const [parentJoined, setParentJoined] = useState(false);
   const [parentChecked, setParentChecked] = useState(false);
   const [tracerSize, setTracerSize] = useState({ w: 0, h: 0 });
+  const [homePlaces, setHomePlaces] = useState<ParentPlace[]>([]);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -1016,6 +1022,7 @@ function HomeScreen({
       );
     } catch {}
     setLoading(false);
+    getAllPlaces().then(setHomePlaces).catch(() => {});
   }, [allFamilyCodes]);
 
   useEffect(() => {
@@ -1275,8 +1282,17 @@ function HomeScreen({
         const getLocationText = (ps: typeof parentActivityStats[0]) => {
           const st = getParentStatusNew(ps.deviceId, ps.name);
           if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
-          if (st.engineResult) return st.msg.title;
+
           const loc = ps.loc;
+          if (loc?.latitude != null && loc?.longitude != null) {
+            const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
+            const match = matchParentPlace(loc.latitude, loc.longitude, parentPlaces, lang as "ko" | "en" | "ja");
+            if (match) {
+              return (t.cardLocationAt as string).replace("{place}", match.displayName);
+            }
+          }
+
+          if (st.engineResult) return st.msg.title;
           if (loc?.locationLabel === "이동중") return t.cardMoving as string;
           if (loc?.locationLabel) return (t.cardLocationAt as string).replace("{place}", loc.locationLabel);
           return st.msg.title;
