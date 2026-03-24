@@ -123,7 +123,6 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
   lang: string;
   onMarkerPress?: (index: number) => void;
 }) {
-  "use no memo";
   const mapRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -254,7 +253,6 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
 }
 
 export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress }: NaverMapViewProps) {
-  "use no memo";
   if (locations.length === 0) return <NoDataView lang={lang} />;
 
   if (Platform.OS === "web") {
