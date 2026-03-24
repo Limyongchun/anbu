@@ -199,6 +199,7 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // MAP SCREEN (Naver Map)
 // ═══════════════════════════════════════════════════════════════════════════════
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
+  "use no memo";
   const { t, lang } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(false);
