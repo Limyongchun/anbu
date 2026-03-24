@@ -35,6 +35,7 @@ import PlaceListSheet from "@/features/places/components/PlaceListSheet";
 import { getAllPlaces } from "@/features/places/store";
 import type { ParentPlace } from "@/features/places/types";
 import { matchParentPlace } from "@/features/places/matchPlace";
+import { getParentLocationLabel } from "@/features/home/utils/getParentLocationLabel";
 import { recordLocation, detectFrequentPlaces, type PlaceSuggestion } from "@/features/places/frequentDetector";
 import PlaceSuggestionBanner from "@/features/places/components/PlaceSuggestionBanner";
 import { useLang } from "@/context/LanguageContext";
@@ -1317,18 +1318,20 @@ function HomeScreen({
           if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
 
           const loc = ps.loc;
-          if (loc?.latitude != null && loc?.longitude != null) {
-            const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
-            const match = matchParentPlace(loc.latitude, loc.longitude, parentPlaces, lang as "ko" | "en" | "ja");
-            if (match) {
-              return (t.cardLocationAt as string).replace("{place}", match.displayName);
-            }
-          }
+          const fallback = st.engineResult
+            ? st.msg.title
+            : loc?.locationLabel === "이동중"
+              ? (t.cardMoving as string)
+              : loc?.locationLabel
+                ? (t.cardLocationAt as string).replace("{place}", loc.locationLabel)
+                : st.msg.title;
 
-          if (st.engineResult) return st.msg.title;
-          if (loc?.locationLabel === "이동중") return t.cardMoving as string;
-          if (loc?.locationLabel) return (t.cardLocationAt as string).replace("{place}", loc.locationLabel);
-          return st.msg.title;
+          const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
+          const currentLoc = (loc?.latitude != null && loc?.longitude != null)
+            ? { latitude: loc.latitude, longitude: loc.longitude }
+            : null;
+
+          return getParentLocationLabel(currentLoc, parentPlaces, fallback, lang as "ko" | "en" | "ja");
         };
 
         const getLastActivityText = (ps: typeof parentActivityStats[0]) => {
