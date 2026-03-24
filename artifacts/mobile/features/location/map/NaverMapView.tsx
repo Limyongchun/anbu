@@ -314,7 +314,7 @@ export default function NaverMapView({ locations, selectedIndex = 0, lang, onMar
     <View style={styles.container}>
       <WebView
         originWhitelist={["*"]}
-        source={{ html: mapHtml }}
+        source={{ html: mapHtml, baseUrl: "http://localhost" }}
         style={StyleSheet.absoluteFillObject}
         javaScriptEnabled
         domStorageEnabled
