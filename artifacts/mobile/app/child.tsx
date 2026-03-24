@@ -442,7 +442,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       )}
 
       {sheetVisible && activeLoc && (
-        <Animated.View style={[mp.bottomSheet, { bottom: BOTTOM_SAFE + 12, transform: [{ translateY: sheetY }], opacity: sheetAlpha }]}>
+        <Animated.View style={[mp.bottomSheet, { bottom: BOTTOM_SAFE + 90, transform: [{ translateY: sheetY }], opacity: sheetAlpha }]}>
           <View style={mp.sheetHandle}>
             <View style={mp.sheetHandleBar} />
           </View>
@@ -1673,7 +1673,7 @@ const mp = StyleSheet.create({
   privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
   privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.brand, marginTop: 2 },
-  topCardsContainer: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, paddingTop: 8 },
+  topCardsContainer: { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10, paddingBottom: 8 },
   topCardsScroll: { paddingHorizontal: 12, gap: 8 },
   topCard: { backgroundColor: DS.surface, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, minWidth: 130, borderWidth: 1.5, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
   topCardSelected: { borderColor: DS.brand, backgroundColor: "#FFF8F2" },

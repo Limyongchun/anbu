@@ -252,26 +252,24 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
   );
 }
 
-export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress }: NaverMapViewProps) {
-  if (locations.length === 0) return <NoDataView lang={lang} />;
-
-  if (Platform.OS === "web") {
-    return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} />;
-  }
-
-  const mapHtml = buildMapHtml(locations, selectedIndex);
-  const WebView = require("react-native-webview").default;
+function NativeNaverMap({ locs, selectedIdx, onMarkerPress }: {
+  locs: ParentLocation[];
+  selectedIdx: number;
+  onMarkerPress?: (index: number) => void;
+}) {
   const webViewRef = useRef<any>(null);
+  const WebView = require("react-native-webview").default;
+  const mapHtml = buildMapHtml(locs, selectedIdx);
 
   useEffect(() => {
-    const sel = locations[selectedIndex];
+    const sel = locs[selectedIdx];
     if (sel && webViewRef.current) {
       const msg = JSON.stringify({ type: "panTo", data: { lat: sel.lat, lng: sel.lng } });
       webViewRef.current.injectJavaScript(`
         try{var msg=${msg};var pos=new naver.maps.LatLng(msg.data.lat,msg.data.lng);map.panTo(pos);}catch(e){}true;
       `);
     }
-  }, [selectedIndex]);
+  }, [selectedIdx]);
 
   return (
     <View style={styles.container}>
@@ -297,6 +295,16 @@ export default function NaverMapView({ locations, selectedIndex, lang, onMarkerP
       />
     </View>
   );
+}
+
+export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress }: NaverMapViewProps) {
+  if (locations.length === 0) return <NoDataView lang={lang} />;
+
+  if (Platform.OS === "web") {
+    return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} />;
+  }
+
+  return <NativeNaverMap locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} />;
 }
 
 const styles = StyleSheet.create({
