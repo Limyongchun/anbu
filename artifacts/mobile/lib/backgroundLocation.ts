@@ -22,7 +22,9 @@ const BASE = process.env.EXPO_PUBLIC_DOMAIN
 async function uploadLocationInBackground(
   latitude: number,
   longitude: number,
-  accuracy: number | null
+  accuracy: number | null,
+  heading: number | null = null,
+  speed: number | null = null
 ) {
   try {
     const [familyCode, deviceId, memberName, lang] = await Promise.all([
@@ -53,6 +55,8 @@ async function uploadLocationInBackground(
         longitude,
         address,
         accuracy: accuracy ?? undefined,
+        heading: heading != null && heading >= 0 ? heading : undefined,
+        speed: speed != null && speed >= 0 ? speed : undefined,
         isSharing: true,
       }),
     });
@@ -86,7 +90,9 @@ if (!TaskManager.isTaskDefined(TASK_NAME)) {
       await uploadLocationInBackground(
         loc.coords.latitude,
         loc.coords.longitude,
-        loc.coords.accuracy
+        loc.coords.accuracy,
+        loc.coords.heading,
+        loc.coords.speed
       );
     }
   });

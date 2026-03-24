@@ -233,7 +233,7 @@ router.get("/family/:code/location", async (req, res) => {
 router.put("/family/:code/location", async (req, res) => {
   try {
     const { code } = req.params;
-    const { deviceId, memberName, latitude, longitude, address, accuracy, battery, isSharing } = req.body;
+    const { deviceId, memberName, latitude, longitude, address, accuracy, battery, heading, speed, isSharing } = req.body;
     if (!deviceId || latitude === undefined || longitude === undefined) {
       return res.status(400).json({ error: "deviceId, latitude, longitude required" });
     }
@@ -242,13 +242,13 @@ router.put("/family/:code/location", async (req, res) => {
     let loc;
     if (existing.length > 0) {
       [loc] = await db.update(familyLocationsTable)
-        .set({ memberName, latitude, longitude, address, accuracy, battery, isSharing, updatedAt: new Date() })
+        .set({ memberName, latitude, longitude, address, accuracy, battery, heading: heading ?? null, speed: speed ?? null, isSharing, updatedAt: new Date() })
         .where(and(eq(familyLocationsTable.familyCode, code), eq(familyLocationsTable.deviceId, deviceId)))
         .returning();
     } else {
       [loc] = await db.insert(familyLocationsTable).values({
         familyCode: code, deviceId, memberName: memberName || "Unknown",
-        latitude, longitude, address, accuracy, battery, isSharing: isSharing ?? true,
+        latitude, longitude, address, accuracy, battery, heading: heading ?? null, speed: speed ?? null, isSharing: isSharing ?? true,
       }).returning();
     }
     return res.json({ ...loc, updatedAt: loc.updatedAt.toISOString() });

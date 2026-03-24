@@ -32,7 +32,9 @@ export function useLocationTracking({
   const [address, setAddress] = useState("");
   const [locUploading, setLocUploading] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+  const headingRef = useRef<Location.LocationSubscription | null>(null);
   const lastLocLogRef = useRef(0);
+  const currentHeadingRef = useRef<number | null>(null);
 
   const uploadLoc = useCallback(
     async (loc: Location.LocationObject, sharing: boolean) => {
@@ -51,6 +53,12 @@ export function useLocationTracking({
           }
         } catch {}
         setAddress(addr);
+        const headingVal = loc.coords.heading != null && loc.coords.heading >= 0
+          ? loc.coords.heading
+          : currentHeadingRef.current ?? undefined;
+        const speedVal = loc.coords.speed != null && loc.coords.speed >= 0
+          ? loc.coords.speed
+          : undefined;
         await api.updateLocation(familyCode, {
           deviceId,
           memberName: myName,
@@ -58,6 +66,8 @@ export function useLocationTracking({
           longitude: loc.coords.longitude,
           address: addr,
           accuracy: loc.coords.accuracy ?? undefined,
+          heading: headingVal,
+          speed: speedVal,
           isSharing: sharing,
         });
         const now = Date.now();
@@ -80,12 +90,25 @@ export function useLocationTracking({
     }
     try {
       watchRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, timeInterval: 20000, distanceInterval: 30 },
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 10000, distanceInterval: 10 },
         (loc) => {
           setCurrentLoc(loc);
           uploadLoc(loc, true);
         },
       );
+    } catch {}
+    if (headingRef.current) {
+      headingRef.current.remove();
+      headingRef.current = null;
+    }
+    try {
+      headingRef.current = await Location.watchHeadingAsync((h) => {
+        if (h.trueHeading >= 0) {
+          currentHeadingRef.current = h.trueHeading;
+        } else if (h.magHeading >= 0) {
+          currentHeadingRef.current = h.magHeading;
+        }
+      });
     } catch {}
   }, [uploadLoc]);
 
@@ -106,11 +129,16 @@ export function useLocationTracking({
     } else if (watchRef.current) {
       watchRef.current.remove();
       watchRef.current = null;
+      if (headingRef.current) { headingRef.current.remove(); headingRef.current = null; }
     }
     return () => {
       if (watchRef.current) {
         watchRef.current.remove();
         watchRef.current = null;
+      }
+      if (headingRef.current) {
+        headingRef.current.remove();
+        headingRef.current = null;
       }
     };
   }, [permission?.granted, isSharing]);

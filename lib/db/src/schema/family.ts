@@ -36,6 +36,8 @@ export const familyLocationsTable = pgTable("family_locations", {
   address: text("address"),
   accuracy: real("accuracy"),
   battery: real("battery"),
+  heading: real("heading"),
+  speed: real("speed"),
   isSharing: boolean("is_sharing").notNull().default(true),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

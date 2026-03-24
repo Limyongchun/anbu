@@ -243,7 +243,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     if (!familyCode) return;
     setLoading(true);
     load().finally(() => setLoading(false));
-    const iv = setInterval(load, 30000);
+    const iv = setInterval(load, 15000);
     return () => clearInterval(iv);
   }, [familyCode, load]);
 
@@ -309,11 +309,22 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const markersJs = parentLocs.map((pl, i) => {
     const c = PIN_COLORS[i % PIN_COLORS.length];
     const initial = (pl.memberName || "?").charAt(0);
+    const hasHeading = pl.heading != null && pl.heading >= 0;
+    const headingDeg = hasHeading ? Math.round(pl.heading!) : 0;
+    const speedMs = pl.speed != null && pl.speed >= 0 ? pl.speed : 0;
+    const isMoving = speedMs > 0.5;
     return `
 (function(){
   var wrap=document.createElement('div');
   wrap.className='profile-pin';
   wrap.id='pin-${i}';
+  ${hasHeading ? `
+  var arrow=document.createElement('div');
+  arrow.className='heading-arrow ${isMoving ? "moving" : ""}';
+  arrow.style.transform='rotate(${headingDeg}deg)';
+  arrow.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2 L16 10 L12 7 L8 10 Z" fill="${isMoving ? "#4CAF50" : "#2196F3"}" stroke="#fff" stroke-width="1"/></svg>';
+  wrap.appendChild(arrow);
+  ` : ""}
   var body=document.createElement('div');
   body.className='pin-body';
   if(_photos[${i}]){
@@ -329,11 +340,18 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
     body.appendChild(d);
   }
   wrap.appendChild(body);
+  ${isMoving ? `
+  var speedBadge=document.createElement('div');
+  speedBadge.className='speed-badge';
+  speedBadge.textContent='${(speedMs * 3.6).toFixed(0)} km/h';
+  wrap.appendChild(speedBadge);
+  ` : `
   var tail=document.createElement('div');
   tail.className='pin-tail';
   tail.innerHTML='<svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#FFD700"/></svg>';
   wrap.appendChild(tail);
-  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:wrap.outerHTML,iconSize:[56,68],iconAnchor:[28,68]})}).addTo(map);
+  `}
+  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:wrap.outerHTML,iconSize:[80,100],iconAnchor:[40,80]})}).addTo(map);
   m.on('click',function(){
     document.querySelectorAll('.profile-pin').forEach(function(e){e.classList.remove('selected')});
     document.getElementById('pin-${i}').classList.add('selected');
@@ -354,13 +372,17 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
 *{margin:0;padding:0;box-sizing:border-box}
 #map{width:100vw;height:100vh}
 .leaflet-control-attribution{font-size:8px;opacity:0.6;background:rgba(255,255,255,0.5)!important}
-.profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));width:56px}
+.profile-pin{display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));width:80px;position:relative}
 .profile-pin.selected{transform:scale(1.25)}
-.pin-body{width:50px;height:50px;border-radius:50%;border:3px solid #FFD700;overflow:hidden;background:#FFD700;margin:0 auto;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.pin-body{width:50px;height:50px;border-radius:50%;border:3px solid #FFD700;overflow:hidden;background:#FFD700;margin:0 auto;box-sizing:border-box;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
 .pin-photo{width:44px;height:44px;object-fit:cover;border-radius:50%;display:block}
 .pin-initial{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;font-family:sans-serif}
 .pin-tail{margin-top:-3px;line-height:0;text-align:center}
 .pin-tail svg path{filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
+.heading-arrow{position:absolute;top:-8px;left:50%;width:24px;height:24px;margin-left:-12px;z-index:3;transform-origin:center 40px;transition:transform 0.5s ease}
+.heading-arrow.moving svg path{animation:pulse-arrow 1.5s infinite}
+@keyframes pulse-arrow{0%,100%{opacity:1}50%{opacity:0.5}}
+.speed-badge{margin-top:2px;background:rgba(76,175,80,0.9);color:#fff;font-size:10px;font-weight:700;font-family:sans-serif;padding:2px 6px;border-radius:8px;text-align:center;white-space:nowrap;line-height:14px}
 </style>
 </head><body><div id="map"></div><script>
 var map=L.map('map',{zoomControl:false}).setView([${centerLat},${centerLon}],16);
@@ -377,6 +399,29 @@ ${boundsJs}
   const bannerLoc = activeLoc;
   const bannerMinsAgo = bannerLoc ? Math.floor((Date.now() - new Date(bannerLoc.updatedAt).getTime()) / 60000) : 0;
   const bannerIsRecent = bannerMinsAgo < 5;
+
+  const getHeadingLabel = (deg: number): string => {
+    const dirs = [
+      t.dirN || "북", t.dirNE || "북동", t.dirE || "동", t.dirSE || "남동",
+      t.dirS || "남", t.dirSW || "남서", t.dirW || "서", t.dirNW || "북서"
+    ];
+    return dirs[Math.round(deg / 45) % 8] as string;
+  };
+
+  const getBannerSpeedInfo = () => {
+    if (!bannerLoc) return null;
+    const spd = bannerLoc.speed;
+    const hdg = bannerLoc.heading;
+    const isMoving = spd != null && spd > 0.5;
+    const hasDir = hdg != null && hdg >= 0;
+    if (!isMoving && !hasDir) return null;
+    const kmh = isMoving ? (spd! * 3.6).toFixed(0) : null;
+    const dirLabel = hasDir ? getHeadingLabel(hdg!) : null;
+    if (isMoving && dirLabel) return `${dirLabel} ${t.dirToward || "방향"} · ${kmh} km/h`;
+    if (isMoving) return `${t.mapMoving || "이동 중"} · ${kmh} km/h`;
+    if (dirLabel) return `${dirLabel} ${t.dirFacing || "방향"}`;
+    return null;
+  };
 
   return (
     <View style={StyleSheet.absoluteFillObject}>
@@ -483,6 +528,12 @@ ${boundsJs}
             <Text style={mp.bannerAddr} numberOfLines={1}>
               {bannerLoc.address || `${bannerLoc.latitude.toFixed(4)}, ${bannerLoc.longitude.toFixed(4)}`}
             </Text>
+            {getBannerSpeedInfo() && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                <Ionicons name={bannerLoc.speed != null && bannerLoc.speed > 0.5 ? "walk" : "compass"} size={13} color={bannerLoc.speed != null && bannerLoc.speed > 0.5 ? DS.success : DS.info} />
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: bannerLoc.speed != null && bannerLoc.speed > 0.5 ? DS.success : DS.info }}>{getBannerSpeedInfo()}</Text>
+              </View>
+            )}
           </View>
           <View style={mp.bannerActions}>
             <CircleBtn icon="call" size={15} bg={DS.success + "20"} color={DS.success} style={mp.bannerBtn} onPress={() => Linking.openURL("tel:")} />

@@ -48,6 +48,8 @@ export interface LocationData {
   address?: string;
   accuracy?: number;
   battery?: number;
+  heading?: number | null;
+  speed?: number | null;
   isSharing: boolean;
   privacyMode?: boolean;
   photoData?: string | null;
@@ -120,6 +122,8 @@ export const api = {
       address?: string;
       accuracy?: number;
       battery?: number;
+      heading?: number;
+      speed?: number;
       isSharing: boolean;
     }
   ): Promise<LocationData> =>
