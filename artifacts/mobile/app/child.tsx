@@ -35,6 +35,8 @@ import PlaceListSheet from "@/features/places/components/PlaceListSheet";
 import { getAllPlaces } from "@/features/places/store";
 import type { ParentPlace } from "@/features/places/types";
 import { matchParentPlace } from "@/features/places/matchPlace";
+import { recordLocation, detectFrequentPlaces, type PlaceSuggestion } from "@/features/places/frequentDetector";
+import PlaceSuggestionBanner from "@/features/places/components/PlaceSuggestionBanner";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -290,6 +292,7 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
   const [savePlaceVisible, setSavePlaceVisible] = useState(false);
   const [placeListVisible, setPlaceListVisible] = useState(false);
   const [savedPlaces, setSavedPlaces] = useState<ParentPlace[]>([]);
+  const [suggestion, setSuggestion] = useState<PlaceSuggestion | null>(null);
 
   const loadPlaces = useCallback(async () => {
     try {
@@ -301,6 +304,23 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
   useEffect(() => {
     loadPlaces();
   }, [loadPlaces]);
+
+  useEffect(() => {
+    if (parentLocs.length === 0) return;
+    const run = async () => {
+      for (const pl of parentLocs) {
+        await recordLocation(pl.deviceId, pl.latitude, pl.longitude);
+      }
+      const places = await getAllPlaces();
+      for (const pl of parentLocs) {
+        const parentPlaces = places.filter(p => p.parentId === pl.deviceId);
+        const s = await detectFrequentPlaces(pl.deviceId, parentPlaces);
+        if (s) { setSuggestion(s); return; }
+      }
+      setSuggestion(null);
+    };
+    run();
+  }, [parentLocs]);
 
   const selectParent = useCallback((idx: number) => {
     setSelectedIdx(idx);
@@ -472,6 +492,19 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
             })}
             <Text style={mp.privacyLabel}>{t.mapPrivacyMode}</Text>
           </View>
+        </View>
+      )}
+
+      {!immersive && suggestion && (
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: BOTTOM_SAFE + (hasParents ? 200 : 14) }}>
+          <PlaceSuggestionBanner
+            suggestion={suggestion}
+            lang={lang as "ko" | "en" | "ja"}
+            suggestText={t.suggestFrequent as string}
+            dismissText={t.suggestDismiss as string}
+            onSaved={() => { setSuggestion(null); loadPlaces(); }}
+            onDismissed={() => setSuggestion(null)}
+          />
         </View>
       )}
 
