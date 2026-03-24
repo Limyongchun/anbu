@@ -206,7 +206,7 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAP SCREEN (Naver Map)
 // ═══════════════════════════════════════════════════════════════════════════════
-function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { familyCode: string | null; bottomInset: number; immersive: boolean; onToggleImmersive: () => void }) {
+function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive, focusParentDeviceId }: { familyCode: string | null; bottomInset: number; immersive: boolean; onToggleImmersive: () => void; focusParentDeviceId?: string | null }) {
   const { t, lang } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -287,6 +287,20 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
       setSelectedIdx(0);
     }
   }, [parentLocs.length, selectedIdx]);
+
+  const focusHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusParentDeviceId || parentLocs.length === 0) return;
+    if (focusHandled.current === focusParentDeviceId) return;
+    const idx = parentLocs.findIndex(p => p.deviceId === focusParentDeviceId);
+    if (idx >= 0) {
+      focusHandled.current = focusParentDeviceId;
+      setSelectedIdx(idx);
+      setTimeout(() => {
+        mapRef.current?.zoomTo(parentLocs[idx].latitude, parentLocs[idx].longitude, 17);
+      }, 500);
+    }
+  }, [focusParentDeviceId, parentLocs]);
 
   const safeIdx = parentLocs.length > 0 ? Math.min(selectedIdx, parentLocs.length - 1) : 0;
 
@@ -971,7 +985,7 @@ type ActivityItem = {
 };
 
 function HomeScreen({
-  familyCode, allFamilyCodes, deviceId, topBarH, bottomInset, onGoToAnbu,
+  familyCode, allFamilyCodes, deviceId, topBarH, bottomInset, onGoToAnbu, onGoToMap,
 }: {
   familyCode: string | null;
   allFamilyCodes: string[];
@@ -979,6 +993,7 @@ function HomeScreen({
   topBarH: number;
   bottomInset: number;
   onGoToAnbu: () => void;
+  onGoToMap: (parentDeviceId: string) => void;
 }) {
   const { t, lang } = useLang();
   type ParentInfo = { name: string; photo: string | null; loc: LocationData | null; deviceId: string };
@@ -1408,7 +1423,7 @@ function HomeScreen({
                   <Pressable style={hm.parentCardActionBtn} onPress={() => { if (parent?.deviceId) Linking.openURL(`tel:`); }}>
                     <Ionicons name="call-outline" size={20} color={DS.brand} />
                   </Pressable>
-                  <Pressable style={hm.parentCardActionBtn} onPress={onGoToAnbu}>
+                  <Pressable style={hm.parentCardActionBtn} onPress={() => onGoToMap(ps.deviceId)}>
                     <Ionicons name="location-outline" size={20} color={DS.info} />
                   </Pressable>
                 </View>
@@ -1663,6 +1678,7 @@ export default function ChildScreen() {
   const { familyCode, allFamilyCodes, myName, myRole, deviceId, isMasterChild, childRole } = useFamilyContext();
   const [tab, setTab] = useState<Tab>("home");
   const [mapImmersive, setMapImmersive] = useState(false);
+  const [mapFocusParent, setMapFocusParent] = useState<string | null>(null);
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
@@ -1692,6 +1708,7 @@ export default function ChildScreen() {
           topBarH={TOP_H}
           bottomInset={bottomInset}
           onGoToAnbu={() => setTab("photo")}
+          onGoToMap={(parentDeviceId) => { setMapFocusParent(parentDeviceId); setTab("map"); }}
         />
       )}
       {tab === "photo" && (
@@ -1699,7 +1716,7 @@ export default function ChildScreen() {
       )}
       {isMap && (
         <View style={StyleSheet.absoluteFillObject}>
-          <MapScreen familyCode={familyCode} bottomInset={bottomInset} immersive={mapImmersive} onToggleImmersive={toggleImmersive} />
+          <MapScreen familyCode={familyCode} bottomInset={bottomInset} immersive={mapImmersive} onToggleImmersive={toggleImmersive} focusParentDeviceId={mapFocusParent} />
         </View>
       )}
       {tab === "alarm" && (
