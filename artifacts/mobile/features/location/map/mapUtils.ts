@@ -54,11 +54,16 @@ export function getStatusText(
   };
 }
 
-export const MOCK_PARENT_LOCATION = {
-  lat: 37.5665,
-  lng: 126.978,
-  accuracy: 15,
-  capturedAt: new Date(Date.now() - 30000).toISOString(),
-  motionState: "moving" as const,
-  parentName: "엄마",
-};
+export function getFreshnessColor(capturedAt: string): string {
+  const diffMin = (Date.now() - new Date(capturedAt).getTime()) / 60000;
+  if (diffMin <= 1) return "#34C759";
+  if (diffMin <= 5) return "#FFCC00";
+  return "#8E8E93";
+}
+
+export function getMarkerColor(capturedAt: string): string {
+  const diffMin = (Date.now() - new Date(capturedAt).getTime()) / 60000;
+  if (diffMin <= 1) return "#34C759";
+  if (diffMin <= 5) return "#FFCC00";
+  return "#8E8E93";
+}

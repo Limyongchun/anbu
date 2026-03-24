@@ -1,15 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import type { ParentLocation } from "./mapTypes";
-import { getStatusText, getNoDataLabel } from "./mapUtils";
+import { getNoDataLabel, getMarkerColor } from "./mapUtils";
 
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID || "rg1fro3mez";
 
-const MARKER_COLORS = ["#34C759", "#FF9500", "#AF52DE"];
-
 interface NaverMapViewProps {
   locations: ParentLocation[];
-  selectedIndex?: number;
+  selectedIndex: number;
   lang: string;
   onMarkerPress?: (index: number) => void;
 }
@@ -18,30 +16,39 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function buildMapHtml(locs: ParentLocation[], selectedIdx: number, lang: string): string {
-  const sel = locs[selectedIdx] || locs[0];
-  if (!sel) return "";
+function buildMarkerHtml(selected: boolean, color: string, initial: string): string {
+  const size = selected ? 36 : 24;
+  const border = selected ? 4 : 3;
+  const fontSize = selected ? 16 : 11;
+  const shadow = selected ? "0 3px 12px rgba(0,0,0,0.35)" : "0 2px 6px rgba(0,0,0,0.25)";
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:${border}px solid #fff;box-shadow:${shadow};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;font-family:sans-serif;transition:all 0.3s ease;">${escapeHtml(initial)}</div>`;
+}
 
+function buildMapHtml(locs: ParentLocation[], selectedIdx: number): string {
+  if (locs.length === 0) return "";
+
+  const sel = locs[selectedIdx] || locs[0];
   const markersJs = locs.map((loc, i) => {
-    const isMoving = loc.motionState === "moving";
-    const dotColor = isMoving ? "#34C759" : "#FF9500";
-    const pulseClass = isMoving ? "marker-ring" : "";
+    const color = getMarkerColor(loc.capturedAt);
+    const initial = (loc.parentName || "?").charAt(0);
+    const isSel = i === selectedIdx;
+    const html = buildMarkerHtml(isSel, color, initial);
+    const anchorSize = isSel ? 18 : 12;
     return `
 (function(){
-  var el = document.createElement('div');
-  el.className = '${pulseClass}';
-  el.style.cssText = 'width:28px;height:28px;border-radius:50%;background:${dotColor};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;';
   var m = new naver.maps.Marker({
     position: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
     map: map,
-    icon: { content: el.outerHTML, anchor: new naver.maps.Point(14, 14) }
+    icon: { content: '${html.replace(/'/g, "\\'")}', anchor: new naver.maps.Point(${anchorSize}, ${anchorSize}) },
+    zIndexOffset: ${isSel ? 100 : 0}
   });
   var c = new naver.maps.Circle({
     map: map, center: new naver.maps.LatLng(${loc.lat}, ${loc.lng}),
-    radius: ${loc.accuracy}, fillColor: '${dotColor}', fillOpacity: 0.08,
-    strokeColor: '${dotColor}', strokeOpacity: 0.2, strokeWeight: 1
+    radius: ${Math.max(loc.accuracy, 10)},
+    fillColor: '${color}', fillOpacity: ${isSel ? 0.12 : 0.06},
+    strokeColor: '${color}', strokeOpacity: ${isSel ? 0.3 : 0.15}, strokeWeight: 1
   });
-  _markers.push({marker:m,circle:c});
+  _markers.push({marker:m,circle:c,lat:${loc.lat},lng:${loc.lng}});
   naver.maps.Event.addListener(m, 'click', function(){
     if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerClick',index:${i}}));}
     else{window.parent.postMessage(JSON.stringify({type:'markerClick',index:${i}}),'*');}
@@ -49,42 +56,16 @@ function buildMapHtml(locs: ParentLocation[], selectedIdx: number, lang: string)
 })();`;
   }).join("\n");
 
-  const status = getStatusText(sel.motionState, sel.capturedAt, lang);
-  const diffMin = (Date.now() - new Date(sel.capturedAt).getTime()) / 60000;
-  const isDelayed = diffMin > 5;
-  const isMoving = sel.motionState === "moving";
-  const dotColor = isMoving ? "#34C759" : "#FF9500";
-
   return `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body,#map{width:100%;height:100%}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,0.5)}70%{box-shadow:0 0 0 12px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}
-.marker-ring{animation:pulse 2s infinite}
-.info-card{
-  position:absolute;bottom:24px;left:16px;right:16px;
-  background:#fff;border-radius:16px;
-  padding:16px 20px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.12);
-  z-index:100;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-}
-.info-name{font-size:17px;font-weight:700;color:#2D2D2D;margin-bottom:6px}
-.info-status{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-.info-dot{width:8px;height:8px;border-radius:50%;background:${dotColor}}
-.info-motion{font-size:14px;color:#555}
-.info-freshness{font-size:13px;color:${isDelayed ? "#E85D3A" : "#999"};margin-top:2px}
 </style>
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_CLIENT_ID}"></script>
 </head><body>
 <div id="map"></div>
-<div class="info-card">
-  <div class="info-name">${escapeHtml(sel.parentName)}</div>
-  ${status.motion ? `<div class="info-status"><div class="info-dot"></div><span class="info-motion">${escapeHtml(status.motion)}</span></div>` : ""}
-  <div class="info-freshness">${escapeHtml(status.freshness)}</div>
-</div>
 <script>
 var map = new naver.maps.Map('map', {
   center: new naver.maps.LatLng(${sel.lat}, ${sel.lng}),
@@ -99,18 +80,23 @@ ${markersJs}
 ${locs.length > 1 ? `
 var bounds = new naver.maps.LatLngBounds();
 ${locs.map(l => `bounds.extend(new naver.maps.LatLng(${l.lat}, ${l.lng}));`).join("\n")}
-map.fitBounds(bounds, { top:60, right:60, bottom:160, left:60 });
+map.fitBounds(bounds, { top:80, right:60, bottom:200, left:60 });
 ` : ""}
 window.addEventListener('message', function(e) {
   try {
     var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-    if (msg.type === 'updateLocation') {
+    if (msg.type === 'panTo' && msg.data) {
+      map.panTo(new naver.maps.LatLng(msg.data.lat, msg.data.lng));
+    }
+    if (msg.type === 'updateLocation' && msg.data) {
       var p = msg.data;
       var pos = new naver.maps.LatLng(p.lat, p.lng);
       if (_markers[p.index]) {
         _markers[p.index].marker.setPosition(pos);
         _markers[p.index].circle.setCenter(pos);
         if (p.accuracy) _markers[p.index].circle.setRadius(p.accuracy);
+        _markers[p.index].lat = p.lat;
+        _markers[p.index].lng = p.lng;
       }
     }
   } catch(ex) {}
@@ -142,6 +128,7 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
   const [error, setError] = useState(false);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<Array<{ marker: any; circle: any }>>([]);
+  const prevSelectedRef = useRef(selectedIdx);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -182,10 +169,6 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
         logoControl: true,
         logoControlOptions: { position: N.Position.BOTTOM_LEFT },
       });
-
-      const style = document.createElement("style");
-      style.textContent = `@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,0.5)}70%{box-shadow:0 0 0 12px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}.marker-ring{animation:pulse 2s infinite}`;
-      document.head.appendChild(style);
     }
 
     markersRef.current.forEach(m => {
@@ -195,29 +178,28 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
     markersRef.current = [];
 
     locs.forEach((loc, i) => {
-      const isMoving = loc.motionState === "moving";
-      const dotColor = isMoving ? "#34C759" : "#FF9500";
-      const pulseClass = isMoving ? "marker-ring" : "";
-
-      const markerEl = document.createElement("div");
-      markerEl.className = pulseClass;
-      markerEl.style.cssText = `width:28px;height:28px;border-radius:50%;background:${dotColor};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;`;
+      const color = getMarkerColor(loc.capturedAt);
+      const initial = (loc.parentName || "?").charAt(0);
+      const isSel = i === selectedIdx;
+      const html = buildMarkerHtml(isSel, color, initial);
+      const anchorSize = isSel ? 18 : 12;
 
       const pos = new N.LatLng(loc.lat, loc.lng);
       const marker = new N.Marker({
         position: pos,
         map: mapInstanceRef.current,
-        icon: { content: markerEl.outerHTML, anchor: new N.Point(14, 14) },
+        icon: { content: html, anchor: new N.Point(anchorSize, anchorSize) },
+        zIndexOffset: isSel ? 100 : 0,
       });
 
       const circle = new N.Circle({
         map: mapInstanceRef.current,
         center: pos,
-        radius: loc.accuracy,
-        fillColor: dotColor,
-        fillOpacity: 0.08,
-        strokeColor: dotColor,
-        strokeOpacity: 0.2,
+        radius: Math.max(loc.accuracy, 10),
+        fillColor: color,
+        fillOpacity: isSel ? 0.12 : 0.06,
+        strokeColor: color,
+        strokeOpacity: isSel ? 0.3 : 0.15,
         strokeWeight: 1,
       });
 
@@ -228,25 +210,25 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
       markersRef.current.push({ marker, circle });
     });
 
-    if (locs.length > 1) {
+    if (locs.length > 1 && prevSelectedRef.current === selectedIdx) {
       const bounds = new N.LatLngBounds(
         new N.LatLng(Math.min(...locs.map(l => l.lat)), Math.min(...locs.map(l => l.lng))),
         new N.LatLng(Math.max(...locs.map(l => l.lat)), Math.max(...locs.map(l => l.lng)))
       );
-      mapInstanceRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 160, left: 60 });
-    } else if (locs.length === 1) {
-      mapInstanceRef.current.panTo(new N.LatLng(locs[0].lat, locs[0].lng));
+      mapInstanceRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 200, left: 60 });
     }
-  }, [loaded, locs]);
 
-  const sel = locs[selectedIdx] || locs[0];
-  if (!sel) return <NoDataView lang={lang} />;
+    prevSelectedRef.current = selectedIdx;
+  }, [loaded, locs, selectedIdx]);
 
-  const status = getStatusText(sel.motionState, sel.capturedAt, lang);
-  const diffMin = (Date.now() - new Date(sel.capturedAt).getTime()) / 60000;
-  const isDelayed = diffMin > 5;
-  const isMoving = sel.motionState === "moving";
-  const dotColor = isMoving ? "#34C759" : "#FF9500";
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current || !(window as any).naver?.maps) return;
+    const N = (window as any).naver.maps;
+    const sel = locs[selectedIdx];
+    if (sel) {
+      mapInstanceRef.current.panTo(new N.LatLng(sel.lat, sel.lng));
+    }
+  }, [selectedIdx, loaded]);
 
   if (error) {
     return (
@@ -266,53 +248,35 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
       )}
       {/* @ts-ignore */}
       <div ref={mapRef} style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }} />
-      {/* @ts-ignore */}
-      <div style={{
-        position: "absolute",
-        bottom: 24,
-        left: 16,
-        right: 16,
-        background: "#fff",
-        borderRadius: 16,
-        padding: "16px 20px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-        zIndex: 100,
-        fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-      }}>
-        {/* @ts-ignore */}
-        <div style={{ fontSize: 17, fontWeight: 700, color: "#2D2D2D", marginBottom: 6 }}>
-          {sel.parentName}
-        </div>
-        {status.motion && (
-          // @ts-ignore
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-            {/* @ts-ignore */}
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor }} />
-            {/* @ts-ignore */}
-            <span style={{ fontSize: 14, color: "#555" }}>{status.motion}</span>
-          </div>
-        )}
-        {/* @ts-ignore */}
-        <div style={{ fontSize: 13, color: isDelayed ? "#E85D3A" : "#999", marginTop: 2 }}>
-          {status.freshness}
-        </div>
-      </div>
     </View>
   );
 }
 
-export default function NaverMapView({ locations, selectedIndex = 0, lang, onMarkerPress }: NaverMapViewProps) {
+export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress }: NaverMapViewProps) {
   if (locations.length === 0) return <NoDataView lang={lang} />;
 
   if (Platform.OS === "web") {
     return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} />;
   }
 
-  const mapHtml = buildMapHtml(locations, selectedIndex, lang);
+  const mapHtml = buildMapHtml(locations, selectedIndex);
   const WebView = require("react-native-webview").default;
+  const webViewRef = useRef<any>(null);
+
+  useEffect(() => {
+    const sel = locations[selectedIndex];
+    if (sel && webViewRef.current) {
+      const msg = JSON.stringify({ type: "panTo", data: { lat: sel.lat, lng: sel.lng } });
+      webViewRef.current.injectJavaScript(`
+        try{var msg=${msg};var pos=new naver.maps.LatLng(msg.data.lat,msg.data.lng);map.panTo(pos);}catch(e){}true;
+      `);
+    }
+  }, [selectedIndex]);
+
   return (
     <View style={styles.container}>
       <WebView
+        ref={webViewRef}
         originWhitelist={["*"]}
         source={{ html: mapHtml, baseUrl: "http://localhost" }}
         style={StyleSheet.absoluteFillObject}
