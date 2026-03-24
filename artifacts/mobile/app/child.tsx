@@ -358,7 +358,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       />
 
       {hasParents && (
-        <View style={mp.topCardsContainer}>
+        <View style={[mp.topCardsContainer, { bottom: BOTTOM_SAFE + 8 }]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -442,7 +442,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
       )}
 
       {sheetVisible && activeLoc && (
-        <Animated.View style={[mp.bottomSheet, { bottom: BOTTOM_SAFE + 90, transform: [{ translateY: sheetY }], opacity: sheetAlpha }]}>
+        <Animated.View style={[mp.bottomSheet, { bottom: BOTTOM_SAFE + 100, transform: [{ translateY: sheetY }], opacity: sheetAlpha }]}>
           <View style={mp.sheetHandle}>
             <View style={mp.sheetHandleBar} />
           </View>
