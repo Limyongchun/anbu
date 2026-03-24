@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Platform, ActivityIndicator } from "react-nativ
 import type { ParentLocation } from "./mapTypes";
 import { getStatusText, getNoDataLabel, MOCK_PARENT_LOCATION } from "./mapUtils";
 
-const NAVER_CLIENT_ID = "0v9ub0stzj";
+const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID || "rg1fro3mez";
 
 const USE_MOCK = true;
 

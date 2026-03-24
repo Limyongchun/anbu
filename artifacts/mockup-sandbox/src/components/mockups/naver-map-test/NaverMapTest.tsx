@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const NAVER_CLIENT_ID = "0v9ub0stzj";
+const NAVER_CLIENT_ID = "rg1fro3mez";
 
 export default function NaverMapTest() {
   const mapRef = useRef<HTMLDivElement>(null);

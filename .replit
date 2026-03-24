@@ -30,6 +30,7 @@ timeoutMs = 20000
 [userenv.shared]
 ADMIN_PASSWORD = "Dladydcjs019!"
 JWT_SECRET = "anbu-admin-jwt-secret-2024"
+EXPO_PUBLIC_NAVER_MAP_CLIENT_ID = "rg1fro3mez"
 
 [nix]
 channel = "stable-25_05"
