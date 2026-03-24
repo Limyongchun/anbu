@@ -198,7 +198,7 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAP SCREEN (Naver Map)
 // ═══════════════════════════════════════════════════════════════════════════════
-function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
+function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { familyCode: string | null; bottomInset: number; immersive: boolean; onToggleImmersive: () => void }) {
   const { t, lang } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -339,9 +339,10 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
         selectedIndex={safeIdx}
         lang={lang}
         onMarkerPress={selectParent}
+        onMapTap={onToggleImmersive}
       />
 
-      {hasParents && (
+      {!immersive && hasParents && (
         <View style={[mp.summaryCardsWrap, { bottom: BOTTOM_SAFE + 14 }]}>
           <ScrollView
             horizontal
@@ -399,7 +400,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
         </View>
       )}
 
-      {!loading && !hasAnyParent && (
+      {!immersive && !loading && !hasAnyParent && (
         <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + 14 }]}>
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.blueSoft, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="location-outline" size={18} color={DS.info} />
@@ -416,7 +417,7 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
         </View>
       )}
 
-      {!loading && privacyParents.length > 0 && (
+      {!immersive && !loading && privacyParents.length > 0 && (
         <View style={[mp.floatingPanel, { bottom: BOTTOM_SAFE + (hasParents ? 170 : 14), borderColor: "rgba(122,84,84,0.2)" }]}>
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(122,84,84,0.10)", alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="eye-off" size={18} color={DS.brand} />
@@ -1514,11 +1515,22 @@ export default function ChildScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, myRole, deviceId, isMasterChild, childRole } = useFamilyContext();
   const [tab, setTab] = useState<Tab>("home");
+  const [mapImmersive, setMapImmersive] = useState(false);
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
   const TOP_H = topInset + 56;
   const isMap = tab === "map";
+  const hideChrome = isMap && mapImmersive;
+
+  const handleTabChange = useCallback((t: Tab) => {
+    setTab(t);
+    if (t !== "map") setMapImmersive(false);
+  }, []);
+
+  const toggleImmersive = useCallback(() => {
+    setMapImmersive(prev => !prev);
+  }, []);
 
   return (
     <ExpoLinearGradient
@@ -1540,20 +1552,22 @@ export default function ChildScreen() {
       )}
       {isMap && (
         <View style={StyleSheet.absoluteFillObject}>
-          <MapScreen familyCode={familyCode} bottomInset={bottomInset} />
+          <MapScreen familyCode={familyCode} bottomInset={bottomInset} immersive={mapImmersive} onToggleImmersive={toggleImmersive} />
         </View>
       )}
       {tab === "alarm" && (
         <NotificationScreen allFamilyCodes={allFamilyCodes} topBarH={TOP_H} bottomInset={bottomInset} />
       )}
 
-      <AppHeader topInset={topInset} isMap={isMap} />
-      <BottomTabBar
-        tab={tab}
-        onTab={setTab}
-        onSettings={() => router.push("/profile")}
-        bottomInset={bottomInset}
-      />
+      {!hideChrome && <AppHeader topInset={topInset} isMap={isMap} />}
+      {!hideChrome && (
+        <BottomTabBar
+          tab={tab}
+          onTab={handleTabChange}
+          onSettings={() => router.push("/profile")}
+          bottomInset={bottomInset}
+        />
+      )}
     </ExpoLinearGradient>
   );
 }

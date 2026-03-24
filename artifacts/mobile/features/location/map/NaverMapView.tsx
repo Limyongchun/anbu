@@ -10,6 +10,7 @@ interface NaverMapViewProps {
   selectedIndex: number;
   lang: string;
   onMarkerPress?: (index: number) => void;
+  onMapTap?: () => void;
 }
 
 function escapeHtml(s: string): string {
@@ -101,6 +102,10 @@ window.addEventListener('message', function(e) {
     }
   } catch(ex) {}
 });
+naver.maps.Event.addListener(map, 'click', function(){
+  if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'mapTap'}));}
+  else{window.parent.postMessage(JSON.stringify({type:'mapTap'}),'*');}
+});
 if(window.ReactNativeWebView){
   window.ReactNativeWebView.postMessage(JSON.stringify({type:'mapReady'}));
 }
@@ -117,11 +122,12 @@ function NoDataView({ lang }: { lang: string }) {
   );
 }
 
-function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
+function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress, onMapTap }: {
   locs: ParentLocation[];
   selectedIdx: number;
   lang: string;
   onMarkerPress?: (index: number) => void;
+  onMapTap?: () => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -159,7 +165,7 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
         ? new N.LatLng(locs[0].lat, locs[0].lng)
         : new N.LatLng(37.5665, 126.978);
 
-      mapInstanceRef.current = new N.Map(mapRef.current, {
+      const mapInst = new N.Map(mapRef.current, {
         center,
         zoom: 16,
         zoomControl: true,
@@ -168,6 +174,11 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
         scaleControl: false,
         logoControl: true,
         logoControlOptions: { position: N.Position.BOTTOM_LEFT },
+      });
+      mapInstanceRef.current = mapInst;
+
+      N.Event.addListener(mapInst, "click", () => {
+        onMapTap?.();
       });
     }
 
@@ -252,10 +263,11 @@ function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress }: {
   );
 }
 
-function NativeNaverMap({ locs, selectedIdx, onMarkerPress }: {
+function NativeNaverMap({ locs, selectedIdx, onMarkerPress, onMapTap }: {
   locs: ParentLocation[];
   selectedIdx: number;
   onMarkerPress?: (index: number) => void;
+  onMapTap?: () => void;
 }) {
   const webViewRef = useRef<any>(null);
   const WebView = require("react-native-webview").default;
@@ -289,6 +301,8 @@ function NativeNaverMap({ locs, selectedIdx, onMarkerPress }: {
             const msg = JSON.parse(event.nativeEvent.data);
             if (msg.type === "markerClick") {
               onMarkerPress?.(msg.index);
+            } else if (msg.type === "mapTap") {
+              onMapTap?.();
             }
           } catch {}
         }}
@@ -297,14 +311,14 @@ function NativeNaverMap({ locs, selectedIdx, onMarkerPress }: {
   );
 }
 
-export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress }: NaverMapViewProps) {
+export default function NaverMapView({ locations, selectedIndex, lang, onMarkerPress, onMapTap }: NaverMapViewProps) {
   if (locations.length === 0) return <NoDataView lang={lang} />;
 
   if (Platform.OS === "web") {
-    return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} />;
+    return <WebNaverMap locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
   }
 
-  return <NativeNaverMap locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} />;
+  return <NativeNaverMap locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
 }
 
 const styles = StyleSheet.create({
