@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } f
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import type { ParentLocation } from "./mapTypes";
 import { getNoDataLabel, getMarkerColor } from "./mapUtils";
+import type { ParentPlace } from "@/features/places/types";
 
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID || "rg1fro3mez";
 
@@ -15,6 +16,7 @@ interface NaverMapViewProps {
   lang: string;
   onMarkerPress?: (index: number) => void;
   onMapTap?: () => void;
+  places?: ParentPlace[];
 }
 
 function escapeHtml(s: string): string {
@@ -29,7 +31,7 @@ function buildMarkerHtml(selected: boolean, color: string, initial: string): str
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:${border}px solid #fff;box-shadow:${shadow};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;font-family:sans-serif;transition:all 0.3s ease;">${escapeHtml(initial)}</div>`;
 }
 
-function buildMapHtml(locs: ParentLocation[], selectedIdx: number): string {
+function buildMapHtml(locs: ParentLocation[], selectedIdx: number, places?: ParentPlace[]): string {
   if (locs.length === 0) return "";
 
   const sel = locs[selectedIdx] || locs[0];
@@ -82,6 +84,25 @@ var map = new naver.maps.Map('map', {
 });
 var _markers = [];
 ${markersJs}
+${(places && places.length > 0) ? places.map(p => {
+  const label = escapeHtml((p.preset && p.preset !== "other" ? p.preset : p.name).charAt(0).toUpperCase());
+  return `
+(function(){
+  new naver.maps.Circle({
+    map:map, center:new naver.maps.LatLng(${p.latitude},${p.longitude}),
+    radius:${p.radius},
+    fillColor:'#7A5454', fillOpacity:0.08,
+    strokeColor:'#7A5454', strokeOpacity:0.35, strokeWeight:1.5,
+    strokeStyle:'shortdash'
+  });
+  new naver.maps.Marker({
+    position:new naver.maps.LatLng(${p.latitude},${p.longitude}),
+    map:map,
+    icon:{content:'<div style="width:20px;height:20px;border-radius:50%;background:rgba(122,84,84,0.7);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2)">${label}</div>',anchor:new naver.maps.Point(10,10)},
+    zIndexOffset:-10
+  });
+})();`;
+}).join("\n") : ""}
 ${locs.length > 1 ? `
 var bounds = new naver.maps.LatLngBounds();
 ${locs.map(l => `bounds.extend(new naver.maps.LatLng(${l.lat}, ${l.lng}));`).join("\n")}
@@ -132,7 +153,8 @@ const WebNaverMap = forwardRef<NaverMapHandle, {
   lang: string;
   onMarkerPress?: (index: number) => void;
   onMapTap?: () => void;
-}>(function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress, onMapTap }, ref) {
+  places?: ParentPlace[];
+}>(function WebNaverMap({ locs, selectedIdx, lang, onMarkerPress, onMapTap, places }, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -246,6 +268,45 @@ const WebNaverMap = forwardRef<NaverMapHandle, {
     prevSelectedRef.current = selectedIdx;
   }, [loaded, locs, selectedIdx]);
 
+  const placeOverlaysRef = useRef<Array<{ circle: any; marker: any }>>([]);
+
+  useEffect(() => {
+    if (!loaded || !mapInstanceRef.current || !(window as any).naver?.maps) return;
+    const N = (window as any).naver.maps;
+
+    placeOverlaysRef.current.forEach(o => {
+      o.circle.setMap(null);
+      o.marker.setMap(null);
+    });
+    placeOverlaysRef.current = [];
+
+    (places || []).forEach(p => {
+      const pos = new N.LatLng(p.latitude, p.longitude);
+      const circle = new N.Circle({
+        map: mapInstanceRef.current,
+        center: pos,
+        radius: p.radius,
+        fillColor: "#7A5454",
+        fillOpacity: 0.08,
+        strokeColor: "#7A5454",
+        strokeOpacity: 0.35,
+        strokeWeight: 1.5,
+        strokeStyle: "shortdash",
+      });
+      const label = ((p.preset && p.preset !== "other") ? p.preset : p.name).charAt(0).toUpperCase();
+      const marker = new N.Marker({
+        position: pos,
+        map: mapInstanceRef.current,
+        icon: {
+          content: `<div style="width:20px;height:20px;border-radius:50%;background:rgba(122,84,84,0.7);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2)">${label}</div>`,
+          anchor: new N.Point(10, 10),
+        },
+        zIndexOffset: -10,
+      });
+      placeOverlaysRef.current.push({ circle, marker });
+    });
+  }, [loaded, places]);
+
   useEffect(() => {
     if (!loaded || !mapInstanceRef.current || !(window as any).naver?.maps) return;
     const N = (window as any).naver.maps;
@@ -282,10 +343,11 @@ const NativeNaverMap = forwardRef<NaverMapHandle, {
   selectedIdx: number;
   onMarkerPress?: (index: number) => void;
   onMapTap?: () => void;
-}>(function NativeNaverMap({ locs, selectedIdx, onMarkerPress, onMapTap }, ref) {
+  places?: ParentPlace[];
+}>(function NativeNaverMap({ locs, selectedIdx, onMarkerPress, onMapTap, places }, ref) {
   const webViewRef = useRef<any>(null);
   const WebView = require("react-native-webview").default;
-  const mapHtml = buildMapHtml(locs, selectedIdx);
+  const mapHtml = buildMapHtml(locs, selectedIdx, places);
 
   useImperativeHandle(ref, () => ({
     zoomTo(lat: number, lng: number, zoom = 18) {
@@ -335,14 +397,14 @@ const NativeNaverMap = forwardRef<NaverMapHandle, {
   );
 });
 
-const NaverMapView = forwardRef<NaverMapHandle, NaverMapViewProps>(function NaverMapView({ locations, selectedIndex, lang, onMarkerPress, onMapTap }, ref) {
+const NaverMapView = forwardRef<NaverMapHandle, NaverMapViewProps>(function NaverMapView({ locations, selectedIndex, lang, onMarkerPress, onMapTap, places }, ref) {
   if (locations.length === 0) return <NoDataView lang={lang} />;
 
   if (Platform.OS === "web") {
-    return <WebNaverMap ref={ref} locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
+    return <WebNaverMap ref={ref} locs={locations} selectedIdx={selectedIndex} lang={lang} onMarkerPress={onMarkerPress} onMapTap={onMapTap} places={places} />;
   }
 
-  return <NativeNaverMap ref={ref} locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} onMapTap={onMapTap} />;
+  return <NativeNaverMap ref={ref} locs={locations} selectedIdx={selectedIndex} onMarkerPress={onMarkerPress} onMapTap={onMapTap} places={places} />;
 });
 
 export default NaverMapView;

@@ -31,6 +31,9 @@ import { useFamilyContext } from "@/context/FamilyContext";
 import NaverMapView, { type NaverMapHandle } from "@/features/location/map/NaverMapView";
 import { getStatusText, getFreshnessColor } from "@/features/location/map/mapUtils";
 import SavePlaceSheet from "@/features/places/components/SavePlaceSheet";
+import PlaceListSheet from "@/features/places/components/PlaceListSheet";
+import { getAllPlaces } from "@/features/places/store";
+import type { ParentPlace } from "@/features/places/types";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -284,6 +287,19 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
   const safeIdx = parentLocs.length > 0 ? Math.min(selectedIdx, parentLocs.length - 1) : 0;
 
   const [savePlaceVisible, setSavePlaceVisible] = useState(false);
+  const [placeListVisible, setPlaceListVisible] = useState(false);
+  const [savedPlaces, setSavedPlaces] = useState<ParentPlace[]>([]);
+
+  const loadPlaces = useCallback(async () => {
+    try {
+      const all = await getAllPlaces();
+      setSavedPlaces(all);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    loadPlaces();
+  }, [loadPlaces]);
 
   const selectParent = useCallback((idx: number) => {
     setSelectedIdx(idx);
@@ -352,6 +368,7 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
         lang={lang}
         onMarkerPress={selectParent}
         onMapTap={onToggleImmersive}
+        places={savedPlaces}
       />
 
       {!immersive && hasParents && (
@@ -454,13 +471,24 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
       )}
 
       {!immersive && hasParents && (
-        <Pressable
-          style={[mp.savePlaceBtn, { bottom: BOTTOM_SAFE + (hasParents ? 170 : 14) }]}
-          onPress={() => setSavePlaceVisible(true)}
-        >
-          <Ionicons name="bookmark-outline" size={15} color="#FFFFFF" />
-          <Text style={mp.savePlaceBtnText}>{t.mapSavePlace}</Text>
-        </Pressable>
+        <View style={[mp.placeBtnsRow, { bottom: BOTTOM_SAFE + (hasParents ? 170 : 14) }]}>
+          {savedPlaces.length > 0 && (
+            <Pressable
+              style={mp.placeListBtn}
+              onPress={() => setPlaceListVisible(true)}
+            >
+              <Ionicons name="list" size={15} color="#7A5454" />
+              <Text style={mp.placeListBtnText}>{t.mapSavedPlaces} ({savedPlaces.length})</Text>
+            </Pressable>
+          )}
+          <Pressable
+            style={mp.savePlaceBtn}
+            onPress={() => setSavePlaceVisible(true)}
+          >
+            <Ionicons name="bookmark-outline" size={15} color="#FFFFFF" />
+            <Text style={mp.savePlaceBtnText}>{t.mapSavePlace}</Text>
+          </Pressable>
+        </View>
       )}
 
       {savePlaceVisible && parentLocs[safeIdx] && (
@@ -471,9 +499,17 @@ function MapScreen({ familyCode, bottomInset, immersive, onToggleImmersive }: { 
           longitude={parentLocs[safeIdx].longitude}
           lang={lang as "ko" | "en" | "ja"}
           onClose={() => setSavePlaceVisible(false)}
-          onSaved={() => setSavePlaceVisible(false)}
+          onSaved={() => { setSavePlaceVisible(false); loadPlaces(); }}
         />
       )}
+
+      <PlaceListSheet
+        visible={placeListVisible}
+        places={savedPlaces}
+        lang={lang as "ko" | "en" | "ja"}
+        onClose={() => setPlaceListVisible(false)}
+        onChanged={loadPlaces}
+      />
 
       {loading && (
         <View style={{ position: "absolute", bottom: BOTTOM_SAFE + 60, left: 0, right: 0, alignItems: "center" }}>
@@ -1660,8 +1696,11 @@ const mp = StyleSheet.create({
   privacyName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: DS.textPrimary },
   privacyStatus: { fontFamily: "Inter_400Regular", fontSize: 12, color: DS.textSecondary },
   privacyLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: DS.brand, marginTop: 2 },
-  savePlaceBtn: { position: "absolute", right: 16, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.brand, paddingHorizontal: 14, paddingVertical: 10, borderRadius: DS.radius.pill, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  placeBtnsRow: { position: "absolute", right: 16, flexDirection: "row", alignItems: "center", gap: 8 },
+  savePlaceBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.brand, paddingHorizontal: 14, paddingVertical: 10, borderRadius: DS.radius.pill, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   savePlaceBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFFFFF" },
+  placeListBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: DS.surface, paddingHorizontal: 14, paddingVertical: 10, borderRadius: DS.radius.pill, borderWidth: 1, borderColor: DS.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
+  placeListBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DS.brand },
   summaryCardsWrap: { position: "absolute", left: 0, right: 0, zIndex: 10 },
   summaryCardsScroll: { paddingHorizontal: 14 },
   summaryCard: { width: 300, backgroundColor: "#FFFFFF", borderRadius: 22, paddingVertical: 16, paddingHorizontal: 18, marginRight: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 6 },
