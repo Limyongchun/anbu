@@ -15,6 +15,32 @@ import { eq, and, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+const locationSubscribers = new Map<string, Set<{ res: any; lastPing: number }>>();
+
+function broadcastLocationUpdate(familyCode: string, locData: any) {
+  const subs = locationSubscribers.get(familyCode);
+  if (!subs || subs.size === 0) return;
+  const payload = `data: ${JSON.stringify(locData)}\n\n`;
+  for (const sub of subs) {
+    try { sub.res.write(payload); } catch { subs.delete(sub); }
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, subs] of locationSubscribers) {
+    for (const sub of subs) {
+      try {
+        sub.res.write(": ping\n\n");
+        sub.lastPing = now;
+      } catch {
+        subs.delete(sub);
+      }
+    }
+    if (subs.size === 0) locationSubscribers.delete(code);
+  }
+}, 25000);
+
 const MAX_PARENTS = 2;
 const MAX_CHILDREN = 10;
 
@@ -229,6 +255,45 @@ router.get("/family/:code/location", async (req, res) => {
   }
 });
 
+// SSE: GET /api/family/:code/locations/stream
+router.get("/family/:code/locations/stream", async (req, res) => {
+  const { code } = req.params;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+
+  try {
+    const [locs, members] = await Promise.all([
+      db.select().from(familyLocationsTable)
+        .where(eq(familyLocationsTable.familyCode, code))
+        .orderBy(desc(familyLocationsTable.updatedAt)),
+      db.select().from(familyMembersTable)
+        .where(eq(familyMembersTable.familyCode, code)),
+    ]);
+    const memberMap = new Map(members.map(m => [m.deviceId, m]));
+    const seen = new Set<string>();
+    const unique = locs.filter(l => { if (seen.has(l.deviceId)) return false; seen.add(l.deviceId); return true; });
+    const initial = unique.map(l => {
+      const member = memberMap.get(l.deviceId);
+      return { ...l, role: member?.role || "unknown", privacyMode: member?.privacyMode ?? false, photoData: member?.photoData || null, updatedAt: l.updatedAt.toISOString() };
+    });
+    res.write(`data: ${JSON.stringify({ type: "init", locations: initial })}\n\n`);
+  } catch {}
+
+  const sub = { res, lastPing: Date.now() };
+  if (!locationSubscribers.has(code)) locationSubscribers.set(code, new Set());
+  locationSubscribers.get(code)!.add(sub);
+
+  req.on("close", () => {
+    const subs = locationSubscribers.get(code);
+    if (subs) { subs.delete(sub); if (subs.size === 0) locationSubscribers.delete(code); }
+  });
+});
+
 // PUT /api/family/:code/location
 router.put("/family/:code/location", async (req, res) => {
   try {
@@ -251,7 +316,22 @@ router.put("/family/:code/location", async (req, res) => {
         latitude, longitude, address, accuracy, battery, heading: heading ?? null, speed: speed ?? null, isSharing: isSharing ?? true,
       }).returning();
     }
-    return res.json({ ...loc, updatedAt: loc.updatedAt.toISOString() });
+    const result = { ...loc, updatedAt: loc.updatedAt.toISOString() };
+
+    const member = await db.select().from(familyMembersTable)
+      .where(and(eq(familyMembersTable.familyCode, code), eq(familyMembersTable.deviceId, deviceId)))
+      .then(r => r[0] ?? null);
+    broadcastLocationUpdate(code, {
+      type: "update",
+      location: {
+        ...result,
+        role: member?.role || "unknown",
+        privacyMode: member?.privacyMode ?? false,
+        photoData: member?.photoData || null,
+      },
+    });
+
+    return res.json(result);
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Failed to update location" });

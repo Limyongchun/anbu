@@ -90,7 +90,7 @@ export function useLocationTracking({
     }
     try {
       watchRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 10000, distanceInterval: 10 },
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 5 },
         (loc) => {
           setCurrentLoc(loc);
           uploadLoc(loc, true);

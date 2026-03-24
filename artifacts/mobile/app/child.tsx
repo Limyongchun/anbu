@@ -29,7 +29,7 @@ import { WebView } from "react-native-webview";
 import COLORS from "@/constants/colors";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useLang } from "@/context/LanguageContext";
-import { api, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
+import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
 
 const { width, height } = Dimensions.get("window");
@@ -196,7 +196,7 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAP IFRAME (blob URL for web)
 // ═══════════════════════════════════════════════════════════════════════════════
-function MapIframe({ mapHtml, title }: { mapHtml: string; title: string }) {
+function MapIframe({ mapHtml, title, iframeRef }: { mapHtml: string; title: string; iframeRef?: React.MutableRefObject<HTMLIFrameElement | null> }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -212,6 +212,7 @@ function MapIframe({ mapHtml, title }: { mapHtml: string; title: string }) {
     <View style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}>
       {/* @ts-ignore */}
       <iframe
+        ref={iframeRef}
         src={blobUrl}
         style={{ width: "100%", height: "100%", border: "none" }}
         title={title}
@@ -226,26 +227,133 @@ function MapIframe({ mapHtml, title }: { mapHtml: string; title: string }) {
 function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bottomInset: number }) {
   const { t } = useLang();
   const [locs, setLocs] = useState<LocationData[]>([]);
+  const [initialLocs, setInitialLocs] = useState<LocationData[]>([]);
+  const [mapReady, setMapReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const webViewRef = useRef<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const bannerY = useRef(new Animated.Value(120)).current;
   const bannerAlpha = useRef(new Animated.Value(0)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const sendToMap = useCallback((locData: LocationData) => {
+    const msg = JSON.stringify({
+      type: "locationUpdate",
+      data: {
+        deviceId: locData.deviceId,
+        lat: locData.latitude,
+        lon: locData.longitude,
+        name: locData.memberName,
+        photo: locData.photoData || "",
+        heading: locData.heading ?? null,
+        speed: locData.speed ?? null,
+      },
+    });
+    if (Platform.OS === "web") {
+      iframeRef.current?.contentWindow?.postMessage(msg, "*");
+    } else {
+      webViewRef.current?.injectJavaScript(`
+        try{var d=${msg};
+        var p=d.data;var idx=Object.keys(_markers).indexOf(p.deviceId);
+        if(idx<0)idx=Object.keys(_markers).length;
+        p.color=_colors[p.deviceId]||'#7A5454';
+        addOrUpdateMarker(p,idx);}catch(e){}true;
+      `);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     if (!familyCode) return;
-    try { setLocs(await api.getAllLocations(familyCode)); } catch {}
-  }, [familyCode]);
+    try {
+      const data = await api.getAllLocations(familyCode);
+      setLocs(data);
+      if (!mapReady) {
+        setInitialLocs(data);
+        setMapReady(true);
+      } else {
+        data.forEach((loc: LocationData) => sendToMap(loc));
+      }
+    } catch {}
+  }, [familyCode, mapReady, sendToMap]);
 
   useEffect(() => {
     if (!familyCode) return;
     setLoading(true);
-    load().finally(() => setLoading(false));
-    const iv = setInterval(load, 15000);
-    return () => clearInterval(iv);
-  }, [familyCode, load]);
+
+    const base = getApiBase();
+    const sseUrl = `${base}/family/${familyCode}/locations/stream`;
+    let es: EventSource | null = null;
+    let fallbackTimer: ReturnType<typeof setInterval> | null = null;
+
+    const connectSSE = () => {
+      try {
+        es = new EventSource(sseUrl);
+        es.onopen = () => {
+          if (fallbackTimer) {
+            clearInterval(fallbackTimer);
+            fallbackTimer = null;
+          }
+        };
+        es.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "init") {
+              if (fallbackTimer) {
+                clearInterval(fallbackTimer);
+                fallbackTimer = null;
+              }
+              setLocs(msg.locations);
+              if (!mapReady) {
+                setInitialLocs(msg.locations);
+                setMapReady(true);
+              } else {
+                msg.locations.forEach((loc: LocationData) => sendToMap(loc));
+              }
+              setLoading(false);
+            } else if (msg.type === "update") {
+              const updated = msg.location;
+              sendToMap(updated);
+              setLocs(prev => {
+                const idx = prev.findIndex(l => l.deviceId === updated.deviceId);
+                if (idx >= 0) {
+                  const next = [...prev];
+                  next[idx] = updated;
+                  return next;
+                }
+                return [...prev, updated];
+              });
+            }
+          } catch {}
+        };
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          if (!fallbackTimer) {
+            fallbackTimer = setInterval(() => { load(); }, 30000);
+          }
+          setTimeout(connectSSE, 5000);
+        };
+      } catch {
+        load().finally(() => setLoading(false));
+        fallbackTimer = setInterval(() => { load(); }, 30000);
+      }
+    };
+
+    if (typeof EventSource !== "undefined") {
+      connectSSE();
+    } else {
+      load().finally(() => setLoading(false));
+      fallbackTimer = setInterval(() => { load(); }, 10000);
+    }
+
+    return () => {
+      es?.close();
+      if (fallbackTimer) clearInterval(fallbackTimer);
+    };
+  }, [familyCode]);
 
   const allParentLocs = locs.filter(l => l.role === "parent" && l.isSharing);
   const parentLocs = allParentLocs.filter(l => !l.privacyMode);
@@ -253,8 +361,13 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const hasParents = parentLocs.length > 0;
   const hasAnyParent = allParentLocs.length > 0;
   const activeLoc = parentLocs[selectedIdx] ?? parentLocs[0] ?? null;
-  const centerLat = hasParents ? parentLocs.reduce((s, l) => s + l.latitude, 0) / parentLocs.length : 37.5665;
-  const centerLon = hasParents ? parentLocs.reduce((s, l) => s + l.longitude, 0) / parentLocs.length : 126.978;
+
+  const initParentLocs = useMemo(() => {
+    const all = initialLocs.filter(l => l.role === "parent" && l.isSharing && !l.privacyMode);
+    return all;
+  }, [initialLocs]);
+  const centerLat = initParentLocs.length > 0 ? initParentLocs.reduce((s, l) => s + l.latitude, 0) / initParentLocs.length : 37.5665;
+  const centerLon = initParentLocs.length > 0 ? initParentLocs.reduce((s, l) => s + l.longitude, 0) / initParentLocs.length : 126.978;
 
   const PIN_COLORS = [DS.brand, "#C0766E"];
 
@@ -303,68 +416,18 @@ function MapScreen({ familyCode, bottomInset }: { familyCode: string | null; bot
   const TAB_BAR_H = 58 + Math.max(bottomInset, 12);
   const BOTTOM_SAFE = TAB_BAR_H;
 
-  const photoDataArr = parentLocs.map(pl => pl.photoData || "");
-  const photoSrcsJs = `var _photos=${JSON.stringify(photoDataArr)};`;
+  const mapDataJson = useMemo(() => JSON.stringify(initParentLocs.map((pl, i) => ({
+    deviceId: pl.deviceId,
+    lat: pl.latitude,
+    lon: pl.longitude,
+    name: pl.memberName,
+    photo: pl.photoData || "",
+    heading: pl.heading ?? null,
+    speed: pl.speed ?? null,
+    color: PIN_COLORS[i % PIN_COLORS.length],
+  }))), [initParentLocs]);
 
-  const markersJs = parentLocs.map((pl, i) => {
-    const c = PIN_COLORS[i % PIN_COLORS.length];
-    const initial = (pl.memberName || "?").charAt(0);
-    const hasHeading = pl.heading != null && pl.heading >= 0;
-    const headingDeg = hasHeading ? Math.round(pl.heading!) : 0;
-    const speedMs = pl.speed != null && pl.speed >= 0 ? pl.speed : 0;
-    const isMoving = speedMs > 0.5;
-    return `
-(function(){
-  var wrap=document.createElement('div');
-  wrap.className='profile-pin';
-  wrap.id='pin-${i}';
-  ${hasHeading ? `
-  var arrow=document.createElement('div');
-  arrow.className='heading-arrow ${isMoving ? "moving" : ""}';
-  arrow.style.transform='rotate(${headingDeg}deg)';
-  arrow.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2 L16 10 L12 7 L8 10 Z" fill="${isMoving ? "#4CAF50" : "#2196F3"}" stroke="#fff" stroke-width="1"/></svg>';
-  wrap.appendChild(arrow);
-  ` : ""}
-  var body=document.createElement('div');
-  body.className='pin-body';
-  if(_photos[${i}]){
-    var img=document.createElement('img');
-    img.src=_photos[${i}];
-    img.className='pin-photo';
-    body.appendChild(img);
-  }else{
-    var d=document.createElement('div');
-    d.className='pin-initial';
-    d.style.background='${c}';
-    d.textContent='${initial}';
-    body.appendChild(d);
-  }
-  wrap.appendChild(body);
-  ${isMoving ? `
-  var speedBadge=document.createElement('div');
-  speedBadge.className='speed-badge';
-  speedBadge.textContent='${(speedMs * 3.6).toFixed(0)} km/h';
-  wrap.appendChild(speedBadge);
-  ` : `
-  var tail=document.createElement('div');
-  tail.className='pin-tail';
-  tail.innerHTML='<svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#FFD700"/></svg>';
-  wrap.appendChild(tail);
-  `}
-  var m=L.marker([${pl.latitude},${pl.longitude}],{icon:L.divIcon({className:'',html:wrap.outerHTML,iconSize:[80,100],iconAnchor:[40,80]})}).addTo(map);
-  m.on('click',function(){
-    document.querySelectorAll('.profile-pin').forEach(function(e){e.classList.remove('selected')});
-    document.getElementById('pin-${i}').classList.add('selected');
-    if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerClick',index:${i}}));}else{window.parent.postMessage('markerClick:${i}','*');}
-  });
-})();`;
-  }).join("\n");
-
-  const boundsJs = parentLocs.length > 1
-    ? `map.fitBounds([${parentLocs.map(p => `[${p.latitude},${p.longitude}]`).join(",")}],{padding:[60,60]});`
-    : "";
-
-  const mapHtml = `<!DOCTYPE html><html><head>
+  const mapHtml = useMemo(() => `<!DOCTYPE html><html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -391,10 +454,79 @@ var tileFallback=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x
 var failCount=0,switched=false;
 tileMain.on('tileerror',function(){if(switched)return;failCount++;if(failCount>4){switched=true;map.removeLayer(tileMain);tileFallback.addTo(map);}});
 tileMain.addTo(map);
-${photoSrcsJs}
-${markersJs}
-${boundsJs}
-</script></body></html>`;
+
+var _markers={};
+var _colors={};
+
+function buildPinHtml(p,idx){
+  var hasH=p.heading!=null&&p.heading>=0;
+  var hdeg=hasH?Math.round(p.heading):0;
+  var spd=p.speed!=null&&p.speed>=0?p.speed:0;
+  var mov=spd>0.5;
+  var c=p.color||'#7A5454';
+  var ini=(p.name||'?').charAt(0);
+  var h='<div class="profile-pin" id="pin-'+idx+'">';
+  if(hasH){h+='<div class="heading-arrow'+(mov?' moving':'')+'" style="transform:rotate('+hdeg+'deg)"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2 L16 10 L12 7 L8 10 Z" fill="'+(mov?'#4CAF50':'#2196F3')+'" stroke="#fff" stroke-width="1"/></svg></div>';}
+  h+='<div class="pin-body">';
+  if(p.photo){h+='<img src="'+p.photo+'" class="pin-photo"/>';}
+  else{h+='<div class="pin-initial" style="background:'+c+'">'+ini+'</div>';}
+  h+='</div>';
+  if(mov){h+='<div class="speed-badge">'+(spd*3.6).toFixed(0)+' km/h</div>';}
+  else{h+='<div class="pin-tail"><svg width="16" height="10" viewBox="0 0 16 10"><path d="M0 0 L8 10 L16 0 Z" fill="#FFD700"/></svg></div>';}
+  h+='</div>';
+  return h;
+}
+
+function addOrUpdateMarker(p,idx){
+  var did=p.deviceId;
+  if(_markers[did]){
+    var m=_markers[did];
+    m.setLatLng([p.lat,p.lon]);
+    m.setIcon(L.divIcon({className:'',html:buildPinHtml(p,idx),iconSize:[80,100],iconAnchor:[40,80]}));
+  }else{
+    var m=L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:buildPinHtml(p,idx),iconSize:[80,100],iconAnchor:[40,80]})}).addTo(map);
+    m.on('click',function(){
+      document.querySelectorAll('.profile-pin').forEach(function(e){e.classList.remove('selected')});
+      var el=document.getElementById('pin-'+idx);if(el)el.classList.add('selected');
+      if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerClick',index:idx}));}
+      else{window.parent.postMessage('markerClick:'+idx,'*');}
+    });
+    _markers[did]=m;
+    _colors[did]=p.color;
+  }
+}
+
+var initData=${mapDataJson};
+initData.forEach(function(p,i){addOrUpdateMarker(p,i);});
+${initParentLocs.length > 1 ? `map.fitBounds([${initParentLocs.map(p => `[${p.latitude},${p.longitude}]`).join(",")}],{padding:[60,60]});` : ""}
+
+window.addEventListener('message',function(e){
+  try{
+    var msg=typeof e.data==='string'?JSON.parse(e.data):e.data;
+    if(msg.type==='locationUpdate'){
+      var p=msg.data;
+      var idx=Object.keys(_markers).indexOf(p.deviceId);
+      if(idx<0)idx=Object.keys(_markers).length;
+      p.color=_colors[p.deviceId]||'#7A5454';
+      addOrUpdateMarker(p,idx);
+    }
+  }catch(ex){}
+});
+if(window.ReactNativeWebView){
+  document.addEventListener('message',function(e){
+    try{
+      var msg=typeof e.data==='string'?JSON.parse(e.data):e.data;
+      if(msg.type==='locationUpdate'){
+        var p=msg.data;
+        var idx=Object.keys(_markers).indexOf(p.deviceId);
+        if(idx<0)idx=Object.keys(_markers).length;
+        p.color=_colors[p.deviceId]||'#7A5454';
+        addOrUpdateMarker(p,idx);
+      }
+    }catch(ex){}
+  });
+}
+</script></body></html>`, [mapDataJson, centerLat, centerLon, initParentLocs]);
 
   const bannerLoc = activeLoc;
   const bannerMinsAgo = bannerLoc ? Math.floor((Date.now() - new Date(bannerLoc.updatedAt).getTime()) / 60000) : 0;
@@ -426,10 +558,11 @@ ${boundsJs}
   return (
     <View style={StyleSheet.absoluteFillObject}>
       {Platform.OS === "web" ? (
-        <MapIframe mapHtml={mapHtml} title={t.mapIframeTitle as string} />
+        <MapIframe mapHtml={mapHtml} title={t.mapIframeTitle as string} iframeRef={iframeRef} />
       
       ) : (
         <WebView
+          ref={webViewRef}
           originWhitelist={["*"]}
           source={{ html: mapHtml }}
           style={StyleSheet.absoluteFillObject}

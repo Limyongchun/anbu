@@ -4,6 +4,8 @@ const BASE = process.env.EXPO_PUBLIC_API_URL
     ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
     : "/api";
 
+export function getApiBase() { return BASE; }
+
 let _previewMode = false;
 export function setPreviewMode(on: boolean) { _previewMode = on; }
 export function isPreviewMode() { return _previewMode; }
