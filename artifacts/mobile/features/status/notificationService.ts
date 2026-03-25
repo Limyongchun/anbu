@@ -1,16 +1,22 @@
-import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 import type { ParentStatus } from "./types";
 import { isWithinSleepWindow } from "./timeUtils";
 import { DAY_START_HOUR, NIGHT_START_HOUR } from "./constants";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowInForeground: true,
-  }),
-});
+let Notifications: typeof import("expo-notifications") | null = null;
+
+if (Platform.OS !== "web") {
+  import("expo-notifications").then((mod) => {
+    Notifications = mod;
+    mod.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }).catch(() => {});
+}
 
 const COOLDOWN_MS: Record<ParentStatus, number> = {
   SAFE: Infinity,
@@ -93,14 +99,11 @@ function getNotifyTexts(
   return texts[lang]?.[status] ?? texts.ko[status] ?? null;
 }
 
-function getPriority(status: ParentStatus): Notifications.AndroidNotificationPriority {
+function getPriority(status: ParentStatus): string {
   switch (status) {
-    case "CRITICAL":
-      return Notifications.AndroidNotificationPriority.MAX;
-    case "DANGER":
-      return Notifications.AndroidNotificationPriority.HIGH;
-    default:
-      return Notifications.AndroidNotificationPriority.DEFAULT;
+    case "CRITICAL": return "max";
+    case "DANGER": return "high";
+    default: return "default";
   }
 }
 
@@ -130,6 +133,8 @@ export function sendStatusNotification(
   const texts = getNotifyTexts(nextStatus, parentName, lang);
   if (!texts) return;
 
+  if (!Notifications) return;
+
   _cache[parentId] = { status: nextStatus, sentAt: now };
 
   try {
@@ -138,7 +143,7 @@ export function sendStatusNotification(
         title: texts.title,
         body: texts.body,
         sound: nextStatus === "CRITICAL" || nextStatus === "DANGER" ? "default" : undefined,
-        priority: getPriority(nextStatus),
+        priority: getPriority(nextStatus) as any,
         data: {
           type: "status_change",
           parentId,
