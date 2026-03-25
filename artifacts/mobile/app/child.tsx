@@ -44,6 +44,7 @@ import { STATUS_FLAG_USE_NEW, getStatusLabel as getNewStatusLabel, getStatusColo
 import { DAY_START_HOUR, NIGHT_START_HOUR } from "@/features/status/constants";
 import type { ParentStatus, EvaluateResult } from "@/features/status/types";
 import { stabilize, createStabilizerState, type StabilizerState } from "@/features/status/stabilizer";
+import { saveParentStatusLog } from "@/features/status/statusLogService";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -1134,6 +1135,42 @@ function HomeScreen({
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentInfos, parentActivities, stabilizeTick]);
+
+  const prevConfirmedRef = useRef<Record<string, ParentStatus>>({});
+  useEffect(() => {
+    if (!familyCode) return;
+    for (const [key, result] of Object.entries(newStatusResults)) {
+      const prev = prevConfirmedRef.current[key];
+      const next = result.confirmedStatus;
+      if (prev != null && prev !== next) {
+        const info = parentInfos.find(p => (p.deviceId || p.name) === key);
+        const myActs = parentActivities.filter(
+          a => a.parentName === info?.name || a.deviceId === info?.deviceId
+        );
+        const latestActTime = myActs.length > 0
+          ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
+          : null;
+        const locTime = info?.loc?.updatedAt ? new Date(info.loc.updatedAt).getTime() : null;
+        try {
+          saveParentStatusLog({
+            parentId: info?.deviceId ?? key,
+            parentName: info?.name ?? key,
+            familyCode,
+            previousStatus: prev,
+            nextStatus: next,
+            reason: result.reason as any,
+            inactiveMinutes: result.inactiveMinutes,
+            signalLostMinutes: result.signalLostMinutes,
+            wakeDelayMinutes: result.wakeDelayMinutes,
+            lastAppActivityAt: latestActTime,
+            lastLocationAt: locTime,
+            lastHeartbeatAt: locTime,
+          });
+        } catch (_) {}
+      }
+      prevConfirmedRef.current[key] = next;
+    }
+  }, [newStatusResults, familyCode, parentInfos, parentActivities]);
 
   const getParentStatusNew = useCallback((deviceId: string, name: string) => {
     const key = deviceId || name;
