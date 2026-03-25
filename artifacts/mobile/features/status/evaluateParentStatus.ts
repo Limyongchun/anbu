@@ -101,6 +101,21 @@ export function evaluateParentStatus(input: EvaluateInput): EvaluateResult {
     reason = "normal";
   }
 
+  const SIGNAL_BUFFER_MINUTES = 10;
+  if (status === "SIGNAL_LOST") {
+    const appRecent = lastApp != null && diffMinutes(now, lastApp) <= SIGNAL_BUFFER_MINUTES;
+    const hbRecent = lastHb != null && diffMinutes(now, lastHb) <= SIGNAL_BUFFER_MINUTES;
+    if (appRecent || hbRecent) {
+      if (inactiveMinutes >= CHECK_INACTIVE_MINUTES) {
+        status = "CHECK";
+        reason = "inactive";
+      } else {
+        status = "SAFE";
+        reason = "normal";
+      }
+    }
+  }
+
   if (isSleeping && status !== "SIGNAL_LOST" && status !== "CRITICAL") {
     status = "SAFE";
     reason = "sleeping";

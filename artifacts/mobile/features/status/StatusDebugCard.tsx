@@ -73,28 +73,36 @@ const MOCK_PRESETS: MockPreset[] = [
   },
 ];
 
+function fmtMins(ts: number | null): string {
+  if (ts == null) return "—";
+  const m = Math.floor((Date.now() - ts) / 60000);
+  return `${m}m`;
+}
+
 interface StatusDebugCardProps {
-  oldStatus: string;
   parentName: string;
+  computedStatus: string;
+  confirmedStatus: string;
+  finalStatus: string;
   lastAppActivityAt: number | string | null | undefined;
   lastLocationAt: number | string | null | undefined;
   lastHeartbeatAt: number | string | null | undefined;
   batteryLevel: number | null | undefined;
   isOnline: boolean | null | undefined;
-  confirmedStatus?: string;
   pendingStatus?: string | null;
   pendingSince?: number | null;
 }
 
 export function StatusDebugCard({
-  oldStatus,
   parentName,
+  computedStatus,
+  confirmedStatus,
+  finalStatus,
   lastAppActivityAt,
   lastLocationAt,
   lastHeartbeatAt,
   batteryLevel,
   isOnline,
-  confirmedStatus: confirmedStatusProp,
   pendingStatus: pendingStatusProp,
   pendingSince: pendingSinceProp,
 }: StatusDebugCardProps) {
@@ -117,18 +125,26 @@ export function StatusDebugCard({
     return evaluateParentStatus(input);
   }, [lastAppActivityAt, lastLocationAt, lastHeartbeatAt, batteryLevel, isOnline, mockOverride]);
 
+  const finalColor = STATUS_COLORS[finalStatus as ParentStatus] ?? "#6B7280";
+
+  const appTs = typeof lastAppActivityAt === "number" ? lastAppActivityAt : typeof lastAppActivityAt === "string" ? new Date(lastAppActivityAt).getTime() : null;
+  const hbTs = typeof lastHeartbeatAt === "number" ? lastHeartbeatAt : typeof lastHeartbeatAt === "string" ? new Date(lastHeartbeatAt).getTime() : null;
+
   if (!expanded) {
     return (
       <Pressable style={s.collapsed} onPress={() => setExpanded(true)}>
         <View style={s.collapsedRow}>
-          <Text style={s.debugLabel}>🔧 DEBUG</Text>
+          <Text style={s.debugLabel}>DEBUG</Text>
           <Text style={s.parentNameSmall}>{parentName}</Text>
-          <View style={[s.dot, { backgroundColor: STATUS_COLORS[newResult.status] }]} />
-          <Text style={[s.statusSmall, { color: STATUS_COLORS[newResult.status] }]}>
-            {newResult.status}
+          <View style={[s.dot, { backgroundColor: finalColor }]} />
+          <Text style={[s.statusSmall, { color: finalColor }]}>
+            {finalStatus}
           </Text>
           {mockOverride && <Text style={s.mockBadge}>MOCK</Text>}
         </View>
+        <Text style={s.collapsedDetail}>
+          computed={computedStatus} confirmed={confirmedStatus} app={fmtMins(appTs)} hb={fmtMins(hbTs)} online={String(isOnline ?? false)}
+        </Text>
       </Pressable>
     );
   }
@@ -136,35 +152,46 @@ export function StatusDebugCard({
   return (
     <View style={s.card}>
       <Pressable style={s.headerRow} onPress={() => setExpanded(false)}>
-        <Text style={s.debugLabel}>🔧 STATUS DEBUG — {parentName}</Text>
+        <Text style={s.debugLabel}>STATUS DEBUG — {parentName}</Text>
         <Text style={s.closeBtn}>▲</Text>
       </Pressable>
 
       <View style={s.compareRow}>
         <View style={s.compareBox}>
-          <Text style={s.compareTitle}>Old Status</Text>
-          <Text style={s.compareValue}>{oldStatus}</Text>
+          <Text style={s.compareTitle}>Computed</Text>
+          <Text style={[s.compareValue, { color: STATUS_COLORS[computedStatus as ParentStatus] ?? "#374151" }]}>
+            {computedStatus}
+          </Text>
         </View>
         <Text style={s.arrow}>→</Text>
         <View style={s.compareBox}>
-          <Text style={s.compareTitle}>New Status</Text>
-          <Text style={[s.compareValue, { color: STATUS_COLORS[newResult.status] }]}>
-            {newResult.status}
+          <Text style={s.compareTitle}>Confirmed</Text>
+          <Text style={[s.compareValue, { color: STATUS_COLORS[confirmedStatus as ParentStatus] ?? "#374151" }]}>
+            {confirmedStatus}
+          </Text>
+        </View>
+        <Text style={s.arrow}>→</Text>
+        <View style={s.compareBox}>
+          <Text style={s.compareTitle}>Final</Text>
+          <Text style={[s.compareValue, { color: finalColor }]}>
+            {finalStatus}
           </Text>
         </View>
       </View>
 
       <View style={s.detailsBox}>
-        <DetailRow label="Computed" value={newResult.status} />
-        <DetailRow label="Confirmed" value={confirmedStatusProp ?? newResult.status} />
+        <DetailRow label="computed" value={computedStatus} />
+        <DetailRow label="confirmed" value={confirmedStatus} />
+        <DetailRow label="final" value={finalStatus} />
+        <DetailRow label="app" value={fmtMins(appTs)} />
+        <DetailRow label="heartbeat" value={fmtMins(hbTs)} />
+        <DetailRow label="online" value={String(isOnline ?? false)} />
         <DetailRow label="Pending" value={pendingStatusProp ?? "—"} />
         <DetailRow label="Pending Since" value={pendingSinceProp ? `${Math.floor((Date.now() - pendingSinceProp) / 60000)}m ago` : "—"} />
         <DetailRow label="Reason" value={newResult.reason} />
         <DetailRow label="Inactive" value={`${newResult.inactiveMinutes}m`} />
         <DetailRow label="Signal Lost" value={`${newResult.signalLostMinutes}m`} />
-        <DetailRow label="Wake Delay" value={`${newResult.wakeDelayMinutes}m`} />
         <DetailRow label="Sleeping" value={newResult.isSleeping ? "true" : "false"} />
-        <DetailRow label="Text" value={newResult.summaryText} />
       </View>
 
       <Text style={s.mockTitle}>Mock 테스트</Text>
@@ -213,6 +240,12 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  collapsedDetail: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 9,
+    color: "#9CA3AF",
+    marginTop: 3,
   },
   dot: {
     width: 8,
@@ -268,7 +301,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 8,
     marginBottom: 12,
     paddingVertical: 8,
     backgroundColor: "rgba(0,0,0,0.02)",
@@ -276,7 +309,7 @@ const s = StyleSheet.create({
   },
   compareBox: {
     alignItems: "center",
-    minWidth: 80,
+    minWidth: 70,
   },
   compareTitle: {
     fontFamily: "Inter_500Medium",
@@ -286,11 +319,11 @@ const s = StyleSheet.create({
   },
   compareValue: {
     fontFamily: "Inter_700Bold",
-    fontSize: 16,
+    fontSize: 14,
     color: "#374151",
   },
   arrow: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#D1D5DB",
   },
   detailsBox: {

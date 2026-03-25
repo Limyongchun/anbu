@@ -1097,7 +1097,7 @@ function HomeScreen({
 
   const newStatusResults = useMemo(() => {
     const now = Date.now();
-    const map: Record<string, EvaluateResult & { confirmedStatus: ParentStatus; pendingStatus: ParentStatus | null; pendingSince: number | null }> = {};
+    const map: Record<string, EvaluateResult & { computedStatus: ParentStatus; confirmedStatus: ParentStatus; pendingStatus: ParentStatus | null; pendingSince: number | null; latestActTime: number | null; locTime: number | null }> = {};
     parentInfos.forEach(p => {
       const key = p.deviceId || p.name;
       const myActs = parentActivities.filter(
@@ -1127,15 +1127,19 @@ function HomeScreen({
 
       map[key] = {
         ...raw,
+        computedStatus: raw.status,
         status: newState.confirmedStatus,
+        summaryText: getStatusSummaryText(newState.confirmedStatus, lang as "ko" | "en" | "ja"),
         confirmedStatus: newState.confirmedStatus,
         pendingStatus: newState.pendingStatus,
         pendingSince: newState.pendingSince,
+        latestActTime,
+        locTime,
       };
     });
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentInfos, parentActivities, stabilizeTick]);
+  }, [parentInfos, parentActivities, stabilizeTick, lang]);
 
   const prevConfirmedRef = useRef<Record<string, ParentStatus>>({});
   useEffect(() => {
@@ -1180,61 +1184,48 @@ function HomeScreen({
     }
   }, [newStatusResults, familyCode, parentInfos, parentActivities, lang]);
 
+  const USE_NEW_STATUS_UI = STATUS_FLAG_USE_NEW;
+
   const getParentStatusNew = useCallback((deviceId: string, name: string) => {
     const key = deviceId || name;
     const newResult = newStatusResults[key] ?? null;
 
-    if (STATUS_FLAG_USE_NEW && newResult) {
-      const status: ParentStatus = newResult.status;
-      const color = getNewStatusColor(status);
-      const badgeBg = getNewStatusBadgeBg(status);
-      const label = getNewStatusLabel(status, lang as "ko" | "en" | "ja");
-      const summaryText = newResult.summaryText || getStatusSummaryText(status, lang as "ko" | "en" | "ja");
-      const actions = getPrimaryActions(status);
-      const isDanger = status === "DANGER" || status === "CRITICAL" || status === "SIGNAL_LOST";
-      return {
-        level: (status === "SAFE" ? "good" : status === "CHECK" ? "warn" : "alert") as "good" | "warn" | "alert" | "none",
-        color,
-        badgeBg,
-        badgeLabel: label,
-        msg: { title: summaryText, sub: "" },
-        minsAgo: newResult.inactiveMinutes,
-        isActive: status === "SAFE",
-        engineResult: null,
-        newStatus: status,
-        newResult,
-        actions,
-        isDanger,
-      };
-    }
+    const newStatus: ParentStatus | null = newResult?.confirmedStatus ?? null;
+    const fallbackOldStatus: ParentStatus = (() => {
+      const found = parentStatusResults.find(
+        (r: ParentStatusInfo) => r.deviceId === deviceId || r.parentName === name
+      );
+      if (!found) return "SAFE";
+      const levelMap: Record<string, ParentStatus> = { SAFE: "SAFE", CHECK: "CHECK", DANGER: "DANGER" };
+      return levelMap[found.result.level] ?? "SAFE";
+    })();
 
-    // old status fallback
-    const found = parentStatusResults.find(
-      (r: ParentStatusInfo) => r.deviceId === deviceId || r.parentName === name
-    );
-    if (!found) {
-      return { level: "none" as const, color: DS.textTertiary, badgeBg: "rgba(0,0,0,0.06)", badgeLabel: "", msg: { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub }, minsAgo: null, isActive: false, engineResult: null, newStatus: null as ParentStatus | null, newResult: null as EvaluateResult | null, actions: getPrimaryActions("SAFE"), isDanger: false };
-    }
-    const r = found.result;
-    const minsAgo = Math.floor((Date.now() - r.lastActiveAt) / 60000);
-    const levelMap: Record<string, "good" | "warn" | "alert"> = { SAFE: "good", CHECK: "warn", DANGER: "alert" };
-    const level = levelMap[r.level] || "none";
-    const colorMap = { good: DS.success, warn: DS.warning, alert: DS.danger, none: DS.textTertiary };
+    const finalStatus: ParentStatus = USE_NEW_STATUS_UI
+      ? (newStatus ?? fallbackOldStatus)
+      : fallbackOldStatus;
+
+    const color = getNewStatusColor(finalStatus);
+    const badgeBg = getNewStatusBadgeBg(finalStatus);
+    const label = getNewStatusLabel(finalStatus, lang as "ko" | "en" | "ja");
+    const summaryText = getStatusSummaryText(finalStatus, lang as "ko" | "en" | "ja");
+    const actions = getPrimaryActions(finalStatus);
+    const isDanger = finalStatus === "DANGER" || finalStatus === "CRITICAL" || finalStatus === "SIGNAL_LOST";
+
     return {
-      level: level as "good" | "warn" | "alert" | "none",
-      color: colorMap[level],
-      badgeBg: "rgba(0,0,0,0.06)",
-      badgeLabel: "",
-      msg: { title: r.message, sub: "" },
-      minsAgo,
-      isActive: level === "good",
-      engineResult: r,
-      newStatus: null as ParentStatus | null,
-      newResult: null as EvaluateResult | null,
-      actions: getPrimaryActions("SAFE"),
-      isDanger: false,
+      level: (finalStatus === "SAFE" ? "good" : finalStatus === "CHECK" ? "warn" : "alert") as "good" | "warn" | "alert" | "none",
+      color,
+      badgeBg,
+      badgeLabel: label,
+      msg: { title: summaryText, sub: "" },
+      minsAgo: newResult?.inactiveMinutes ?? null,
+      isActive: finalStatus === "SAFE",
+      newStatus: finalStatus,
+      newResult,
+      actions,
+      isDanger,
+      finalStatus,
     };
-  }, [parentStatusResults, newStatusResults, t, lang]);
+  }, [parentStatusResults, newStatusResults, lang, USE_NEW_STATUS_UI]);
 
   const prevStatusRef = useRef<Record<string, string>>({});
   useEffect(() => {
@@ -1422,9 +1413,10 @@ function HomeScreen({
     >
       {/* ── Summary Bar ── */}
       {(() => {
+        const needsAttentionStatuses: ParentStatus[] = ["CHECK", "DANGER", "CRITICAL", "SIGNAL_LOST"];
         const dangerCount = parentActivityStats.filter(ps => {
           const st = getParentStatusNew(ps.deviceId, ps.name);
-          return st.level === "alert" || st.level === "none";
+          return needsAttentionStatuses.includes(st.finalStatus);
         }).length;
 
         let detailLine = "";
@@ -1438,7 +1430,7 @@ function HomeScreen({
             const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
             const label = getParentLocationLabel(
               currentLoc, parentPlaces,
-              loc?.locationLabel === "이동중" ? (t.cardMoving as string) : "",
+              (loc as any)?.locationLabel === "이동중" ? (t.cardMoving as string) : "",
               lang as "ko" | "en" | "ja",
             );
             if (label) snippets.push(`${ps.name}: ${label}`);
@@ -1478,36 +1470,17 @@ function HomeScreen({
 
         const getLocationText = (ps: typeof parentActivityStats[0]) => {
           const st = getParentStatusNew(ps.deviceId, ps.name);
-
-          if (st.newStatus && STATUS_FLAG_USE_NEW) {
-            const statusText = st.msg.title || getStatusSummaryText(st.newStatus, lang as "ko" | "en" | "ja");
-
-            const loc = ps.loc;
-            const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
-            const currentLoc = (loc?.latitude != null && loc?.longitude != null)
-              ? { latitude: loc.latitude, longitude: loc.longitude }
-              : null;
-            const placeLabel = getParentLocationLabel(currentLoc, parentPlaces, "", lang as "ko" | "en" | "ja");
-
-            if (placeLabel && st.newStatus === "SAFE") return placeLabel;
-            if (placeLabel && (st.newStatus === "CHECK" || st.newStatus === "DANGER")) return `${placeLabel} · ${statusText}`;
-            return statusText;
-          }
-
-          if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
+          const statusText = st.msg.title;
           const loc = ps.loc;
-          const fallback = st.engineResult
-            ? st.msg.title
-            : loc?.locationLabel === "이동중"
-              ? (t.cardMoving as string)
-              : loc?.locationLabel
-                ? (t.cardLocationAt as string).replace("{place}", loc.locationLabel)
-                : st.msg.title;
           const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
           const currentLoc = (loc?.latitude != null && loc?.longitude != null)
             ? { latitude: loc.latitude, longitude: loc.longitude }
             : null;
-          return getParentLocationLabel(currentLoc, parentPlaces, fallback, lang as "ko" | "en" | "ja");
+          const placeLabel = getParentLocationLabel(currentLoc, parentPlaces, "", lang as "ko" | "en" | "ja");
+
+          if (placeLabel && st.finalStatus === "SAFE") return placeLabel;
+          if (placeLabel && (st.finalStatus === "CHECK" || st.finalStatus === "DANGER")) return `${placeLabel} · ${statusText}`;
+          return statusText;
         };
 
         const getLastActivityText = (ps: typeof parentActivityStats[0]) => {
@@ -1591,26 +1564,19 @@ function HomeScreen({
       {/* ── Status Debug Cards (dev only) ── */}
       {__DEV__ && parentInfos.map((p, i) => {
         const st = getParentStatusNew(p.deviceId, p.name);
-        const myActs = parentActivities.filter(
-          a => a.parentName === p.name || a.deviceId === p.deviceId
-        );
-        const latestActTime = myActs.length > 0
-          ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
-          : null;
-        const locTime = p.loc?.updatedAt ? new Date(p.loc.updatedAt).getTime() : null;
-
         const nsResult = newStatusResults[p.deviceId || p.name];
         return (
           <StatusDebugCard
             key={`debug-${p.deviceId || i}`}
-            oldStatus={st.level === "good" ? "SAFE" : st.level === "warn" ? "CHECK" : st.level === "alert" ? "DANGER" : "NONE"}
             parentName={p.name}
-            lastAppActivityAt={latestActTime}
-            lastLocationAt={locTime}
-            lastHeartbeatAt={locTime}
+            computedStatus={nsResult?.computedStatus ?? "—"}
+            confirmedStatus={nsResult?.confirmedStatus ?? "—"}
+            finalStatus={st.finalStatus}
+            lastAppActivityAt={nsResult?.latestActTime ?? null}
+            lastLocationAt={nsResult?.locTime ?? null}
+            lastHeartbeatAt={nsResult?.locTime ?? null}
             batteryLevel={null}
             isOnline={null}
-            confirmedStatus={nsResult?.confirmedStatus}
             pendingStatus={nsResult?.pendingStatus}
             pendingSince={nsResult?.pendingSince}
           />
@@ -1629,7 +1595,7 @@ function HomeScreen({
         const todayTouch = todayActs.filter(a => a.activityType === "app_open" || a.activityType === "view_slide" || a.activityType === "heart").length;
         const allParentsAlert = parentActivityStats.length > 0 && parentActivityStats.every(ps => {
           const st = getParentStatusNew(ps.deviceId, ps.name);
-          return st.level === "alert" || st.level === "none";
+          return st.finalStatus !== "SAFE";
         });
         const level = isNight ? "sleep" : allParentsAlert ? "alert" : (todayLoc >= 2 && todayTouch >= 3) ? "safe" : (totalActs > 0) ? "quiet" : "check";
         const emoji = level === "sleep" ? "🌙" : level === "safe" ? "☀️" : level === "quiet" ? "🌤️" : level === "alert" ? "🚨" : "💌";

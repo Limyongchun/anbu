@@ -130,15 +130,17 @@ Expo React Native app called A N B U. Korean family safety app.
   - **평상시 (safe/quiet/check/sleep)**: border tracer 없음, 붉은 라인 없음
   - 오늘 날짜 활동만 집계 (`todayStr` 필터), 과거 기록은 레벨 판정에 포함하지 않음
   - 랜덤 문구: `anbuCheckMessages` (check, 30개) / `anbuAlertMessages` (alert, 30개) — ko/en/ja 각각
-- **Status Engine**: `lib/status/` — 2-phase status computation (candidate → confirmed) with configurable waiting times
-  - `statusTypes.ts`: StatusLevel (SAFE/CHECK_CANDIDATE/CHECK/DANGER_CANDIDATE/DANGER), PlaceType, ParentSignals, ScheduleConfig
-  - `statusConfig.ts`: Default timing constants (activityUiDelay=2m, placeEnterDelay=3m, checkNeedDelay=20m, dangerDelay=40m, sleepApplyDelay=30m, wakeCheckDelay=60m)
-  - `statusEngine.ts`: Core computation — resolvePlace (GPS jitter protection via candidate place), computeRawStatus (time-based + sleep/wake), promoteStatus (candidate → confirmed with waiting)
-  - `statusMessages.ts`: Localized messages (ko/en/ja) for each status level + place + sleep state
-  - `useParentStatus.ts`: React hook `useParentStatusEngine(lang)` — manages per-parent signal state, computes all parent statuses from parentInfos + activities
-  - **Status escalation**: SAFE → CHECK_CANDIDATE (20m wait) → CHECK → DANGER_CANDIDATE (40m wait) → DANGER; never skips steps
-  - **Notifications**: Only on confirmed status changes (CHECK, DANGER); never on candidate states
-  - **Sleep/wake logic**: Child sets wake/sleep hours; sleep applies 30m after set time; wake check after 1h inactivity post-wake
+- **Status Engine (New)**: `features/status/` — unified status system with stabilizer
+  - `types.ts`: ParentStatus (SAFE/CHECK/DANGER/CRITICAL/SIGNAL_LOST), EvaluateInput/Result
+  - `evaluateParentStatus.ts`: Core evaluation — inactive minutes, signal lost minutes, wake delay; thresholds CHECK≥180m, DANGER≥360m, CRITICAL≥720m, SIGNAL_CRITICAL≥720m; SIGNAL_LOST 10-minute buffer (if lastAppActivity or lastHeartbeat within 10m, suppress SIGNAL_LOST); sleep window (22:00–07:00) overrides to SAFE except CRITICAL/SIGNAL_LOST
+  - `stabilizer.ts`: Delays status transitions — SAFE 5m, CHECK 10m, DANGER 20m, CRITICAL 10m+2 repeat confirmations; prevents flapping between states
+  - `statusDisplay.ts`: `STATUS_FLAG_USE_NEW` toggle (true=new engine, false=rollback); color/badge/label/summary mapping functions for all 5 statuses; `getPrimaryActions()` for contextual action buttons
+  - `StatusDebugCard.tsx`: Debug overlay (dev only) showing computed→confirmed→final status pipeline, app/heartbeat/online timestamps, mock presets
+  - `statusLogService.ts`: Persists status transitions to AsyncStorage
+  - `notificationService.ts`: Push notifications on confirmed status changes
+  - **Unified finalStatus**: `child.tsx` computes single `finalStatus` from `confirmedStatus` (stabilizer output); badge, body text, summary bar, interpretation card ALL derive from the same `finalStatus` — no divergence possible
+  - **Summary bar**: Counts CHECK/DANGER/CRITICAL/SIGNAL_LOST as "needs attention"; only SAFE excluded
+  - `useParentStatus.ts` (legacy): React hook `useParentStatusEngine(lang)` — old 2-phase system, used as fallback when `STATUS_FLAG_USE_NEW=false`
   - **DB tables**: `status_change_logs` (status transition history), `parent_schedule` (wake/sleep hours per parent)
   - **API endpoints**: `GET/PUT /api/family/:code/schedule/:deviceId`, `POST /api/family/:code/status-log`, `GET /api/family/:code/status-logs`
 - **Inquiry System**: `app/inquiry.tsx` — form screen (name, email, subject, content) with success state; profile "이메일 문의" button routes to inquiry screen; `POST /api/inquiry` persists to `inquiriesTable`; DB: `inquiriesTable` (userId, userName, userEmail, title, content, reply, repliedAt)
