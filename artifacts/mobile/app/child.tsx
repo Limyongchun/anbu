@@ -39,6 +39,10 @@ import { getParentLocationLabel } from "@/features/home/utils/getParentLocationL
 import { recordLocation, detectFrequentPlaces, type PlaceSuggestion } from "@/features/places/frequentDetector";
 import PlaceSuggestionBanner from "@/features/places/components/PlaceSuggestionBanner";
 import { StatusDebugCard } from "@/features/status/StatusDebugCard";
+import { evaluateParentStatus } from "@/features/status/evaluateParentStatus";
+import { STATUS_FLAG_USE_NEW, getStatusLabel as getNewStatusLabel, getStatusColor as getNewStatusColor, getStatusBadgeBg as getNewStatusBadgeBg, getStatusSummaryText, getPrimaryActions } from "@/features/status/statusDisplay";
+import { DAY_START_HOUR, NIGHT_START_HOUR } from "@/features/status/constants";
+import type { ParentStatus, EvaluateResult } from "@/features/status/types";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -1080,12 +1084,67 @@ function HomeScreen({
     return statusEngine.computeAll(parentInfos, parentActivities);
   }, [parentInfos, parentActivities, statusEngine]);
 
+  const newStatusResults = useMemo(() => {
+    const now = Date.now();
+    const map: Record<string, EvaluateResult> = {};
+    parentInfos.forEach(p => {
+      const key = p.deviceId || p.name;
+      const myActs = parentActivities.filter(
+        a => a.parentName === p.name || a.deviceId === p.deviceId
+      );
+      const latestActTime = myActs.length > 0
+        ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
+        : null;
+      const locTime = p.loc?.updatedAt ? new Date(p.loc.updatedAt).getTime() : null;
+      map[key] = evaluateParentStatus({
+        now,
+        lastAppActivityAt: latestActTime,
+        lastLocationAt: locTime,
+        lastHeartbeatAt: locTime,
+        batteryLevel: null,
+        isOnline: null,
+        sleepStart: NIGHT_START_HOUR,
+        sleepEnd: DAY_START_HOUR,
+        expectedWakeTime: DAY_START_HOUR,
+      });
+    });
+    return map;
+  }, [parentInfos, parentActivities]);
+
   const getParentStatusNew = useCallback((deviceId: string, name: string) => {
+    const key = deviceId || name;
+    const newResult = newStatusResults[key] ?? null;
+
+    if (STATUS_FLAG_USE_NEW && newResult) {
+      const status: ParentStatus = newResult.status;
+      const color = getNewStatusColor(status);
+      const badgeBg = getNewStatusBadgeBg(status);
+      const label = getNewStatusLabel(status, lang as "ko" | "en" | "ja");
+      const summaryText = newResult.summaryText || getStatusSummaryText(status, lang as "ko" | "en" | "ja");
+      const actions = getPrimaryActions(status);
+      const isDanger = status === "DANGER" || status === "CRITICAL" || status === "SIGNAL_LOST";
+      return {
+        level: (status === "SAFE" ? "good" : status === "CHECK" ? "warn" : "alert") as "good" | "warn" | "alert" | "none",
+        color,
+        badgeBg,
+        badgeLabel: label,
+        msg: { title: summaryText, sub: "" },
+        minsAgo: newResult.inactiveMinutes,
+        isActive: status === "SAFE",
+        engineResult: null,
+        newStatus: status,
+        newResult,
+        actions,
+        isDanger,
+      };
+    }
+
+    // old status fallback
     const found = parentStatusResults.find(
       (r: ParentStatusInfo) => r.deviceId === deviceId || r.parentName === name
     );
     if (!found) {
-      return { level: "none" as const, color: DS.textTertiary, msg: { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub }, minsAgo: null, isActive: false, engineResult: null };
+      return { level: "none" as const, color: DS.textTertiary, badgeBg: "rgba(0,0,0,0.06)", badgeLabel: "", msg: { title: t.statusMsgNoneTitle, sub: t.statusMsgNoneSub }, minsAgo: null, isActive: false, engineResult: null, newStatus: null as ParentStatus | null, newResult: null as EvaluateResult | null, actions: getPrimaryActions("SAFE"), isDanger: false };
     }
     const r = found.result;
     const minsAgo = Math.floor((Date.now() - r.lastActiveAt) / 60000);
@@ -1095,12 +1154,18 @@ function HomeScreen({
     return {
       level: level as "good" | "warn" | "alert" | "none",
       color: colorMap[level],
+      badgeBg: "rgba(0,0,0,0.06)",
+      badgeLabel: "",
       msg: { title: r.message, sub: "" },
       minsAgo,
       isActive: level === "good",
       engineResult: r,
+      newStatus: null as ParentStatus | null,
+      newResult: null as EvaluateResult | null,
+      actions: getPrimaryActions("SAFE"),
+      isDanger: false,
     };
-  }, [parentStatusResults, t]);
+  }, [parentStatusResults, newStatusResults, t, lang]);
 
   const prevStatusRef = useRef<Record<string, string>>({});
   useEffect(() => {
@@ -1342,17 +1407,25 @@ function HomeScreen({
           return (statusPriority[sa] ?? 2) - (statusPriority[sb] ?? 2);
         });
 
-        const getCardStatus = (ps: typeof parentActivityStats[0]) => {
-          const st = getParentStatusNew(ps.deviceId, ps.name);
-          if (st.level === "good") return "safe" as const;
-          if (st.level === "warn") return "warning" as const;
-          return "danger" as const;
-        };
-
         const getLocationText = (ps: typeof parentActivityStats[0]) => {
           const st = getParentStatusNew(ps.deviceId, ps.name);
-          if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
 
+          if (st.newStatus && STATUS_FLAG_USE_NEW) {
+            const statusText = st.msg.title || getStatusSummaryText(st.newStatus, lang as "ko" | "en" | "ja");
+
+            const loc = ps.loc;
+            const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
+            const currentLoc = (loc?.latitude != null && loc?.longitude != null)
+              ? { latitude: loc.latitude, longitude: loc.longitude }
+              : null;
+            const placeLabel = getParentLocationLabel(currentLoc, parentPlaces, "", lang as "ko" | "en" | "ja");
+
+            if (placeLabel && st.newStatus === "SAFE") return placeLabel;
+            if (placeLabel && (st.newStatus === "CHECK" || st.newStatus === "DANGER")) return `${placeLabel} · ${statusText}`;
+            return statusText;
+          }
+
+          if (st.level === "alert" || st.level === "none") return t.cardNeedCheck as string;
           const loc = ps.loc;
           const fallback = st.engineResult
             ? st.msg.title
@@ -1361,12 +1434,10 @@ function HomeScreen({
               : loc?.locationLabel
                 ? (t.cardLocationAt as string).replace("{place}", loc.locationLabel)
                 : st.msg.title;
-
           const parentPlaces = homePlaces.filter(p => p.parentId === ps.deviceId);
           const currentLoc = (loc?.latitude != null && loc?.longitude != null)
             ? { latitude: loc.latitude, longitude: loc.longitude }
             : null;
-
           return getParentLocationLabel(currentLoc, parentPlaces, fallback, lang as "ko" | "en" | "ja");
         };
 
@@ -1378,14 +1449,34 @@ function HomeScreen({
           return (t.cardLastActivity as string).replace("{time}", `${hrs}시간`);
         };
 
-        const statusColors = { safe: "#4CAF50", warning: "#FFC107", danger: "#F44336" };
-        const statusLabels = { safe: t.cardStatusSafe, warning: t.cardStatusWarning, danger: t.cardStatusDanger };
-        const statusBadgeBg = { safe: "rgba(76,175,80,0.12)", warning: "rgba(255,193,7,0.15)", danger: "rgba(244,67,54,0.12)" };
+        const handleAction = (actionType: string, ps: typeof parentActivityStats[0]) => {
+          switch (actionType) {
+            case "call":
+              Linking.openURL("tel:");
+              break;
+            case "location":
+            case "last_location":
+              onGoToMap(ps.deviceId);
+              break;
+            case "message":
+              onGoToAnbu();
+              break;
+            case "connection_check":
+              onGoToMap(ps.deviceId);
+              break;
+            default:
+              onGoToMap(ps.deviceId);
+          }
+        };
 
         return sorted.map((ps, i) => {
-          const cardStatus = getCardStatus(ps);
+          const st = getParentStatusNew(ps.deviceId, ps.name);
           const parent = parentInfos.find(p => p.deviceId === ps.deviceId || p.name === ps.name);
-          const isDanger = cardStatus === "danger";
+          const cardColor = st.color;
+          const cardBadgeBg = st.badgeBg || "rgba(0,0,0,0.06)";
+          const cardLabel = st.badgeLabel || (st.level === "good" ? t.cardStatusSafe : st.level === "warn" ? t.cardStatusWarning : t.cardStatusDanger);
+          const isDanger = st.isDanger;
+          const actions = st.actions;
 
           const cardBorder = isDanger ? {
             shadowColor: "#F44336",
@@ -1395,7 +1486,7 @@ function HomeScreen({
           const CardContainer = isDanger ? Animated.View : View;
 
           return (
-            <CardContainer key={ps.deviceId || i} style={[hm.parentCard, { borderLeftColor: statusColors[cardStatus] }, cardBorder]}>
+            <CardContainer key={ps.deviceId || i} style={[hm.parentCard, { borderLeftColor: cardColor }, cardBorder]}>
               <View style={hm.parentCardInner}>
                 {parent?.photo ? (
                   <Image source={{ uri: parent.photo }} style={hm.parentCardAvatar} />
@@ -1407,21 +1498,20 @@ function HomeScreen({
                 <View style={hm.parentCardTextBox}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Text style={hm.parentCardName} numberOfLines={1}>{ps.name}</Text>
-                    <View style={[hm.parentCardBadge, { backgroundColor: statusBadgeBg[cardStatus] }]}>
-                      <View style={[hm.parentCardBadgeDot, { backgroundColor: statusColors[cardStatus] }]} />
-                      <Text style={[hm.parentCardBadgeText, { color: statusColors[cardStatus] }]}>{statusLabels[cardStatus]}</Text>
+                    <View style={[hm.parentCardBadge, { backgroundColor: cardBadgeBg }]}>
+                      <View style={[hm.parentCardBadgeDot, { backgroundColor: cardColor }]} />
+                      <Text style={[hm.parentCardBadgeText, { color: cardColor }]}>{cardLabel}</Text>
                     </View>
                   </View>
                   <Text style={hm.parentCardMainText}>{getLocationText(ps)}</Text>
                   <Text style={hm.parentCardSubText}>{getLastActivityText(ps)}</Text>
                 </View>
                 <View style={hm.parentCardActions}>
-                  <Pressable style={hm.parentCardActionBtn} onPress={() => { if (parent?.deviceId) Linking.openURL(`tel:`); }}>
-                    <Ionicons name="call-outline" size={20} color={DS.brand} />
-                  </Pressable>
-                  <Pressable style={hm.parentCardActionBtn} onPress={() => onGoToMap(ps.deviceId)}>
-                    <Ionicons name="location-outline" size={20} color={DS.info} />
-                  </Pressable>
+                  {actions.slice(0, 2).map(act => (
+                    <Pressable key={act.type} style={hm.parentCardActionBtn} onPress={() => handleAction(act.type, ps)}>
+                      <Ionicons name={act.icon as any} size={20} color={act.priority === 1 && isDanger ? DS.danger : DS.brand} />
+                    </Pressable>
+                  ))}
                 </View>
               </View>
             </CardContainer>
@@ -1429,8 +1519,8 @@ function HomeScreen({
         });
       })()}
 
-      {/* ── Status Debug Cards ── */}
-      {parentInfos.map((p, i) => {
+      {/* ── Status Debug Cards (dev only) ── */}
+      {__DEV__ && parentInfos.map((p, i) => {
         const st = getParentStatusNew(p.deviceId, p.name);
         const myActs = parentActivities.filter(
           a => a.parentName === p.name || a.deviceId === p.deviceId
