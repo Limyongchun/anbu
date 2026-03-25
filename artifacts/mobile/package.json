@@ -60,6 +60,7 @@
     "expo-build-properties": "^55.0.9",
     "expo-camera": "^55.0.10",
     "expo-clipboard": "^55.0.8",
+    "expo-notifications": "^55.0.13",
     "expo-task-manager": "^14.0.9",
     "react-native-webview": "^13.16.1"
   }

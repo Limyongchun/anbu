@@ -45,6 +45,7 @@ import { DAY_START_HOUR, NIGHT_START_HOUR } from "@/features/status/constants";
 import type { ParentStatus, EvaluateResult } from "@/features/status/types";
 import { stabilize, createStabilizerState, type StabilizerState } from "@/features/status/stabilizer";
 import { saveParentStatusLog } from "@/features/status/statusLogService";
+import { sendStatusNotification } from "@/features/status/notificationService";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -1166,11 +1167,18 @@ function HomeScreen({
             lastLocationAt: locTime,
             lastHeartbeatAt: locTime,
           });
+          sendStatusNotification(
+            info?.deviceId ?? key,
+            info?.name ?? key,
+            prev,
+            next,
+            lang as "ko" | "en" | "ja"
+          );
         } catch (_) {}
       }
       prevConfirmedRef.current[key] = next;
     }
-  }, [newStatusResults, familyCode, parentInfos, parentActivities]);
+  }, [newStatusResults, familyCode, parentInfos, parentActivities, lang]);
 
   const getParentStatusNew = useCallback((deviceId: string, name: string) => {
     const key = deviceId || name;
