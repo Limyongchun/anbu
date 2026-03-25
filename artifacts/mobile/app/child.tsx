@@ -1183,6 +1183,7 @@ function HomeScreen({
   }, [newStatusResults, familyCode, parentInfos, parentActivities, lang]);
 
   const USE_NEW_STATUS_UI = STATUS_FLAG_USE_NEW;
+  const SHOW_DEBUG_STATUS = __DEV__;
 
   const getParentStatusNew = useCallback((deviceId: string, name: string) => {
     const key = deviceId || name;
@@ -1560,7 +1561,7 @@ function HomeScreen({
       })()}
 
       {/* ── Status Debug Cards (dev only) ── */}
-      {__DEV__ && parentInfos.map((p, i) => {
+      {SHOW_DEBUG_STATUS && parentInfos.map((p, i) => {
         const st = getParentStatusNew(p.deviceId, p.name);
         const nsResult = newStatusResults[p.deviceId || p.name];
         return (
