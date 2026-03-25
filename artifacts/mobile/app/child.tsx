@@ -1107,13 +1107,18 @@ function HomeScreen({
         ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
         : null;
       const locTime = p.loc?.updatedAt ? new Date(p.loc.updatedAt).getTime() : null;
+
+      const connectionSignals = [locTime, latestActTime].filter((v): v is number => v != null);
+      const heartbeatTime = connectionSignals.length > 0 ? Math.max(...connectionSignals) : null;
+      const isOnline = heartbeatTime != null && (now - heartbeatTime) < 10 * 60_000;
+
       const raw = evaluateParentStatus({
         now,
         lastAppActivityAt: latestActTime,
         lastLocationAt: locTime,
-        lastHeartbeatAt: locTime,
+        lastHeartbeatAt: heartbeatTime,
         batteryLevel: null,
-        isOnline: null,
+        isOnline,
         sleepStart: NIGHT_START_HOUR,
         sleepEnd: DAY_START_HOUR,
         expectedWakeTime: DAY_START_HOUR,
@@ -1149,13 +1154,6 @@ function HomeScreen({
       const next = result.confirmedStatus;
       if (prev != null && prev !== next) {
         const info = parentInfos.find(p => (p.deviceId || p.name) === key);
-        const myActs = parentActivities.filter(
-          a => a.parentName === info?.name || a.deviceId === info?.deviceId
-        );
-        const latestActTime = myActs.length > 0
-          ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
-          : null;
-        const locTime = info?.loc?.updatedAt ? new Date(info.loc.updatedAt).getTime() : null;
         try {
           saveParentStatusLog({
             parentId: info?.deviceId ?? key,
@@ -1167,9 +1165,9 @@ function HomeScreen({
             inactiveMinutes: result.inactiveMinutes,
             signalLostMinutes: result.signalLostMinutes,
             wakeDelayMinutes: result.wakeDelayMinutes,
-            lastAppActivityAt: latestActTime,
-            lastLocationAt: locTime,
-            lastHeartbeatAt: locTime,
+            lastAppActivityAt: result.latestActTime,
+            lastLocationAt: result.locTime,
+            lastHeartbeatAt: Math.max(result.latestActTime ?? 0, result.locTime ?? 0) || null,
           });
           sendStatusNotification(
             info?.deviceId ?? key,
