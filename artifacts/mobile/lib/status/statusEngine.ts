@@ -1,3 +1,10 @@
+// ===== OLD STATUS LOGIC =====
+// This entire file is the old status engine.
+// New status engine: features/status/evaluateParentStatus.ts
+// This file is kept for backward compatibility during migration.
+// Do not add new logic here. See features/status/ for the new engine.
+// =============================
+
 import type {
   StatusLevel,
   ConfirmedStatus,

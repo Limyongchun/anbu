@@ -1,0 +1,17 @@
+export const DAY_START_HOUR = 7;
+export const NIGHT_START_HOUR = 22;
+
+export const CHECK_INACTIVE_MINUTES = 180;
+export const DANGER_INACTIVE_MINUTES = 360;
+export const CRITICAL_INACTIVE_MINUTES = 720;
+
+export const WAKE_CHECK_DELAY_MINUTES = 90;
+export const WAKE_DANGER_DELAY_MINUTES = 180;
+
+export const SIGNAL_WEAK_MINUTES = 120;
+export const SIGNAL_LOST_MINUTES = 240;
+export const SIGNAL_CRITICAL_MINUTES = 720;
+
+export const CHECK_STABILIZE_MINUTES = 10;
+export const DANGER_STABILIZE_MINUTES = 20;
+export const CRITICAL_STABILIZE_MINUTES = 10;

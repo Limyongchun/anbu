@@ -1,0 +1,151 @@
+[1단계 — 상태 로직 분리 준비 작업]
+
+목표
+- 기존 상태 판단 코드를 바로 뜯어고치지 말고, 먼저 “새 상태 판단 엔진”을 별도 파일로 분리한다.
+- 지금 화면에 붙어 있는 기존 로직은 일단 유지한다.
+- 새 파일에서만 계산 테스트를 먼저 한다.
+- 이 단계에서는 UI를 거의 건드리지 않는다.
+
+중요 원칙
+- 한 번에 홈화면, 부모카드, 푸시, DB 저장까지 다 바꾸지 마라.
+- 먼저 “계산만 정확히 되는 함수”를 만든다.
+- 기존 코드에 바로 덮어쓰기 하지 마라.
+- 기존 로직과 새 로직을 병행 비교할 수 있게 만든다.
+
+작업 지시
+
+1. 상태 계산 전용 폴더를 새로 만든다.
+- 예시:
+  /src/features/status/
+  /src/features/status/constants.ts
+  /src/features/status/types.ts
+  /src/features/status/timeUtils.ts
+  /src/features/status/evaluateParentStatus.ts
+
+2. 기존 홈 화면 파일 안에 들어 있는 상태 판단 코드를 찾는다.
+- lastActiveAt 기준으로 SAFE / CHECK / DANGER를 바로 바꾸는 코드를 찾는다.
+- 그 코드는 삭제하지 말고 주석으로 “old status logic” 표시만 남긴다.
+- 아직 기존 화면 연결은 유지한다.
+
+3. types.ts에 상태 타입을 먼저 만든다.
+- 상태는 아래만 사용한다.
+  SAFE
+  CHECK
+  DANGER
+  CRITICAL
+  SIGNAL_LOST
+
+- reason 타입도 만든다.
+  normal
+  inactive
+  wake_delay
+  signal_lost
+  sleeping
+  battery_low
+
+- 반환 타입도 만든다.
+  {
+    status,
+    reason,
+    inactiveMinutes,
+    signalLostMinutes,
+    wakeDelayMinutes,
+    isSleeping,
+    summaryText
+  }
+
+4. constants.ts에 숫자값을 하드코딩하지 말고 상수로 분리한다.
+- DAY_START_HOUR = 7
+- NIGHT_START_HOUR = 22
+- CHECK_INACTIVE_MINUTES = 180
+- DANGER_INACTIVE_MINUTES = 360
+- CRITICAL_INACTIVE_MINUTES = 720
+- WAKE_CHECK_DELAY_MINUTES = 90
+- WAKE_DANGER_DELAY_MINUTES = 180
+- SIGNAL_WEAK_MINUTES = 120
+- SIGNAL_LOST_MINUTES = 240
+- SIGNAL_CRITICAL_MINUTES = 720
+- CHECK_STABILIZE_MINUTES = 10
+- DANGER_STABILIZE_MINUTES = 20
+- CRITICAL_STABILIZE_MINUTES = 10
+
+5. timeUtils.ts를 만든다.
+- 여기에는 순수 시간 계산 함수만 넣는다.
+- 예:
+  getNow()
+  diffMinutes(dateA, dateB)
+  isWithinSleepWindow(now, sleepStart, sleepEnd)
+  getExpectedWakeDate(now, expectedWakeTime)
+  safeParseDate(value)
+
+6. evaluateParentStatus.ts를 만든다.
+- 이 파일은 UI import 금지
+- React hook 사용 금지
+- navigation 사용 금지
+- Alert 사용 금지
+- fetch 호출 금지
+- DB 저장 금지
+- 오직 입력값을 받아 결과만 반환하는 순수 함수로 만든다.
+
+7. evaluateParentStatus 입력 구조를 단순하게 만든다.
+- 아래 데이터만 받도록 한다.
+  {
+    now,
+    lastAppActivityAt,
+    lastLocationAt,
+    lastHeartbeatAt,
+    batteryLevel,
+    isOnline,
+    sleepStart,
+    sleepEnd,
+    expectedWakeTime
+  }
+
+8. 아직 장소 로직은 넣지 마라.
+- placeEnterDelayMs
+- movingDelayMs
+- farPlaceConfirmDelayMs
+이 부분은 3단계에서 붙인다.
+- 지금 1단계에서는 활동 / 신호 / 수면만 계산한다.
+
+9. evaluateParentStatus 함수 내부 규칙
+- 먼저 now 파싱
+- 모든 시간값 safeParseDate 적용
+- 날짜가 없으면 null 처리
+- inactiveMinutes 계산
+  = lastAppActivityAt 기준
+- signalLostMinutes 계산
+  = lastLocationAt 과 lastHeartbeatAt 중 더 최근값 기준으로 계산
+- sleep 여부 계산
+- wakeDelayMinutes 계산
+- 마지막에 상태 결정
+
+10. 이 단계에서는 상태 결정 우선순위를 아래처럼 고정한다.
+- signalLostMinutes >= 720 => SIGNAL_LOST 또는 CRITICAL
+- inactiveMinutes >= 720 => CRITICAL
+- wakeDelayMinutes >= 180 => DANGER
+- inactiveMinutes >= 360 => DANGER
+- wakeDelayMinutes >= 90 => CHECK
+- inactiveMinutes >= 180 => CHECK
+- 수면 중이면 SAFE
+- 그 외 SAFE
+
+11. summaryText도 같이 반환한다.
+- SAFE => “정상 활동 중”
+- CHECK => “조용한 시간이 길어지고 있어요”
+- DANGER => “확인이 필요해요”
+- CRITICAL => “확인전화가 필요해요”
+- SIGNAL_LOST => “기기 연결 상태를 확인해주세요”
+
+12. 절대 하지 말 것
+- 홈 화면 카드 디자인까지 같이 수정하지 마라.
+- push 알림 붙이지 마라.
+- DB 저장 붙이지 마라.
+- 부모 여러 명 반복문 최적화 하지 마라.
+- 먼저 1명 기준 계산만 맞춘다.
+
+완료 기준
+- evaluateParentStatus.ts만 단독으로 import 해서 실행 가능해야 한다.
+- 입력값이 비어도 앱이 죽지 않아야 한다.
+- null 값이 들어와도 SAFE 또는 SIGNAL_LOST로 안전하게 반환되어야 한다.
+- red screen error가 없어야 한다.
