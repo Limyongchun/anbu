@@ -92,7 +92,20 @@ export function getPrimaryActions(status: ParentStatus): StatusAction[] {
   }
 }
 
-export function getStatusSummaryText(status: ParentStatus, lang: "ko" | "en" | "ja" = "ko"): string {
+export function getStatusSummaryText(
+  status: ParentStatus,
+  lang: "ko" | "en" | "ja" = "ko",
+  options?: { batteryLevel?: number | null }
+): string {
+  if (options?.batteryLevel != null && options.batteryLevel <= 3 && options.batteryLevel >= 0) {
+    const lowBattery: Record<string, string> = {
+      ko: "배터리가 거의 없어요 — 곧 꺼질 수 있어요",
+      en: "Battery almost empty — device may turn off soon",
+      ja: "バッテリーがほぼありません — まもなく電源が切れる可能性があります",
+    };
+    return lowBattery[lang] ?? lowBattery.ko;
+  }
+
   const texts: Record<string, Record<ParentStatus, string>> = {
     ko: {
       SAFE: "정상 활동 중",

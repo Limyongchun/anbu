@@ -81,6 +81,9 @@ interface StatusDebugCardProps {
   lastHeartbeatAt: number | string | null | undefined;
   batteryLevel: number | null | undefined;
   isOnline: boolean | null | undefined;
+  confirmedStatus?: string;
+  pendingStatus?: string | null;
+  pendingSince?: number | null;
 }
 
 export function StatusDebugCard({
@@ -91,6 +94,9 @@ export function StatusDebugCard({
   lastHeartbeatAt,
   batteryLevel,
   isOnline,
+  confirmedStatus: confirmedStatusProp,
+  pendingStatus: pendingStatusProp,
+  pendingSince: pendingSinceProp,
 }: StatusDebugCardProps) {
   const [mockOverride, setMockOverride] = useState<Partial<EvaluateInput> | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -149,6 +155,10 @@ export function StatusDebugCard({
       </View>
 
       <View style={s.detailsBox}>
+        <DetailRow label="Computed" value={newResult.status} />
+        <DetailRow label="Confirmed" value={confirmedStatusProp ?? newResult.status} />
+        <DetailRow label="Pending" value={pendingStatusProp ?? "—"} />
+        <DetailRow label="Pending Since" value={pendingSinceProp ? `${Math.floor((Date.now() - pendingSinceProp) / 60000)}m ago` : "—"} />
         <DetailRow label="Reason" value={newResult.reason} />
         <DetailRow label="Inactive" value={`${newResult.inactiveMinutes}m`} />
         <DetailRow label="Signal Lost" value={`${newResult.signalLostMinutes}m`} />

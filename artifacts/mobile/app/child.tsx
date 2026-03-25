@@ -43,6 +43,7 @@ import { evaluateParentStatus } from "@/features/status/evaluateParentStatus";
 import { STATUS_FLAG_USE_NEW, getStatusLabel as getNewStatusLabel, getStatusColor as getNewStatusColor, getStatusBadgeBg as getNewStatusBadgeBg, getStatusSummaryText, getPrimaryActions } from "@/features/status/statusDisplay";
 import { DAY_START_HOUR, NIGHT_START_HOUR } from "@/features/status/constants";
 import type { ParentStatus, EvaluateResult } from "@/features/status/types";
+import { stabilize, createStabilizerState, type StabilizerState } from "@/features/status/stabilizer";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -1084,9 +1085,17 @@ function HomeScreen({
     return statusEngine.computeAll(parentInfos, parentActivities);
   }, [parentInfos, parentActivities, statusEngine]);
 
+  const stabilizerRef = useRef<Record<string, StabilizerState>>({});
+  const [stabilizeTick, setStabilizeTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setStabilizeTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const newStatusResults = useMemo(() => {
     const now = Date.now();
-    const map: Record<string, EvaluateResult> = {};
+    const map: Record<string, EvaluateResult & { confirmedStatus: ParentStatus; pendingStatus: ParentStatus | null; pendingSince: number | null }> = {};
     parentInfos.forEach(p => {
       const key = p.deviceId || p.name;
       const myActs = parentActivities.filter(
@@ -1096,7 +1105,7 @@ function HomeScreen({
         ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
         : null;
       const locTime = p.loc?.updatedAt ? new Date(p.loc.updatedAt).getTime() : null;
-      map[key] = evaluateParentStatus({
+      const raw = evaluateParentStatus({
         now,
         lastAppActivityAt: latestActTime,
         lastLocationAt: locTime,
@@ -1107,9 +1116,24 @@ function HomeScreen({
         sleepEnd: DAY_START_HOUR,
         expectedWakeTime: DAY_START_HOUR,
       });
+
+      if (!stabilizerRef.current[key]) {
+        stabilizerRef.current[key] = createStabilizerState(raw.status);
+      }
+      const newState = stabilize(stabilizerRef.current[key], raw.status, now);
+      stabilizerRef.current[key] = newState;
+
+      map[key] = {
+        ...raw,
+        status: newState.confirmedStatus,
+        confirmedStatus: newState.confirmedStatus,
+        pendingStatus: newState.pendingStatus,
+        pendingSince: newState.pendingSince,
+      };
     });
     return map;
-  }, [parentInfos, parentActivities]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentInfos, parentActivities, stabilizeTick]);
 
   const getParentStatusNew = useCallback((deviceId: string, name: string) => {
     const key = deviceId || name;
@@ -1530,6 +1554,7 @@ function HomeScreen({
           : null;
         const locTime = p.loc?.updatedAt ? new Date(p.loc.updatedAt).getTime() : null;
 
+        const nsResult = newStatusResults[p.deviceId || p.name];
         return (
           <StatusDebugCard
             key={`debug-${p.deviceId || i}`}
@@ -1540,6 +1565,9 @@ function HomeScreen({
             lastHeartbeatAt={locTime}
             batteryLevel={null}
             isOnline={null}
+            confirmedStatus={nsResult?.confirmedStatus}
+            pendingStatus={nsResult?.pendingStatus}
+            pendingSince={nsResult?.pendingSince}
           />
         );
       })}
