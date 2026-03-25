@@ -82,7 +82,7 @@ interface LocationTaskBody {
   error: TaskManager.TaskManagerError | null;
 }
 
-if (!TaskManager.isTaskDefined(TASK_NAME)) {
+if (Platform.OS !== "web" && !TaskManager.isTaskDefined(TASK_NAME)) {
   TaskManager.defineTask(TASK_NAME, async ({ data, error }: LocationTaskBody) => {
     if (error) return;
     if (data && data.locations && data.locations.length > 0) {
