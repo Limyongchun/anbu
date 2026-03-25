@@ -10,6 +10,14 @@ const CHECK_STABILIZE_MS = CHECK_STABILIZE_MINUTES * 60 * 1000;
 const DANGER_STABILIZE_MS = DANGER_STABILIZE_MINUTES * 60 * 1000;
 const CRITICAL_STABILIZE_MS = CRITICAL_STABILIZE_MINUTES * 60 * 1000;
 
+const SEVERITY: Record<ParentStatus, number> = {
+  SAFE: 0,
+  CHECK: 1,
+  DANGER: 2,
+  CRITICAL: 3,
+  SIGNAL_LOST: 4,
+};
+
 function getStabilizeMs(status: ParentStatus): number {
   switch (status) {
     case "SAFE": return SAFE_STABILIZE_MS;
@@ -47,6 +55,19 @@ export function stabilize(
   if (computedStatus === state.confirmedStatus) {
     return {
       ...state,
+      pendingStatus: null,
+      pendingSince: null,
+      pendingCount: 0,
+    };
+  }
+
+  const computedSev = SEVERITY[computedStatus] ?? 0;
+  const confirmedSev = SEVERITY[state.confirmedStatus] ?? 0;
+
+  if (computedSev < confirmedSev) {
+    return {
+      confirmedStatus: computedStatus,
+      confirmedAt: now,
       pendingStatus: null,
       pendingSince: null,
       pendingCount: 0,

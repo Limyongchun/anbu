@@ -61,6 +61,22 @@ export function evaluateParentStatus(input: EvaluateInput): EvaluateResult {
   let status: ParentStatus = "SAFE";
   let reason: StatusReason = "normal";
 
+  if (input.isOnline === true) {
+    if (lastApp == null && latestSignal == null) {
+      status = "SAFE";
+      reason = "normal";
+      return {
+        status,
+        reason,
+        inactiveMinutes: 0,
+        signalLostMinutes: 0,
+        wakeDelayMinutes: 0,
+        isSleeping,
+        summaryText: SUMMARY_KO[status],
+      };
+    }
+  }
+
   if (lastApp == null && latestSignal == null) {
     status = "SIGNAL_LOST";
     reason = "signal_lost";
