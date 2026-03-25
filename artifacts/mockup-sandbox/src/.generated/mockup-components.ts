@@ -2,12 +2,12 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/child-profile/ChildProfile.tsx": () => import("../components/mockups/child-profile/ChildProfile.tsx"),
-  "./components/mockups/parent-profile/ParentProfile.tsx": () => import("../components/mockups/parent-profile/ParentProfile.tsx"),
+  "./components/mockups/child-profile-copy-V8cTu3Pj/ChildProfileCopyV8cTu3Pj.tsx": () => import("../components/mockups/child-profile-copy-V8cTu3Pj/ChildProfileCopyV8cTu3Pj.tsx"),
   "./components/mockups/home-connected/HomeConnected.tsx": () => import("../components/mockups/home-connected/HomeConnected.tsx"),
-  "./components/mockups/photo-message/PhotoMessage.tsx": () => import("../components/mockups/photo-message/PhotoMessage.tsx"),
+  "./components/mockups/parent-profile/ParentProfile.tsx": () => import("../components/mockups/parent-profile/ParentProfile.tsx"),
   "./components/mockups/photo-gallery/PhotoGallery.tsx": () => import("../components/mockups/photo-gallery/PhotoGallery.tsx"),
+  "./components/mockups/photo-message/PhotoMessage.tsx": () => import("../components/mockups/photo-message/PhotoMessage.tsx"),
   "./components/mockups/signup-complete/SignupComplete.tsx": () => import("../components/mockups/signup-complete/SignupComplete.tsx"),
   "./components/mockups/waiting-room/WaitingRoom.tsx": () => import("../components/mockups/waiting-room/WaitingRoom.tsx"),
-  "./components/mockups/child-profile-copy-V8cTu3Pj/ChildProfileCopyV8cTu3Pj.tsx": () => import("../components/mockups/child-profile-copy-V8cTu3Pj/ChildProfileCopyV8cTu3Pj.tsx"),
   "./components/mockups/waiting-room-copy-ppHYBD-p/WaitingRoomCopyPpHYBDP.tsx": () => import("../components/mockups/waiting-room-copy-ppHYBD-p/WaitingRoomCopyPpHYBDP.tsx")
 };

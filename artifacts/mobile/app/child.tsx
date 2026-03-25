@@ -38,6 +38,7 @@ import { matchParentPlace } from "@/features/places/matchPlace";
 import { getParentLocationLabel } from "@/features/home/utils/getParentLocationLabel";
 import { recordLocation, detectFrequentPlaces, type PlaceSuggestion } from "@/features/places/frequentDetector";
 import PlaceSuggestionBanner from "@/features/places/components/PlaceSuggestionBanner";
+import { StatusDebugCard } from "@/features/status/StatusDebugCard";
 import { useLang } from "@/context/LanguageContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
@@ -1427,6 +1428,31 @@ function HomeScreen({
           );
         });
       })()}
+
+      {/* ── Status Debug Cards ── */}
+      {parentInfos.map((p, i) => {
+        const st = getParentStatusNew(p.deviceId, p.name);
+        const myActs = parentActivities.filter(
+          a => a.parentName === p.name || a.deviceId === p.deviceId
+        );
+        const latestActTime = myActs.length > 0
+          ? Math.max(...myActs.map(a => new Date(a.createdAt).getTime()))
+          : null;
+        const locTime = p.loc?.updatedAt ? new Date(p.loc.updatedAt).getTime() : null;
+
+        return (
+          <StatusDebugCard
+            key={`debug-${p.deviceId || i}`}
+            oldStatus={st.level === "good" ? "SAFE" : st.level === "warn" ? "CHECK" : st.level === "alert" ? "DANGER" : "NONE"}
+            parentName={p.name}
+            lastAppActivityAt={latestActTime}
+            lastLocationAt={locTime}
+            lastHeartbeatAt={locTime}
+            batteryLevel={null}
+            isOnline={null}
+          />
+        );
+      })}
 
       {/* Anbu Interpretation Card */}
       {(() => {
