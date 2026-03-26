@@ -43,16 +43,24 @@ function SupportPage() {
           빠르게 답변드리겠습니다.
         </p>
 
-        <Link href="/privacy" style={{
-          display: "inline-block",
-          marginTop: "16px",
-          color: "#2b7cff",
-          fontSize: "13px",
-          textDecoration: "underline",
-          cursor: "pointer",
-        }}>
-          개인정보처리방침
-        </Link>
+        <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+          <Link href="/privacy" style={{
+            color: "#2b7cff",
+            fontSize: "13px",
+            textDecoration: "underline",
+            cursor: "pointer",
+          }}>
+            개인정보처리방침
+          </Link>
+          <Link href="/account-delete" style={{
+            color: "#2b7cff",
+            fontSize: "13px",
+            textDecoration: "underline",
+            cursor: "pointer",
+          }}>
+            계정 삭제 요청
+          </Link>
+        </div>
 
         <p style={{ marginTop: "20px", fontSize: "12px", color: "#888" }}>
           ANBU - 부모 안부 확인 앱
@@ -143,11 +151,77 @@ function PrivacyPage() {
   );
 }
 
+function AccountDeletePage() {
+  return (
+    <div style={{
+      margin: 0,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      background: "#f5f7fa",
+      display: "flex",
+      justifyContent: "center",
+      minHeight: "100vh",
+      padding: "20px",
+      boxSizing: "border-box",
+    }}>
+      <div style={{
+        background: "white",
+        padding: "30px",
+        borderRadius: "16px",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+        maxWidth: "600px",
+        width: "100%",
+        lineHeight: 1.6,
+      }}>
+        <h1 style={{ fontSize: "22px", color: "#333", marginBottom: "20px" }}>
+          ANBU 계정 삭제 요청
+        </h1>
+
+        <p style={{ color: "#555", fontSize: "14px" }}>
+          계정 삭제를 원하시면 아래 이메일로 요청해주세요.
+        </p>
+
+        <div style={{
+          margin: "20px 0",
+          fontWeight: "bold",
+          color: "#2b7cff",
+          fontSize: "16px",
+        }}>
+          이메일: 2011atrees@gmail.com
+        </div>
+
+        <p style={{ color: "#555", fontSize: "14px" }}>
+          요청 시 아래 정보를 함께 보내주세요:
+        </p>
+        <ul style={{ color: "#555", fontSize: "14px", paddingLeft: "20px" }}>
+          <li>등록된 전화번호</li>
+          <li>사용자 이름</li>
+        </ul>
+
+        <p style={{ color: "#555", fontSize: "14px", marginTop: "16px" }}>
+          요청 접수 후 최대 7일 이내 삭제 처리됩니다.
+        </p>
+
+        <div style={{ marginTop: "30px", textAlign: "center" }}>
+          <Link href="/" style={{
+            color: "#2b7cff",
+            fontSize: "14px",
+            textDecoration: "underline",
+            cursor: "pointer",
+          }}>
+            ← 고객지원으로 돌아가기
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Route path="/" component={SupportPage} />
       <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/account-delete" component={AccountDeletePage} />
     </WouterRouter>
   );
 }
