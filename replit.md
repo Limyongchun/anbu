@@ -161,6 +161,22 @@ React + Vite admin dashboard for A N B U. Dark-themed management UI at `/admin/`
 - **Inquiries tab**: List all user inquiries with reply/delete; detail view with mailto integration and reply saving
 - **Packages**: `jsonwebtoken` + `@types/jsonwebtoken` in api-server
 
+### `artifacts/support` (`@workspace/support`)
+
+Apple 심사용 고객지원 웹페이지 (`/support/`). React + Vite 단일 페이지.
+- **이메일**: `2011atrees@gmail.com`
+- 포트: 22770
+
+### Guest Mode (체험 모드)
+
+Apple 심사를 위한 로그인 없이 앱 진입 기능. 기본적으로 게스트 모드가 켜져 있어 앱 실행 즉시 자녀 홈 화면 진입.
+- **GuestModeContext**: `context/GuestModeContext.tsx` — `isGuestMode` 상태 관리; 기본값 `true`
+- **FamilyContext 연동**: 게스트 모드 시 가짜 familyCode(`DEMO01`), deviceId, 부모 정보 자동 제공
+- **Mock 데이터**: 어머니/아버지 2명의 부모 (SAFE 상태, 위치/활동 데이터 포함)
+- **체험 모드 배너**: 홈 상단 노란색 배너 + "로그인하기" 버튼으로 실제 로그인 화면 전환
+- **API 호출 차단**: 게스트 모드에서 모든 서버 API 호출 스킵
+- **i18n**: ko/en/ja 3개 언어 지원 (`guestBannerTitle`, `guestBannerDesc`, `guestLoginBtn`)
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

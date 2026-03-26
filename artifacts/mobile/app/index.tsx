@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useFamilyContext } from "@/context/FamilyContext";
+import { useGuestMode } from "@/context/GuestModeContext";
 
 const splashVideoModule = require("@/assets/splash-video.mp4");
 const splashPoster = require("@/assets/splash-poster.jpg");
@@ -69,6 +70,7 @@ function WebVideo() {
 
 export default function SplashScreen() {
   const { isConnected, myRole, loading } = useFamilyContext();
+  const { isGuestMode } = useGuestMode();
   const fadeIn = useRef(new Animated.Value(0)).current;
   const breathScale = useRef(new Animated.Value(1)).current;
   const breathOpacity = useRef(new Animated.Value(1)).current;
@@ -93,10 +95,14 @@ export default function SplashScreen() {
   }, []);
 
   useEffect(() => {
+    if (isGuestMode && !loading) {
+      router.replace("/child");
+      return;
+    }
     if (!loading && isConnected && myRole) {
       router.replace(myRole === "parent" ? "/parent" : "/child");
     }
-  }, [loading, isConnected, myRole]);
+  }, [loading, isConnected, myRole, isGuestMode]);
 
   const handleTap = () => {
     router.push("/lang-select");

@@ -15,6 +15,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FamilyProvider } from "@/context/FamilyContext";
+import { GuestModeProvider } from "@/context/GuestModeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import "@/lib/backgroundLocation";
 
@@ -59,13 +60,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <LanguageProvider>
-            <FamilyProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </FamilyProvider>
-          </LanguageProvider>
+          <GuestModeProvider>
+            <LanguageProvider>
+              <FamilyProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </FamilyProvider>
+            </LanguageProvider>
+          </GuestModeProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

@@ -47,6 +47,7 @@ import { stabilize, createStabilizerState, type StabilizerState } from "@/featur
 import { saveParentStatusLog } from "@/features/status/statusLogService";
 import { sendStatusNotification } from "@/features/status/notificationService";
 import { useLang } from "@/context/LanguageContext";
+import { useGuestMode } from "@/context/GuestModeContext";
 import { api, getApiBase, FamilyMessage, LocationData, ParentActivityLog } from "@/lib/api";
 import { useParentStatusEngine, type ConfirmedStatus, type ParentStatusInfo } from "@/lib/status";
 
@@ -987,6 +988,90 @@ type ActivityItem = {
   parentName?: string;
 };
 
+function GuestBanner() {
+  const { t } = useLang();
+  const { exitGuestMode } = useGuestMode();
+  return (
+    <View style={{ marginHorizontal: DS.space.md, marginBottom: DS.space.sm, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: DS.radius.card, padding: DS.space.sm, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFD700" }}>
+          {t.guestBannerTitle || "체험 모드"}
+        </Text>
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+          {t.guestBannerDesc || "이 화면은 체험 모드입니다"}
+        </Text>
+      </View>
+      <Pressable
+        onPress={() => { exitGuestMode(); router.replace("/"); }}
+        style={({ pressed }) => [{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: DS.radius.pill, paddingHorizontal: 14, paddingVertical: 7, opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFD700" }}>
+          {t.guestLoginBtn || "로그인하기"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function buildGuestMockData() {
+  const now = new Date();
+  const fiveMinAgo = new Date(now.getTime() - 5 * 60_000).toISOString();
+  const tenMinAgo = new Date(now.getTime() - 10 * 60_000).toISOString();
+  const thirtyMinAgo = new Date(now.getTime() - 30 * 60_000).toISOString();
+
+  const parentInfos = [
+    {
+      name: "어머니",
+      photo: null,
+      deviceId: "demo_parent_1",
+      loc: {
+        familyCode: "DEMO01",
+        deviceId: "demo_parent_1",
+        memberName: "어머니",
+        role: "parent" as const,
+        latitude: 37.5665,
+        longitude: 126.978,
+        accuracy: 10,
+        speed: 0,
+        heading: 0,
+        batteryLevel: 85,
+        updatedAt: fiveMinAgo,
+      },
+    },
+    {
+      name: "아버지",
+      photo: null,
+      deviceId: "demo_parent_2",
+      loc: {
+        familyCode: "DEMO01",
+        deviceId: "demo_parent_2",
+        memberName: "아버지",
+        role: "parent" as const,
+        latitude: 37.5512,
+        longitude: 126.9882,
+        accuracy: 15,
+        speed: 0,
+        heading: 0,
+        batteryLevel: 72,
+        updatedAt: tenMinAgo,
+      },
+    },
+  ];
+
+  const activities: ParentActivityLog[] = [
+    { id: 1, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "app_open", detail: "앱 열기", createdAt: fiveMinAgo },
+    { id: 2, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "location_update", detail: "위치 업데이트", createdAt: fiveMinAgo },
+    { id: 3, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "app_open", detail: "앱 열기", createdAt: tenMinAgo },
+    { id: 4, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "heart_touch", detail: "하트 터치", createdAt: thirtyMinAgo },
+  ];
+
+  const messages: FamilyMessage[] = [
+    { id: 1, familyCode: "DEMO01", deviceId: "demo_parent_1", fromName: "어머니", fromRole: "parent", text: "오늘 날씨가 좋구나 😊", photoData: null, hearts: 0, createdAt: fiveMinAgo },
+  ];
+
+  return { parentInfos, activities, messages };
+}
+
 function HomeScreen({
   familyCode, allFamilyCodes, deviceId, topBarH, bottomInset, onGoToAnbu, onGoToMap,
 }: {
@@ -999,19 +1084,22 @@ function HomeScreen({
   onGoToMap: (parentDeviceId: string) => void;
 }) {
   const { t, lang } = useLang();
+  const { isGuestMode } = useGuestMode();
   type ParentInfo = { name: string; photo: string | null; loc: LocationData | null; deviceId: string };
-  const [parentInfos, setParentInfos] = useState<ParentInfo[]>([]);
+  const guestData = useMemo(() => isGuestMode ? buildGuestMockData() : null, [isGuestMode]);
+  const [parentInfos, setParentInfos] = useState<ParentInfo[]>(guestData?.parentInfos ?? []);
   const statusEngine = useParentStatusEngine(lang as "ko" | "en" | "ja");
-  const [messages, setMessages] = useState<FamilyMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<FamilyMessage[]>(guestData?.messages ?? []);
+  const [loading, setLoading] = useState(!isGuestMode);
   const [showAll, setShowAll] = useState(false);
-  const [parentJoined, setParentJoined] = useState(false);
-  const [parentChecked, setParentChecked] = useState(false);
+  const [parentJoined, setParentJoined] = useState(isGuestMode);
+  const [parentChecked, setParentChecked] = useState(isGuestMode);
   const [tracerSize, setTracerSize] = useState({ w: 0, h: 0 });
   const [homePlaces, setHomePlaces] = useState<ParentPlace[]>([]);
-  const revealAnim = useRef(new Animated.Value(0)).current;
+  const revealAnim = useRef(new Animated.Value(isGuestMode ? 1 : 0)).current;
 
   useEffect(() => {
+    if (isGuestMode) return;
     if (!familyCode) { setParentChecked(true); return; }
     let cancelled = false;
     const check = async () => {
@@ -1049,11 +1137,12 @@ function HomeScreen({
     check();
     const iv = setInterval(check, 5000);
     return () => { cancelled = true; clearInterval(iv); };
-  }, [familyCode, allFamilyCodes]);
+  }, [familyCode, allFamilyCodes, isGuestMode]);
 
-  const [parentActivities, setParentActivities] = useState<ParentActivityLog[]>([]);
+  const [parentActivities, setParentActivities] = useState<ParentActivityLog[]>(guestData?.activities ?? []);
 
   const load = useCallback(async () => {
+    if (isGuestMode) { setLoading(false); return; }
     if (!allFamilyCodes.length) { setLoading(false); return; }
     try {
       const [locsArr, msgsArr, actsArr] = await Promise.all([
@@ -1075,7 +1164,7 @@ function HomeScreen({
     } catch {}
     setLoading(false);
     getAllPlaces().then(setHomePlaces).catch(() => {});
-  }, [allFamilyCodes]);
+  }, [allFamilyCodes, isGuestMode]);
 
   useEffect(() => {
     load();
@@ -1148,7 +1237,7 @@ function HomeScreen({
 
   const prevConfirmedRef = useRef<Record<string, ParentStatus>>({});
   useEffect(() => {
-    if (!familyCode) return;
+    if (!familyCode || isGuestMode) return;
     for (const [key, result] of Object.entries(newStatusResults)) {
       const prev = prevConfirmedRef.current[key];
       const next = result.confirmedStatus;
@@ -1410,6 +1499,7 @@ function HomeScreen({
       contentContainerStyle={{ paddingTop: topBarH + 12, paddingBottom: bottomInset + 80 }}
       showsVerticalScrollIndicator={false}
     >
+      {isGuestMode && <GuestBanner />}
       {/* ── Summary Bar ── */}
       {(() => {
         const needsAttentionStatuses: ParentStatus[] = ["CHECK", "DANGER", "CRITICAL", "SIGNAL_LOST"];

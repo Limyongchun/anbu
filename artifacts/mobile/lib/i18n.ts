@@ -565,6 +565,10 @@ const translations = {
       { q: "가족 연결을 해제하면 데이터가 삭제되나요?", a: "연결 해제 시 이 기기의 연결 정보만 삭제됩니다. 서버에 저장된 메시지와 위치 기록은 유지됩니다." },
       { q: "자녀/부모님 역할을 바꿀 수 있나요?", a: "역할 변경은 현재 지원되지 않습니다. 가족 연결을 해제한 뒤 다시 연결하면 역할을 새로 선택할 수 있어요." },
     ],
+
+    guestBannerTitle: "체험 모드",
+    guestBannerDesc: "이 화면은 체험 모드입니다",
+    guestLoginBtn: "로그인하기",
   },
 
   en: {
@@ -1099,6 +1103,10 @@ const translations = {
       { q: "Will data be deleted if I disconnect?", a: "Only the connection info on this device is deleted when disconnecting. Messages and location history stored on the server are retained." },
       { q: "Can I change my parent/child role?", a: "Role changes are not currently supported. Disconnect from the family and reconnect to select a new role." },
     ],
+
+    guestBannerTitle: "Demo Mode",
+    guestBannerDesc: "This is a demo screen",
+    guestLoginBtn: "Sign In",
   },
 
   ja: {
@@ -1633,6 +1641,10 @@ const translations = {
       { q: "接続解除するとデータは削除されますか？", a: "接続解除時、このデバイスの接続情報のみ削除されます。サーバーに保存されたメッセージと位置履歴は保持されます。" },
       { q: "子ども/親の役割を変更できますか？", a: "役割変更は現在サポートされていません。家族接続を解除してから再接続すると新しい役割を選択できます。" },
     ],
+
+    guestBannerTitle: "体験モード",
+    guestBannerDesc: "この画面は体験モードです",
+    guestLoginBtn: "ログイン",
   },
 } as const;
 

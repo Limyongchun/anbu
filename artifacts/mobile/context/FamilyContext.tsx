@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useGuestMode } from "@/context/GuestModeContext";
 
 export type FamilyRole = "parent" | "child";
 export type ChildRole = "master" | "sub" | null;
@@ -62,7 +63,11 @@ function buildAllCodes(primary: string | null, extras: string[]): string[] {
 
 export const FamilyContext = createContext<FamilyContextValue | null>(null);
 
+const GUEST_FAMILY_CODE = "DEMO01";
+const GUEST_DEVICE_ID = "guest_device_demo";
+
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
+  const { isGuestMode } = useGuestMode();
   const [state, setState] = useState<FamilyState>({
     familyCode: null,
     allFamilyCodes: [],
@@ -77,6 +82,37 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isGuestMode) {
+      setState({
+        familyCode: GUEST_FAMILY_CODE,
+        allFamilyCodes: [GUEST_FAMILY_CODE],
+        deviceId: GUEST_DEVICE_ID,
+        accountId: null,
+        myName: "체험자",
+        myRole: "child",
+        childRole: "master",
+        isMasterChild: true,
+        isConnected: true,
+      });
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setState({
+      familyCode: null,
+      allFamilyCodes: [],
+      deviceId: "",
+      accountId: null,
+      myName: null,
+      myRole: null,
+      childRole: null,
+      isMasterChild: false,
+      isConnected: false,
+    });
+  }, [isGuestMode]);
+
+  useEffect(() => {
+    if (isGuestMode) return;
     async function load() {
       try {
         const [code, extrasRaw, deviceId, acctIdRaw, name, role, cr] = await Promise.all([
@@ -144,7 +180,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       }
     }
     load();
-  }, []);
+  }, [isGuestMode]);
 
   const connect = async (
     code: string,
