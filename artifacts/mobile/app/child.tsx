@@ -217,20 +217,22 @@ function CircleBtn({ icon, size = 18, bg, color, onPress, style }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 function MapScreen({ familyCode, bottomInset, topInset, immersive, onToggleImmersive, focusParentDeviceId, onGoBack }: { familyCode: string | null; bottomInset: number; topInset: number; immersive: boolean; onToggleImmersive: () => void; focusParentDeviceId?: string | null; onGoBack: () => void }) {
   const { t, lang } = useLang();
-  const [locs, setLocs] = useState<LocationData[]>([]);
+  const { isGuestMode } = useGuestMode();
+  const guestLocs = useMemo<LocationData[]>(() => isGuestMode ? buildGuestMockData().parentInfos.map(p => ({ ...p.loc!, isSharing: true, privacyMode: false })) : [], [isGuestMode]);
+  const [locs, setLocs] = useState<LocationData[]>(guestLocs);
   const [loading, setLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const mapRef = useRef<NaverMapHandle>(null);
 
   const load = useCallback(async () => {
-    if (!familyCode) return;
+    if (isGuestMode || !familyCode) return;
     try {
       setLocs(await api.getAllLocations(familyCode));
     } catch {}
-  }, [familyCode]);
+  }, [familyCode, isGuestMode]);
 
   useEffect(() => {
-    if (!familyCode) return;
+    if (isGuestMode || !familyCode) return;
     setLoading(true);
 
     const base = getApiBase();
@@ -283,7 +285,7 @@ function MapScreen({ familyCode, bottomInset, topInset, immersive, onToggleImmer
       es?.close();
       if (fallbackTimer) clearInterval(fallbackTimer);
     };
-  }, [familyCode]);
+  }, [familyCode, isGuestMode]);
 
   const allParentLocs = locs.filter(l => l.role === "parent" && l.isSharing);
   const parentLocs = allParentLocs.filter(l => !l.privacyMode);
@@ -627,10 +629,12 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   familyCode: string | null; allFamilyCodes: string[]; myName: string | null; myRole: string | null; deviceId: string; topBarH: number;
 }) {
   const { t } = useLang();
+  const { isGuestMode } = useGuestMode();
+  const guestMsgs = useMemo(() => isGuestMode ? buildGuestMockData().messages : [], [isGuestMode]);
   const [subView, setSubView] = useState<"messages" | "gallery">("messages");
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
-  const [msgs, setMsgs] = useState<FamilyMessage[]>([]);
+  const [msgs, setMsgs] = useState<FamilyMessage[]>(guestMsgs);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -642,7 +646,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   const photos = msgs.filter(m => !!m.photoData);
 
   useEffect(() => {
-    if (!allFamilyCodes.length) return;
+    if (isGuestMode || !allFamilyCodes.length) return;
     Promise.all(allFamilyCodes.map(c => api.getFamily(c).catch(() => null))).then(results => {
       const map: Record<string, string> = {};
       results.forEach(g => {
@@ -653,13 +657,13 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
       });
       setParentPhotos(map);
     });
-  }, [allFamilyCodes]);
+  }, [allFamilyCodes, isGuestMode]);
   const GAL_GAP = 6;
   const GAL_COLS = 3;
   const THUMB = (width - 40 - GAL_GAP * (GAL_COLS - 1)) / GAL_COLS;
 
   const load = useCallback(async () => {
-    if (allFamilyCodes.length === 0) return;
+    if (isGuestMode || allFamilyCodes.length === 0) return;
     try {
       const results = await Promise.allSettled(allFamilyCodes.map(c => api.getMessages(c)));
       const all: FamilyMessage[] = [];
@@ -667,14 +671,15 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
       all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setMsgs(all);
     } catch {}
-  }, [allFamilyCodes]);
+  }, [allFamilyCodes, isGuestMode]);
 
   useEffect(() => {
+    if (isGuestMode) return;
     setLoading(true);
     load().finally(() => setLoading(false));
     const iv = setInterval(load, 10000);
     return () => clearInterval(iv);
-  }, [load]);
+  }, [load, isGuestMode]);
 
   const pickLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -697,6 +702,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   };
 
   const send = async () => {
+    if (isGuestMode) return;
     if ((!text.trim() && !photo) || allFamilyCodes.length === 0 || !myName || !myRole) return;
     setSending(true);
     try {
@@ -714,6 +720,7 @@ function AnbuScreen({ familyCode, allFamilyCodes, myName, myRole, deviceId, topB
   };
 
   const del = async (id: number) => {
+    if (isGuestMode) return;
     const msg = msgs.find(m => m.id === id);
     const code = msg?.familyCode ?? familyCode;
     if (!code) return;
@@ -1015,9 +1022,11 @@ function GuestBanner() {
 
 function buildGuestMockData() {
   const now = new Date();
-  const fiveMinAgo = new Date(now.getTime() - 5 * 60_000).toISOString();
-  const tenMinAgo = new Date(now.getTime() - 10 * 60_000).toISOString();
-  const thirtyMinAgo = new Date(now.getTime() - 30 * 60_000).toISOString();
+  const m = (mins: number) => new Date(now.getTime() - mins * 60_000).toISOString();
+  const d = (days: number, hrs = 0) => {
+    const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, now.getHours() - hrs);
+    return dt.toISOString();
+  };
 
   const parentInfos = [
     {
@@ -1029,13 +1038,13 @@ function buildGuestMockData() {
         deviceId: "demo_parent_1",
         memberName: "어머니",
         role: "parent" as const,
-        latitude: 37.5665,
-        longitude: 126.978,
+        latitude: 37.7585,
+        longitude: 127.0458,
         accuracy: 10,
         speed: 0,
         heading: 0,
         batteryLevel: 85,
-        updatedAt: fiveMinAgo,
+        updatedAt: m(5),
       },
     },
     {
@@ -1047,29 +1056,57 @@ function buildGuestMockData() {
         deviceId: "demo_parent_2",
         memberName: "아버지",
         role: "parent" as const,
-        latitude: 37.5512,
-        longitude: 126.9882,
+        latitude: 37.7512,
+        longitude: 127.0382,
         accuracy: 15,
         speed: 0,
         heading: 0,
         batteryLevel: 72,
-        updatedAt: tenMinAgo,
+        updatedAt: m(10),
       },
     },
   ];
 
   const activities: ParentActivityLog[] = [
-    { id: 1, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "app_open", detail: "앱 열기", createdAt: fiveMinAgo },
-    { id: 2, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "location_update", detail: "위치 업데이트", createdAt: fiveMinAgo },
-    { id: 3, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "app_open", detail: "앱 열기", createdAt: tenMinAgo },
-    { id: 4, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "heart_touch", detail: "하트 터치", createdAt: thirtyMinAgo },
+    { id: 1, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "app_open", detail: "앱 열기", createdAt: m(5) },
+    { id: 2, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "location", detail: "위치 공유 · 경기도 양주시", createdAt: m(5) },
+    { id: 3, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "view_slide", detail: "사진 보기", createdAt: m(15) },
+    { id: 4, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "heart", detail: "하트 터치", createdAt: m(18) },
+    { id: 5, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "app_open", detail: "앱 열기", createdAt: m(10) },
+    { id: 6, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "location", detail: "위치 공유 · 경기도 양주시", createdAt: m(12) },
+    { id: 7, familyCode: "DEMO01", deviceId: "demo_parent_2", parentName: "아버지", activityType: "heart", detail: "하트 터치", createdAt: m(30) },
+    { id: 8, familyCode: "DEMO01", deviceId: "demo_parent_1", parentName: "어머니", activityType: "app_open", detail: "앱 열기", createdAt: m(60) },
+    ...Array.from({ length: 60 }, (_, i) => ({
+      id: 100 + i,
+      familyCode: "DEMO01",
+      deviceId: i % 2 === 0 ? "demo_parent_1" : "demo_parent_2",
+      parentName: i % 2 === 0 ? "어머니" : "아버지",
+      activityType: ["app_open", "location", "view_slide", "heart"][i % 4],
+      detail: null,
+      createdAt: d(Math.floor(i / 3), i % 8),
+    })),
+  ];
+
+  const DEMO_PHOTOS = [
+    "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&q=80",
+    "https://images.unsplash.com/photo-1516589091380-5d8e87df6999?w=400&q=80",
+    "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&q=80",
   ];
 
   const messages: FamilyMessage[] = [
-    { id: 1, familyCode: "DEMO01", deviceId: "demo_parent_1", fromName: "어머니", fromRole: "parent", text: "오늘 날씨가 좋구나 😊", photoData: null, hearts: 0, createdAt: fiveMinAgo },
+    { id: 1, familyCode: "DEMO01", deviceId: "demo_parent_1", fromName: "어머니", fromRole: "parent", text: "오늘 날씨가 좋구나 😊", photoData: DEMO_PHOTOS[0], hearts: 2, createdAt: m(5) },
+    { id: 2, familyCode: "DEMO01", deviceId: "demo_parent_2", fromName: "아버지", fromRole: "parent", text: "점심 잘 먹었니?", photoData: null, hearts: 1, createdAt: m(30) },
+    { id: 3, familyCode: "DEMO01", deviceId: "demo_parent_1", fromName: "어머니", fromRole: "parent", text: "꽃이 예쁘게 피었어 🌸", photoData: DEMO_PHOTOS[1], hearts: 3, createdAt: m(120) },
+    { id: 4, familyCode: "DEMO01", deviceId: "guest_device_demo", fromName: "체험자", fromRole: "child", text: "엄마 아빠 사랑해요 ❤️", photoData: null, hearts: 0, createdAt: m(90) },
+    { id: 5, familyCode: "DEMO01", deviceId: "demo_parent_2", fromName: "아버지", fromRole: "parent", text: "산책 다녀왔다", photoData: DEMO_PHOTOS[2], hearts: 1, createdAt: m(180) },
   ];
 
-  return { parentInfos, activities, messages };
+  const places: ParentPlace[] = [
+    { id: "demo_place_1", parentId: "demo_parent_1", name: "집", latitude: 37.7585, longitude: 127.0458, radius: 200 },
+    { id: "demo_place_2", parentId: "demo_parent_2", name: "집", latitude: 37.7512, longitude: 127.0382, radius: 200 },
+  ];
+
+  return { parentInfos, activities, messages, places };
 }
 
 function HomeScreen({
@@ -1095,7 +1132,7 @@ function HomeScreen({
   const [parentJoined, setParentJoined] = useState(isGuestMode);
   const [parentChecked, setParentChecked] = useState(isGuestMode);
   const [tracerSize, setTracerSize] = useState({ w: 0, h: 0 });
-  const [homePlaces, setHomePlaces] = useState<ParentPlace[]>([]);
+  const [homePlaces, setHomePlaces] = useState<ParentPlace[]>(guestData?.places ?? []);
   const revealAnim = useRef(new Animated.Value(isGuestMode ? 1 : 0)).current;
 
   useEffect(() => {
@@ -1317,7 +1354,7 @@ function HomeScreen({
 
   const prevStatusRef = useRef<Record<string, string>>({});
   useEffect(() => {
-    if (!allFamilyCodes.length) return;
+    if (isGuestMode || !allFamilyCodes.length) return;
     parentStatusResults.forEach((ps: ParentStatusInfo) => {
       const key = ps.deviceId || ps.parentName;
       const prev = prevStatusRef.current[key];
@@ -1808,12 +1845,15 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
   allFamilyCodes: string[]; topBarH: number; bottomInset: number;
 }) {
   const { t } = useLang();
-  const [messages, setMessages] = useState<FamilyMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isGuestMode } = useGuestMode();
+  const guestMsgs = useMemo(() => isGuestMode ? buildGuestMockData().messages : [], [isGuestMode]);
+  const [messages, setMessages] = useState<FamilyMessage[]>(guestMsgs);
+  const [loading, setLoading] = useState(!isGuestMode);
   const [filter, setFilter] = useState<NotifFilter>("all");
   const [parentPhotos, setParentPhotos] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (isGuestMode) return;
     if (!allFamilyCodes.length) { setLoading(false); return; }
     Promise.all(allFamilyCodes.map(c => api.getMessages(c)))
       .then(arr => setMessages(
@@ -1831,7 +1871,7 @@ function NotificationScreen({ allFamilyCodes, topBarH, bottomInset }: {
       });
       setParentPhotos(map);
     });
-  }, [allFamilyCodes]);
+  }, [allFamilyCodes, isGuestMode]);
 
   const filters: { key: NotifFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: "all", label: t.notifFilterAll || "All", icon: "list-outline" },
