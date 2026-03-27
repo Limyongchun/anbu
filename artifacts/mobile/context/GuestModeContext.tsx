@@ -13,7 +13,7 @@ const GuestModeContext = createContext<GuestModeContextValue>({
 });
 
 export function GuestModeProvider({ children }: { children: React.ReactNode }) {
-  const [isGuestMode, setIsGuestMode] = useState(true);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
   return (
     <GuestModeContext.Provider
