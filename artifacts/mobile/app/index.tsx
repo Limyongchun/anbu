@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { Asset } from "expo-asset";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as AuthSession from "expo-auth-session";
-import * as Crypto from "expo-crypto";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -157,10 +156,8 @@ export default function SplashScreen() {
     setAppleLoading(true);
 
     try {
-      const nonce = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        Math.random().toString(36).substring(2),
-      );
+      const rawNonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+      const nonce = rawNonce;
 
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
