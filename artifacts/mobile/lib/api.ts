@@ -253,6 +253,12 @@ export const api = {
   getStatusLogs: (code: string, limit = 50): Promise<StatusChangeLogEntry[]> =>
     request(`/family/${code}/status-logs?limit=${limit}`),
 
+  deleteAccount: (accountId: number, deviceId?: string): Promise<{ success: boolean }> =>
+    request(`/account/${accountId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ deviceId }),
+    }),
+
   submitInquiry: (data: { userId?: string; userName: string; userEmail: string; title: string; content: string }) =>
     request("/inquiry", {
       method: "POST",

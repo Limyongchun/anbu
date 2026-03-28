@@ -137,7 +137,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { familyCode, allFamilyCodes, myName, myRole, childRole, isMasterChild, deviceId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
+  const { familyCode, allFamilyCodes, myName, myRole, childRole, isMasterChild, deviceId, accountId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
   const { lang, setLang, t } = useLang();
 
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
@@ -502,7 +502,81 @@ export default function ProfileScreen() {
     });
   };
 
+  const handleLogout = () => {
+    setConfirmModal({
+      title: t.logoutLabel,
+      message: t.disconnectMsg,
+      onConfirm: async () => {
+        if (deviceId) {
+          await Promise.all(
+            allFamilyCodes.map(code => api.leaveFamily(code, deviceId).catch(() => {}))
+          );
+        }
+        await disconnect();
+        await AsyncStorage.removeItem("account_id");
+        router.replace("/");
+      },
+    });
+  };
 
+  const [showDeleteStep1, setShowDeleteStep1] = useState(false);
+  const [showDeleteStep2, setShowDeleteStep2] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = () => {
+    setShowDeleteStep1(true);
+  };
+
+  const handleDeleteStep1Continue = () => {
+    setShowDeleteStep1(false);
+    setDeleteInput("");
+    setShowDeleteStep2(true);
+  };
+
+  const handleDeleteFinal = async () => {
+    if (deleteInput.trim().toUpperCase() !== "DELETE" || deleting) return;
+    setDeleting(true);
+    try {
+      if (accountId) {
+        await api.deleteAccount(accountId, deviceId);
+      } else if (deviceId) {
+        await Promise.all(
+          allFamilyCodes.map(code => api.leaveFamily(code, deviceId).catch(() => {}))
+        );
+      }
+      const keysToRemove = [
+        "account_id",
+        "family_code",
+        "extra_family_codes",
+        "my_name",
+        "my_role",
+        "child_role",
+        "device_id",
+      ];
+      if (deviceId) {
+        keysToRemove.push(`profile_photo_${deviceId}`);
+        keysToRemove.push(`privacy_mode_${deviceId}`);
+        keysToRemove.push(`bg_loc_${deviceId}`);
+      }
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const userKeys = allKeys.filter(
+          k => k.startsWith("profile_photo_") || k.startsWith("privacy_mode_") || k.startsWith("bg_loc_")
+        );
+        keysToRemove.push(...userKeys);
+      } catch {}
+      await AsyncStorage.multiRemove([...new Set(keysToRemove)]);
+      await disconnect();
+      setShowDeleteStep2(false);
+      Alert.alert(t.deleteAccountSuccess);
+      router.replace("/");
+    } catch {
+      Alert.alert(t.deleteAccountFail);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <LinearGradient colors={["#D4843A", "#C4692E", "#A85528"]} style={[s.container, { paddingTop: topInset }]}>
@@ -835,8 +909,32 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 연결 해제 (모든 접속자) ── */}
-        {isConnected && (
+        {/* ── 로그아웃 / 계정 삭제 (자녀만) ── */}
+        {isConnected && myRole === "child" && (
+          <>
+            <SectionHeader title="" />
+            <View style={s.card}>
+              <InfoRow
+                icon="log-out-outline"
+                label={t.logoutLabel}
+                onPress={handleLogout}
+                danger
+                rightIcon="chevron-forward"
+              />
+              <Divider />
+              <InfoRow
+                icon="trash-outline"
+                label={t.deleteAccountLabel}
+                onPress={handleDeleteAccount}
+                danger
+                rightIcon="chevron-forward"
+              />
+            </View>
+          </>
+        )}
+
+        {/* ── 연결 해제 (부모) ── */}
+        {isConnected && myRole === "parent" && (
           <View style={[s.card, { marginTop: 8 }]}>
             <InfoRow
               icon="log-out-outline"
@@ -847,7 +945,6 @@ export default function ProfileScreen() {
             />
           </View>
         )}
-
 
         <Text style={s.bottomNote}>{t.bottomNote}</Text>
       </ScrollView>
@@ -977,6 +1074,70 @@ export default function ProfileScreen() {
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── 계정 삭제 1차 경고 모달 ── */}
+      <Modal visible={showDeleteStep1} transparent animationType="fade" onRequestClose={() => setShowDeleteStep1(false)}>
+        <View style={s.confirmOverlay}>
+          <View style={s.confirmBox}>
+            <View style={s.confirmIconWrap}>
+              <Ionicons name="warning" size={32} color="#E53935" />
+            </View>
+            <Text style={s.confirmTitle}>{t.deleteAccountTitle}</Text>
+            <Text style={s.confirmMessage}>{t.deleteAccountMsg}</Text>
+            <View style={s.confirmBtns}>
+              <Pressable style={s.confirmCancel} onPress={() => setShowDeleteStep1(false)}>
+                <Text style={s.confirmCancelText}>{t.cancel}</Text>
+              </Pressable>
+              <Pressable style={s.confirmDanger} onPress={handleDeleteStep1Continue}>
+                <Text style={s.confirmDangerText}>{t.deleteAccountContinue}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── 계정 삭제 2차 확인 모달 (DELETE 입력) ── */}
+      <Modal visible={showDeleteStep2} transparent animationType="fade" onRequestClose={() => !deleting && setShowDeleteStep2(false)}>
+        <View style={s.confirmOverlay}>
+          <View style={s.confirmBox}>
+            <View style={s.confirmIconWrap}>
+              <Ionicons name="alert-circle" size={32} color="#E53935" />
+            </View>
+            <Text style={s.confirmTitle}>{t.deleteAccountFinalTitle}</Text>
+            <Text style={s.confirmMessage}>{t.deleteAccountFinalMsg}</Text>
+            <TextInput
+              style={s.deleteInput}
+              value={deleteInput}
+              onChangeText={setDeleteInput}
+              placeholder={t.deleteAccountFinalPlaceholder}
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!deleting}
+            />
+            <View style={s.confirmBtns}>
+              <Pressable
+                style={[s.confirmCancel, deleting && { opacity: 0.4 }]}
+                disabled={deleting}
+                onPress={() => { setShowDeleteStep2(false); setDeleteInput(""); }}
+              >
+                <Text style={s.confirmCancelText}>{t.cancel}</Text>
+              </Pressable>
+              <Pressable
+                style={[s.confirmDanger, (deleteInput.trim().toUpperCase() !== "DELETE" || deleting) && { opacity: 0.4 }]}
+                disabled={deleteInput.trim().toUpperCase() !== "DELETE" || deleting}
+                onPress={handleDeleteFinal}
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={s.confirmDangerText}>{t.deleteAccountFinalBtn}</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* ── 연결 해제 확인 모달 ── */}
@@ -1126,6 +1287,8 @@ const s = StyleSheet.create({
   confirmCancelText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#777" },
   confirmDanger:     { flex: 1, paddingVertical: 15, borderRadius: 16, backgroundColor: COLORS.danger, alignItems: "center", justifyContent: "center" },
   confirmDangerText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+
+  deleteInput:       { width: "100%", backgroundColor: "#F5F5F5", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 18, fontFamily: "Inter_700Bold", letterSpacing: 3, textAlign: "center", color: "#333", borderWidth: 1, borderColor: "#E8E8E8", marginTop: 8, marginBottom: 4 },
 
   // ── 자녀 관리 섹션 ──
   childMgmtShareBlock: { padding: 16, paddingBottom: 8 },

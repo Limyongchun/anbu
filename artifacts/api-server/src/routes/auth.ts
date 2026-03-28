@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { accountsTable, familyMembersTable } from "@workspace/db/schema";
+import { accountsTable, familyMembersTable, familyLocationsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -170,6 +170,64 @@ router.post("/auth/google", async (req, res) => {
   } catch (e) {
     console.error("[auth/google] error:", e);
     return res.status(500).json({ error: "Google 로그인 처리 중 오류가 발생했습니다" });
+  }
+});
+
+router.delete("/account/:accountId", async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  const { deviceId } = req.body as { deviceId?: string };
+
+  if (!accountId || Number.isNaN(accountId)) {
+    return res.status(400).json({ error: "유효한 계정 ID가 필요합니다" });
+  }
+  if (!deviceId) {
+    return res.status(400).json({ error: "deviceId가 필요합니다" });
+  }
+
+  console.log("[account/delete] accountId:", accountId, "deviceId:", deviceId);
+
+  try {
+    const memberships = await db.select().from(familyMembersTable).where(eq(familyMembersTable.accountId, accountId));
+    const ownsAccount = memberships.some(m => m.deviceId === deviceId);
+
+    if (!ownsAccount) {
+      const [account] = await db.select().from(accountsTable).where(eq(accountsTable.id, accountId));
+      if (!account) {
+        return res.status(404).json({ error: "계정을 찾을 수 없습니다" });
+      }
+      const deviceMemberships = await db.select().from(familyMembersTable).where(eq(familyMembersTable.deviceId, deviceId));
+      const linkedToAccount = deviceMemberships.some(m => m.accountId === accountId);
+      if (!linkedToAccount && memberships.length > 0) {
+        return res.status(403).json({ error: "본인 계정만 삭제할 수 있습니다" });
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      const allDeviceIds = new Set<string>();
+      for (const m of memberships) {
+        allDeviceIds.add(m.deviceId);
+      }
+      allDeviceIds.add(deviceId);
+
+      for (const did of allDeviceIds) {
+        await tx.delete(familyLocationsTable).where(eq(familyLocationsTable.deviceId, did));
+      }
+
+      await tx.delete(familyMembersTable).where(eq(familyMembersTable.accountId, accountId));
+
+      const extraDeviceMembers = await tx.select().from(familyMembersTable).where(eq(familyMembersTable.deviceId, deviceId));
+      for (const m of extraDeviceMembers) {
+        await tx.delete(familyMembersTable).where(eq(familyMembersTable.id, m.id));
+      }
+
+      await tx.delete(accountsTable).where(eq(accountsTable.id, accountId));
+    });
+
+    console.log("[account/delete] success, accountId:", accountId);
+    return res.json({ success: true });
+  } catch (e) {
+    console.error("[account/delete] error:", e);
+    return res.status(500).json({ error: "계정 삭제 중 오류가 발생했습니다" });
   }
 });
 

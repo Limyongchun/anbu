@@ -167,6 +167,19 @@ Apple 심사용 고객지원 웹페이지 (`/support/`). React + Vite 단일 페
 - **이메일**: `2011atrees@gmail.com`
 - 포트: 22770
 
+### Account Deletion (계정 삭제 - Apple 심사 대응)
+
+자녀 계정 전용 앱 내 계정 삭제 기능. Apple App Store 심사 요건 충족.
+- **대상**: `role === "child"` 자녀 계정만 (부모 화면에는 노출 안 됨)
+- **UI 위치**: 설정(프로필) 화면 하단 → "로그아웃" + "계정 삭제" 메뉴
+- **2단계 확인 플로우**: 1차 경고 모달 → 2차 "DELETE" 입력 확인
+- **서버 엔드포인트**: `DELETE /api/account/:accountId` (auth.ts)
+  - deviceId 소유권 검증
+  - DB 트랜잭션으로 accounts, family_members, family_locations 전부 삭제
+- **로컬 데이터 정리**: AsyncStorage 전체 키 삭제 (account, family, photo, privacy, bg_loc)
+- **i18n**: ko/en/ja 3개 언어 지원
+- **API 클라이언트**: `api.deleteAccount(accountId, deviceId)` (lib/api.ts)
+
 ### Guest Mode (체험 모드)
 
 Apple 심사를 위한 로그인 없이 앱 진입 기능. 기본적으로 게스트 모드가 켜져 있어 앱 실행 즉시 자녀 홈 화면 진입.
