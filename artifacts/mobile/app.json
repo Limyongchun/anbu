@@ -17,6 +17,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.anbu.family",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "가족의 안전을 위해 현재 위치를 공유합니다.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "앱이 꺼져 있어도 가족에게 위치를 안전하게 공유하기 위해 백그라운드 위치 접근이 필요합니다.",
@@ -81,7 +82,8 @@
             "deploymentTarget": "15.1"
           }
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

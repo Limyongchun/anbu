@@ -4,6 +4,11 @@ import { createInsertSchema } from "drizzle-zod";
 export const accountsTable = pgTable("accounts", {
   id: serial("id").primaryKey(),
   phone: text("phone").notNull().unique(),
+  appleId: text("apple_id").unique(),
+  googleId: text("google_id").unique(),
+  displayName: text("display_name"),
+  email: text("email"),
+  authProvider: text("auth_provider").default("phone"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

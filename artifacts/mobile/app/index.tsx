@@ -1,8 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Asset } from "expo-asset";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as AuthSession from "expo-auth-session";
+import * as Crypto from "expo-crypto";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,10 +23,22 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useGuestMode } from "@/context/GuestModeContext";
+import { api } from "@/lib/api";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const splashVideoModule = require("@/assets/splash-video.mp4");
 const splashPoster = require("@/assets/splash-poster.jpg");
 const logoImage = require("@/assets/images/logo-anbu.png");
+
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
+
+const googleDiscovery = {
+  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+  tokenEndpoint: "https://oauth2.googleapis.com/token",
+  revocationEndpoint: "https://oauth2.googleapis.com/revoke",
+};
 
 function NativeVideo() {
   const player = useVideoPlayer(splashVideoModule, (p) => {
@@ -74,6 +90,29 @@ function WebVideo() {
   );
 }
 
+async function handleSocialAuthResult(result: {
+  success: boolean;
+  accountId: number;
+  displayName?: string | null;
+  email?: string | null;
+  existingFamilies: any[];
+}) {
+  if (result.existingFamilies && result.existingFamilies.length > 0) {
+    const first = result.existingFamilies[0];
+    router.replace({
+      pathname: "/child",
+      params: {
+        familyCode: first.familyCode,
+        memberName: first.memberName,
+        role: first.role,
+        accountId: String(result.accountId),
+      },
+    });
+  } else {
+    router.push("/lang-select");
+  }
+}
+
 export default function SplashScreen() {
   const { isConnected, myRole, loading } = useFamilyContext();
   const { isGuestMode, enterGuestMode } = useGuestMode();
@@ -85,9 +124,14 @@ export default function SplashScreen() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: false }).start();
+
+    if (Platform.OS === "ios") {
+      AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+    }
   }, []);
 
   useEffect(() => {
@@ -101,29 +145,125 @@ export default function SplashScreen() {
   }, [loading, isConnected, myRole, isGuestMode]);
 
   const handleDemoStart = () => {
+    if (demoLoading) return;
+    console.log("[Login] Demo mode button pressed");
     setDemoLoading(true);
     enterGuestMode();
   };
 
-  const handleAppleLogin = () => {
+  const handleAppleLogin = async () => {
+    if (appleLoading) return;
+    console.log("[Login] Apple login button pressed");
     setAppleLoading(true);
-    setTimeout(() => {
+
+    try {
+      const nonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        Math.random().toString(36).substring(2),
+      );
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce,
+      });
+
+      console.log("[Login] Apple auth success, user:", credential.user);
+
+      const result = await api.authApple({
+        identityToken: credential.identityToken ?? undefined,
+        user: credential.user,
+        fullName: credential.fullName
+          ? { givenName: credential.fullName.givenName ?? undefined, familyName: credential.fullName.familyName ?? undefined }
+          : null,
+        email: credential.email,
+      });
+
+      console.log("[Login] Apple server auth success, accountId:", result.accountId);
+      await handleSocialAuthResult(result);
+    } catch (e: any) {
+      if (e?.code === "ERR_REQUEST_CANCELED") {
+        console.log("[Login] Apple login cancelled by user");
+      } else {
+        console.error("[Login] Apple login failed:", e);
+        Alert.alert("로그인 실패", "Apple 로그인에 실패했습니다. 다시 시도해주세요.");
+      }
+    } finally {
       setAppleLoading(false);
-      Alert.alert("Apple 로그인", "현재 Apple 로그인은 준비 중입니다.\n체험 모드를 이용해주세요.");
-    }, 800);
+    }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
+    if (googleLoading) return;
+    console.log("[Login] Google login button pressed");
+
+    if (!GOOGLE_WEB_CLIENT_ID && !GOOGLE_IOS_CLIENT_ID) {
+      console.log("[Login] Google client ID not configured");
+      Alert.alert("Google 로그인", "Google 로그인 설정이 필요합니다.\nEXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID 환경변수를 설정해주세요.");
+      return;
+    }
+
     setGoogleLoading(true);
-    setTimeout(() => {
+
+    try {
+      const clientId = Platform.OS === "ios" && GOOGLE_IOS_CLIENT_ID
+        ? GOOGLE_IOS_CLIENT_ID
+        : GOOGLE_WEB_CLIENT_ID;
+
+      const redirectUri = AuthSession.makeRedirectUri({ scheme: "anbu" });
+      console.log("[Login] Google redirect URI:", redirectUri);
+
+      const authRequest = new AuthSession.AuthRequest({
+        clientId,
+        redirectUri,
+        scopes: ["openid", "profile", "email"],
+        responseType: AuthSession.ResponseType.Token,
+        usePKCE: false,
+      });
+
+      const result = await authRequest.promptAsync(googleDiscovery);
+      console.log("[Login] Google auth result type:", result.type);
+
+      if (result.type === "success") {
+        const { access_token } = result.params;
+        console.log("[Login] Google auth success, fetching user info");
+
+        const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+        const userInfo = await userInfoResponse.json();
+        console.log("[Login] Google user info:", userInfo.email);
+
+        const serverResult = await api.authGoogle({
+          accessToken: access_token,
+          email: userInfo.email,
+          name: userInfo.name,
+        });
+
+        console.log("[Login] Google server auth success, accountId:", serverResult.accountId);
+        await handleSocialAuthResult(serverResult);
+      } else if (result.type === "cancel" || result.type === "dismiss") {
+        console.log("[Login] Google login cancelled by user");
+      } else {
+        console.error("[Login] Google login failed, result:", result);
+        Alert.alert("로그인 실패", "Google 로그인에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (e: any) {
+      console.error("[Login] Google login error:", e);
+      Alert.alert("로그인 실패", "Google 로그인에 실패했습니다. 다시 시도해주세요.");
+    } finally {
       setGoogleLoading(false);
-      Alert.alert("Google 로그인", "현재 Google 로그인은 준비 중입니다.\n체험 모드를 이용해주세요.");
-    }, 800);
+    }
   };
 
   const handleNormalLogin = () => {
+    console.log("[Login] Normal login button pressed");
     router.push("/lang-select");
   };
+
+  const isAnyLoading = demoLoading || appleLoading || googleLoading;
 
   return (
     <View style={st.container}>
@@ -133,20 +273,21 @@ export default function SplashScreen() {
         resizeMode="cover"
       />
 
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeIn }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeIn, pointerEvents: "none" }]}>
         {Platform.OS === "web" ? <WebVideo /> : <NativeVideo />}
       </Animated.View>
 
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)" }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)", pointerEvents: "none" }]} />
 
       <ScrollView
-        style={StyleSheet.absoluteFill}
+        style={{ flex: 1 }}
         contentContainerStyle={[
           st.scrollContent,
           { paddingTop: topInset + 40, paddingBottom: bottomInset + 24 },
         ]}
         bounces={false}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View style={[st.logoSection, { opacity: fadeIn }]}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
@@ -156,9 +297,10 @@ export default function SplashScreen() {
 
         <Animated.View style={[st.buttonsSection, { opacity: fadeIn }]}>
           <Pressable
-            style={({ pressed }) => [st.demoBtn, pressed && st.demoBtnPressed]}
+            style={({ pressed }) => [st.demoBtn, pressed && st.btnPressed]}
             onPress={handleDemoStart}
-            disabled={demoLoading}
+            disabled={isAnyLoading}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <LinearGradient
               colors={["#FFD700", "#FFC107"]}
@@ -181,25 +323,29 @@ export default function SplashScreen() {
             <View style={st.dividerLine} />
           </View>
 
-          <Pressable
-            style={({ pressed }) => [st.loginBtn, st.appleBtn, pressed && st.loginBtnPressed]}
-            onPress={handleAppleLogin}
-            disabled={appleLoading}
-          >
-            {appleLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Ionicons name="logo-apple" size={22} color="#fff" style={{ marginRight: 10 }} />
-                <Text style={[st.loginBtnText, { color: "#fff" }]}>Apple로 계속하기</Text>
-              </>
-            )}
-          </Pressable>
+          {(Platform.OS === "ios" || Platform.OS === "web") && (
+            <Pressable
+              style={({ pressed }) => [st.loginBtn, st.appleBtn, pressed && st.btnPressed]}
+              onPress={handleAppleLogin}
+              disabled={isAnyLoading}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              {appleLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={22} color="#fff" style={{ marginRight: 10 }} />
+                  <Text style={[st.loginBtnText, { color: "#fff" }]}>Apple로 계속하기</Text>
+                </>
+              )}
+            </Pressable>
+          )}
 
           <Pressable
-            style={({ pressed }) => [st.loginBtn, st.googleBtn, pressed && st.loginBtnPressed]}
+            style={({ pressed }) => [st.loginBtn, st.googleBtn, pressed && st.btnPressed]}
             onPress={handleGoogleLogin}
-            disabled={googleLoading}
+            disabled={isAnyLoading}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             {googleLoading ? (
               <ActivityIndicator color="#333" size="small" />
@@ -212,8 +358,10 @@ export default function SplashScreen() {
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [st.loginBtn, st.normalBtn, pressed && st.loginBtnPressed]}
+            style={({ pressed }) => [st.loginBtn, st.normalBtn, pressed && st.btnPressed]}
             onPress={handleNormalLogin}
+            disabled={isAnyLoading}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <Ionicons name="person-outline" size={20} color="#fff" style={{ marginRight: 10 }} />
             <Text style={[st.loginBtnText, { color: "#fff" }]}>일반 로그인</Text>
@@ -275,9 +423,9 @@ const st = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  demoBtnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+  btnPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.97 }],
   },
   demoBtnGradient: {
     flexDirection: "row",
@@ -318,10 +466,6 @@ const st = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 20,
-  },
-  loginBtnPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
   },
   appleBtn: {
     backgroundColor: "#000",

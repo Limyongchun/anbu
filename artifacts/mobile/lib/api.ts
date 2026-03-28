@@ -96,6 +96,40 @@ export const api = {
       body: JSON.stringify({ phone, otp }),
     }),
 
+  authApple: (data: {
+    identityToken?: string;
+    user: string;
+    fullName?: { givenName?: string; familyName?: string } | null;
+    email?: string | null;
+  }): Promise<{
+    success: boolean;
+    accountId: number;
+    displayName?: string | null;
+    email?: string | null;
+    existingFamilies: AccountFamily[];
+  }> =>
+    request("/auth/apple", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  authGoogle: (data: {
+    idToken?: string;
+    accessToken?: string;
+    email?: string | null;
+    name?: string | null;
+  }): Promise<{
+    success: boolean;
+    accountId: number;
+    displayName?: string | null;
+    email?: string | null;
+    existingFamilies: AccountFamily[];
+  }> =>
+    request("/auth/google", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   getAccountFamilies: (accountId: number): Promise<{ accountId: number; families: AccountFamily[] }> =>
     request(`/account/${accountId}/families`),
 
