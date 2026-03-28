@@ -1,7 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Asset } from "expo-asset";
-import * as AppleAuthentication from "expo-apple-authentication";
-import * as AuthSession from "expo-auth-session";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -24,7 +22,12 @@ import { useFamilyContext } from "@/context/FamilyContext";
 import { useGuestMode } from "@/context/GuestModeContext";
 import { api } from "@/lib/api";
 
-WebBrowser.maybeCompleteAuthSession();
+let AppleAuthentication: any = null;
+let AuthSession: any = null;
+try { AppleAuthentication = require("expo-apple-authentication"); } catch {}
+try { AuthSession = require("expo-auth-session"); } catch {}
+
+try { WebBrowser.maybeCompleteAuthSession(); } catch {}
 
 const splashVideoModule = require("@/assets/splash-video.mp4");
 const splashPoster = require("@/assets/splash-poster.jpg");
@@ -128,7 +131,7 @@ export default function SplashScreen() {
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: false }).start();
 
-    if (Platform.OS === "ios") {
+    if (Platform.OS === "ios" && AppleAuthentication?.isAvailableAsync) {
       AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
     }
   }, []);
@@ -151,7 +154,7 @@ export default function SplashScreen() {
   };
 
   const handleAppleLogin = async () => {
-    if (appleLoading) return;
+    if (appleLoading || !AppleAuthentication) return;
     console.log("[Login] Apple login button pressed");
     setAppleLoading(true);
 
@@ -195,6 +198,11 @@ export default function SplashScreen() {
   const handleGoogleLogin = async () => {
     if (googleLoading) return;
     console.log("[Login] Google login button pressed");
+
+    if (!AuthSession) {
+      Alert.alert("Google 로그인", "이 환경에서는 Google 로그인을 사용할 수 없습니다.");
+      return;
+    }
 
     if (!GOOGLE_WEB_CLIENT_ID && !GOOGLE_IOS_CLIENT_ID) {
       console.log("[Login] Google client ID not configured");

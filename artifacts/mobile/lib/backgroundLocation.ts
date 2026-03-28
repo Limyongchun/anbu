@@ -1,7 +1,9 @@
 import * as Location from "expo-location";
-import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+
+let TaskManager: any = null;
+try { TaskManager = require("expo-task-manager"); } catch {}
 
 const TASK_NAME = "ANBU_BACKGROUND_LOCATION";
 const STORAGE_KEY_FAMILY_CODE = "bg_loc_familyCode";
@@ -79,10 +81,10 @@ async function uploadLocationInBackground(
 
 interface LocationTaskBody {
   data: { locations: Location.LocationObject[] } | null;
-  error: TaskManager.TaskManagerError | null;
+  error: any;
 }
 
-if (Platform.OS !== "web" && !TaskManager.isTaskDefined(TASK_NAME)) {
+if (Platform.OS !== "web" && TaskManager?.isTaskDefined && !TaskManager.isTaskDefined(TASK_NAME)) {
   TaskManager.defineTask(TASK_NAME, async ({ data, error }: LocationTaskBody) => {
     if (error) return;
     if (data && data.locations && data.locations.length > 0) {
@@ -122,7 +124,7 @@ export async function clearBackgroundLocationConfig() {
 }
 
 export async function startBackgroundLocationTracking(): Promise<boolean> {
-  if (Platform.OS === "web") return false;
+  if (Platform.OS === "web" || !TaskManager) return false;
 
   const isRegistered = await TaskManager.isTaskRegisteredAsync(TASK_NAME);
   if (isRegistered) return true;
@@ -150,7 +152,7 @@ export async function startBackgroundLocationTracking(): Promise<boolean> {
 }
 
 export async function stopBackgroundLocationTracking(): Promise<void> {
-  if (Platform.OS === "web") return;
+  if (Platform.OS === "web" || !TaskManager) return;
   const isRegistered = await TaskManager.isTaskRegisteredAsync(TASK_NAME);
   if (isRegistered) {
     await Location.stopLocationUpdatesAsync(TASK_NAME);
@@ -159,7 +161,7 @@ export async function stopBackgroundLocationTracking(): Promise<void> {
 }
 
 export async function isBackgroundLocationRunning(): Promise<boolean> {
-  if (Platform.OS === "web") return false;
+  if (Platform.OS === "web" || !TaskManager) return false;
   return TaskManager.isTaskRegisteredAsync(TASK_NAME);
 }
 

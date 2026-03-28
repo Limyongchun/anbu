@@ -1,6 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
+
+let CameraView: any = null;
+let _useCameraPermissions: any = null;
+try {
+  const cam = require("expo-camera");
+  CameraView = cam.CameraView;
+  _useCameraPermissions = cam.useCameraPermissions;
+} catch {}
+
+function useCameraPermissionsSafe(): [any, () => Promise<any>] {
+  if (_useCameraPermissions) {
+    return _useCameraPermissions();
+  }
+  return [null, async () => ({ granted: false })];
+}
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -37,7 +51,7 @@ export default function ParentCodeScreen() {
   const [joining, setJoining] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissionsSafe();
   const scanLockRef = useRef(false);
 
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -62,6 +76,10 @@ export default function ParentCodeScreen() {
   };
 
   const handleOpenScanner = async () => {
+    if (!CameraView) {
+      setError("이 환경에서는 QR 스캔을 사용할 수 없습니다. 코드를 직접 입력해주세요.");
+      return;
+    }
     if (!cameraPermission?.granted) {
       const result = await requestCameraPermission();
       if (!result.granted) {

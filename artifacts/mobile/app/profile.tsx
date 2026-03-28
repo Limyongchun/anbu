@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import * as Clipboard from "expo-clipboard";
+let Clipboard: any = null;
+try { Clipboard = require("expo-clipboard"); } catch {}
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
@@ -310,7 +311,9 @@ export default function ProfileScreen() {
 
   const copyChildCode = async () => {
     if (!familyCode) return;
-    await Clipboard.setStringAsync(familyCode);
+    if (Clipboard?.setStringAsync) {
+      await Clipboard.setStringAsync(familyCode);
+    }
     setChildCodeCopied(true);
     setTimeout(() => setChildCodeCopied(false), 2500);
   };
@@ -469,7 +472,9 @@ export default function ProfileScreen() {
 
   const copyCode = async () => {
     if (!familyCode) return;
-    await Clipboard.setStringAsync(familyCode);
+    if (Clipboard?.setStringAsync) {
+      await Clipboard.setStringAsync(familyCode);
+    }
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
