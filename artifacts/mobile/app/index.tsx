@@ -84,31 +84,9 @@ function WebVideo() {
   );
 }
 
-async function handleSocialAuthResult(result: {
-  success: boolean;
-  accountId: number;
-  displayName?: string | null;
-  email?: string | null;
-  existingFamilies: any[];
-}) {
-  if (result.existingFamilies && result.existingFamilies.length > 0) {
-    const first = result.existingFamilies[0];
-    router.replace({
-      pathname: "/child",
-      params: {
-        familyCode: first.familyCode,
-        memberName: first.memberName,
-        role: first.role,
-        accountId: String(result.accountId),
-      },
-    });
-  } else {
-    router.push("/lang-select");
-  }
-}
 
 export default function SplashScreen() {
-  const { isConnected, myRole, loading } = useFamilyContext();
+  const { isConnected, myRole, loading, connect, addExtraFamily, setAccountId } = useFamilyContext();
   const { isGuestMode, enterGuestMode } = useGuestMode();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 50 : insets.top;
@@ -137,6 +115,33 @@ export default function SplashScreen() {
       router.replace(myRole === "parent" ? "/parent" : "/child");
     }
   }, [loading, isConnected, myRole, isGuestMode]);
+
+  const handleSocialAuthResult = async (result: {
+    success: boolean;
+    accountId: number;
+    displayName?: string | null;
+    email?: string | null;
+    existingFamilies: any[];
+  }) => {
+    await setAccountId(result.accountId);
+
+    if (result.existingFamilies && result.existingFamilies.length > 0) {
+      const first = result.existingFamilies[0];
+      await connect(
+        first.familyCode,
+        first.memberName,
+        first.role as "parent" | "child",
+        first.childRole || undefined,
+        result.accountId,
+      );
+      for (let i = 1; i < result.existingFamilies.length; i++) {
+        await addExtraFamily(result.existingFamilies[i].familyCode);
+      }
+      router.replace(first.role === "parent" ? "/parent" : "/child");
+    } else {
+      router.push("/lang-select");
+    }
+  };
 
   const handleDemoStart = () => {
     if (demoLoading) return;
