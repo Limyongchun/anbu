@@ -23,7 +23,6 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.anbu.family",
-    buildNumber: "1",
     usesAppleSignIn: true,
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
@@ -36,6 +35,7 @@ const config: ExpoConfig = {
         "가족에게 보낼 사진을 촬영하기 위해 카메라 접근이 필요합니다.",
       NSPhotoLibraryUsageDescription:
         "가족에게 보낼 사진을 선택하기 위해 사진 라이브러리 접근이 필요합니다.",
+      ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["location", "fetch"],
       ...(googleReversedClientId
         ? {
