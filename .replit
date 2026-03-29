@@ -31,6 +31,7 @@ timeoutMs = 20000
 ADMIN_PASSWORD = "Dladydcjs019!"
 JWT_SECRET = "anbu-admin-jwt-secret-2024"
 EXPO_PUBLIC_NAVER_MAP_CLIENT_ID = "rg1fro3mez"
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = "589055853445-2p9cqa4rnoc3n5bv90t3r91gjad2jjs5.apps.googleusercontent.com"
 
 [nix]
 channel = "stable-25_05"
