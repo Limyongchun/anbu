@@ -191,40 +191,104 @@ export default function SplashScreen() {
     if (googleLoading) return;
     console.log("[Login] Google login button pressed");
 
+    if (!AuthSession) {
+      Alert.alert("Google 로그인", "Google 로그인은 앱 빌드(TestFlight)에서 사용 가능합니다.\nExpo Go에서는 지원되지 않습니다.");
+      return;
+    }
+
+    const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
+    const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
+
+    if (!iosClientId && !webClientId) {
+      Alert.alert("Google 로그인", "Google Client ID가 설정되지 않았습니다.");
+      return;
+    }
+
     setGoogleLoading(true);
 
     try {
-      const apiBase = process.env.EXPO_PUBLIC_API_URL
-        || (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : "");
-      const googleAuthUrl = `${apiBase}/api/auth/google/start`;
-      console.log("[Login] Opening Google auth URL:", googleAuthUrl);
+      let clientId: string;
+      let redirectUri: string;
+      let useCodeFlow = false;
 
-      const result = await WebBrowser.openAuthSessionAsync(
-        googleAuthUrl,
-        "anbu://auth/google"
-      );
-      console.log("[Login] Google auth browser result:", result.type);
+      if (Platform.OS === "ios" && iosClientId) {
+        clientId = iosClientId;
+        const reversedClientId = iosClientId.split(".").reverse().join(".");
+        redirectUri = `${reversedClientId}:/oauthredirect`;
+        useCodeFlow = true;
+      } else {
+        clientId = webClientId;
+        redirectUri = AuthSession.makeRedirectUri({ scheme: "anbu" });
+        useCodeFlow = false;
+      }
 
-      if (result.type === "success" && result.url) {
-        const url = new URL(result.url);
-        const accountId = url.searchParams.get("accountId");
-        const email = url.searchParams.get("email");
-        const name = url.searchParams.get("name");
-        const error = url.searchParams.get("error");
+      console.log("[Login] Google clientId:", clientId.substring(0, 20) + "...");
+      console.log("[Login] Google redirectUri:", redirectUri);
+      console.log("[Login] Using code flow:", useCodeFlow);
 
-        if (error) {
-          console.error("[Login] Google auth error from server:", error);
-          Alert.alert("로그인 실패", "Google 로그인에 실패했습니다. 다시 시도해주세요.");
-        } else if (accountId) {
-          console.log("[Login] Google server auth success, accountId:", accountId);
-          await handleSocialAuthResult({
-            accountId: parseInt(accountId, 10),
-            email: email || undefined,
-            name: name || undefined,
-          });
+      const discovery = {
+        authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenEndpoint: "https://oauth2.googleapis.com/token",
+      };
+
+      const authRequest = new AuthSession.AuthRequest({
+        clientId,
+        redirectUri,
+        scopes: ["openid", "profile", "email"],
+        responseType: useCodeFlow
+          ? AuthSession.ResponseType.Code
+          : AuthSession.ResponseType.Token,
+        usePKCE: useCodeFlow,
+      });
+
+      const result = await authRequest.promptAsync(discovery);
+      console.log("[Login] Google auth result type:", result.type);
+
+      if (result.type === "success") {
+        let accessToken: string | undefined;
+
+        if (useCodeFlow && result.params?.code) {
+          console.log("[Login] Exchanging auth code for tokens...");
+          const tokenResult = await AuthSession.exchangeCodeAsync(
+            {
+              clientId,
+              code: result.params.code,
+              redirectUri,
+              extraParams: authRequest.codeVerifier
+                ? { code_verifier: authRequest.codeVerifier }
+                : undefined,
+            },
+            { tokenEndpoint: discovery.tokenEndpoint }
+          );
+          accessToken = tokenResult.accessToken;
+        } else {
+          accessToken = result.params?.access_token;
         }
+
+        if (!accessToken) {
+          Alert.alert("로그인 실패", "인증 토큰을 받지 못했습니다.");
+          return;
+        }
+
+        const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const userInfo = await userInfoResponse.json();
+        console.log("[Login] Google user info:", userInfo.email);
+
+        const serverResult = await api.authGoogle({
+          accessToken,
+          email: userInfo.email,
+          name: userInfo.name,
+        });
+
+        console.log("[Login] Google server auth success, accountId:", serverResult.accountId);
+        await handleSocialAuthResult(serverResult);
       } else if (result.type === "cancel" || result.type === "dismiss") {
         console.log("[Login] Google login cancelled by user");
+      } else {
+        console.error("[Login] Google login failed, result:", result);
+        Alert.alert("로그인 실패", "Google 로그인에 실패했습니다. 다시 시도해주세요.");
       }
     } catch (e: any) {
       console.error("[Login] Google login error:", e);

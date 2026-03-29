@@ -148,69 +148,6 @@ router.post("/auth/apple", async (req, res) => {
   }
 });
 
-router.get("/auth/google/start", (req, res) => {
-  const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
-  if (!clientId) {
-    return res.status(500).send("Google Client ID not configured");
-  }
-
-  const protocol = req.headers["x-forwarded-proto"] || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers.host || "";
-  const callbackUrl = `${protocol}://${host}/api/auth/google/callback`;
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: callbackUrl,
-    response_type: "token",
-    scope: "openid profile email",
-    include_granted_scopes: "true",
-  });
-
-  console.log("[auth/google/start] redirecting to Google, callback:", callbackUrl);
-  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
-});
-
-router.get("/auth/google/callback", (_req, res) => {
-  res.send(`<!DOCTYPE html><html><body><script>
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get("access_token");
-    if (accessToken) {
-      fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: "Bearer " + accessToken }
-      })
-      .then(r => r.json())
-      .then(userInfo => {
-        return fetch(window.location.origin + "/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accessToken: accessToken,
-            email: userInfo.email,
-            name: userInfo.name,
-          })
-        });
-      })
-      .then(r => r.json())
-      .then(result => {
-        if (result.success && result.accountId) {
-          const deepLink = "anbu://auth/google?accountId=" + result.accountId
-            + "&email=" + encodeURIComponent(result.email || "")
-            + "&name=" + encodeURIComponent(result.displayName || "");
-          window.location.href = deepLink;
-        } else {
-          window.location.href = "anbu://auth/google?error=auth_failed";
-        }
-      })
-      .catch(() => {
-        window.location.href = "anbu://auth/google?error=network_error";
-      });
-    } else {
-      window.location.href = "anbu://auth/google?error=no_token";
-    }
-  </script><p>로그인 처리 중...</p></body></html>`);
-});
-
 router.post("/auth/google", async (req, res) => {
   const { idToken, accessToken, email, name } = req.body as {
     idToken?: string;
