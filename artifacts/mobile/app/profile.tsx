@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import COLORS from "@/constants/colors";
 import { FamilyRole, useFamilyContext } from "@/context/FamilyContext";
+import { useGuestMode } from "@/context/GuestModeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Lang } from "@/lib/i18n";
 import { api } from "@/lib/api";
@@ -139,6 +140,7 @@ function ProfileLangDropdown({ lang, setLang }: { lang: Lang; setLang: (l: Lang)
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { familyCode, allFamilyCodes, myName, myRole, childRole, isMasterChild, deviceId, accountId, isConnected, connect, updateName, disconnect, addExtraFamily, removeExtraFamily } = useFamilyContext();
+  const { isGuestMode, exitGuestMode } = useGuestMode();
   const { lang, setLang, t } = useLang();
 
   const [familyChildren, setFamilyChildren] = useState<ChildMember[]>([]);
@@ -914,8 +916,51 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* ── 로그아웃 / 계정 삭제 (자녀만) ── */}
-        {isConnected && myRole === "child" && (
+        {/* ── 게스트 모드: 회원가입 / 체험 종료 ── */}
+        {isGuestMode && (
+          <>
+            <SectionHeader title="" />
+            <View style={s.card}>
+              <Pressable
+                style={({ pressed }) => [s.guestSignupBtn, pressed && { opacity: 0.85 }]}
+                onPress={() => {
+                  exitGuestMode();
+                  disconnect();
+                  router.replace("/");
+                }}
+              >
+                <LinearGradient
+                  colors={["#D4843A", "#C4692E"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={s.guestSignupGradient}
+                >
+                  <Ionicons name="person-add-outline" size={20} color="#fff" />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={s.guestSignupTitle}>{t.guestSignupLabel}</Text>
+                    <Text style={s.guestSignupDesc}>{t.guestSignupDesc}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+                </LinearGradient>
+              </Pressable>
+              <Divider />
+              <InfoRow
+                icon="exit-outline"
+                label={t.guestExitLabel}
+                onPress={() => {
+                  exitGuestMode();
+                  disconnect();
+                  router.replace("/");
+                }}
+                danger
+                rightIcon="chevron-forward"
+              />
+            </View>
+          </>
+        )}
+
+        {/* ── 로그아웃 / 계정 삭제 (자녀만, 비게스트) ── */}
+        {isConnected && myRole === "child" && !isGuestMode && (
           <>
             <SectionHeader title="" />
             <View style={s.card}>
@@ -1270,6 +1315,11 @@ const s = StyleSheet.create({
   faqQText:     { fontFamily: "Inter_500Medium", fontSize: 14, color: "#333", flex: 1, lineHeight: 20 },
   faqA:         { backgroundColor: "rgba(0,0,0,0.03)", paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 8, marginBottom: 10, borderRadius: 12 },
   faqAText:     { fontFamily: "Inter_400Regular", fontSize: 13, color: "#777", lineHeight: 20 },
+
+  guestSignupBtn:      { borderRadius: 14, overflow: "hidden" },
+  guestSignupGradient: { flexDirection: "row", alignItems: "center", paddingVertical: 16, paddingHorizontal: 16, gap: 4 },
+  guestSignupTitle:    { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff", marginBottom: 2 },
+  guestSignupDesc:     { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.8)", lineHeight: 15 },
 
   bottomNote:   { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(0,0,0,0.2)", textAlign: "center", marginTop: 28 },
 
