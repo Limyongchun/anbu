@@ -31,6 +31,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "2011atrees@naver.com"
+      }
+    }
   }
 }
