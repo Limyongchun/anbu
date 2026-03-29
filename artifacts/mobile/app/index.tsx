@@ -33,14 +33,6 @@ const splashVideoModule = require("@/assets/splash-video.mp4");
 const splashPoster = require("@/assets/splash-poster.jpg");
 const logoImage = require("@/assets/images/logo-anbu.png");
 
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
-
-const googleDiscovery = {
-  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-  tokenEndpoint: "https://oauth2.googleapis.com/token",
-  revocationEndpoint: "https://oauth2.googleapis.com/revoke",
-};
 
 function NativeVideo() {
   const player = useVideoPlayer(splashVideoModule, (p) => {
@@ -199,61 +191,40 @@ export default function SplashScreen() {
     if (googleLoading) return;
     console.log("[Login] Google login button pressed");
 
-    if (!AuthSession) {
-      Alert.alert("Google 로그인", "이 환경에서는 Google 로그인을 사용할 수 없습니다.");
-      return;
-    }
-
-    if (!GOOGLE_WEB_CLIENT_ID && !GOOGLE_IOS_CLIENT_ID) {
-      console.log("[Login] Google client ID not configured");
-      Alert.alert("Google 로그인", "Google 로그인 설정이 필요합니다.\nEXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID 환경변수를 설정해주세요.");
-      return;
-    }
-
     setGoogleLoading(true);
 
     try {
-      const clientId = Platform.OS === "ios" && GOOGLE_IOS_CLIENT_ID
-        ? GOOGLE_IOS_CLIENT_ID
-        : GOOGLE_WEB_CLIENT_ID;
+      const apiBase = process.env.EXPO_PUBLIC_API_URL
+        || (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : "");
+      const googleAuthUrl = `${apiBase}/api/auth/google/start`;
+      console.log("[Login] Opening Google auth URL:", googleAuthUrl);
 
-      const redirectUri = AuthSession.makeRedirectUri({ scheme: "anbu" });
-      console.log("[Login] Google redirect URI:", redirectUri);
+      const result = await WebBrowser.openAuthSessionAsync(
+        googleAuthUrl,
+        "anbu://auth/google"
+      );
+      console.log("[Login] Google auth browser result:", result.type);
 
-      const authRequest = new AuthSession.AuthRequest({
-        clientId,
-        redirectUri,
-        scopes: ["openid", "profile", "email"],
-        responseType: AuthSession.ResponseType.Token,
-        usePKCE: false,
-      });
+      if (result.type === "success" && result.url) {
+        const url = new URL(result.url);
+        const accountId = url.searchParams.get("accountId");
+        const email = url.searchParams.get("email");
+        const name = url.searchParams.get("name");
+        const error = url.searchParams.get("error");
 
-      const result = await authRequest.promptAsync(googleDiscovery);
-      console.log("[Login] Google auth result type:", result.type);
-
-      if (result.type === "success") {
-        const { access_token } = result.params;
-        console.log("[Login] Google auth success, fetching user info");
-
-        const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${access_token}` },
-        });
-        const userInfo = await userInfoResponse.json();
-        console.log("[Login] Google user info:", userInfo.email);
-
-        const serverResult = await api.authGoogle({
-          accessToken: access_token,
-          email: userInfo.email,
-          name: userInfo.name,
-        });
-
-        console.log("[Login] Google server auth success, accountId:", serverResult.accountId);
-        await handleSocialAuthResult(serverResult);
+        if (error) {
+          console.error("[Login] Google auth error from server:", error);
+          Alert.alert("로그인 실패", "Google 로그인에 실패했습니다. 다시 시도해주세요.");
+        } else if (accountId) {
+          console.log("[Login] Google server auth success, accountId:", accountId);
+          await handleSocialAuthResult({
+            accountId: parseInt(accountId, 10),
+            email: email || undefined,
+            name: name || undefined,
+          });
+        }
       } else if (result.type === "cancel" || result.type === "dismiss") {
         console.log("[Login] Google login cancelled by user");
-      } else {
-        console.error("[Login] Google login failed, result:", result);
-        Alert.alert("로그인 실패", "Google 로그인에 실패했습니다. 다시 시도해주세요.");
       }
     } catch (e: any) {
       console.error("[Login] Google login error:", e);
