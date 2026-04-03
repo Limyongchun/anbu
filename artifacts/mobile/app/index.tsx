@@ -241,8 +241,12 @@ export default function SplashScreen() {
     const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
 
+    console.log("[Google] iOS Client ID:", iosClientId ? iosClientId.substring(0, 20) + "..." : "(없음)");
+    console.log("[Google] Web Client ID:", webClientId ? webClientId.substring(0, 20) + "..." : "(없음)");
+    console.log("[Google] Platform:", Platform.OS);
+
     if (!iosClientId && !webClientId) {
-      Alert.alert("Google 로그인", "Google Client ID가 설정되지 않았습니다.");
+      Alert.alert("Google 로그인", "Google Client ID가 설정되지 않았습니다.\n\nEXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID 또는\nEXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID가 필요합니다.");
       return;
     }
 
