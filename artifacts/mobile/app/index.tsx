@@ -356,11 +356,12 @@ export default function SplashScreen() {
               ) : (
                 <>
                   <Ionicons name="play-circle" size={24} color="#000" style={{ marginRight: 8 }} />
-                  <Text style={st.demoBtnText}>체험모드로 바로 시작</Text>
+                  <Text style={st.demoBtnText}>체험모드로 시작하기</Text>
                 </>
               )}
             </LinearGradient>
           </Pressable>
+          <Text style={st.demoGuideText}>로그인 없이 주요 기능을 체험할 수 있습니다</Text>
 
           <View style={st.dividerRow}>
             <View style={st.dividerLine} />
@@ -380,7 +381,7 @@ export default function SplashScreen() {
               ) : (
                 <>
                   <Ionicons name="logo-apple" size={22} color="#fff" style={{ marginRight: 10 }} />
-                  <Text style={[st.loginBtnText, { color: "#fff" }]}>Apple로 계속하기</Text>
+                  <Text style={[st.loginBtnText, { color: "#fff" }]}>Apple 계정으로 계속</Text>
                 </>
               )}
             </Pressable>
@@ -397,7 +398,7 @@ export default function SplashScreen() {
             ) : (
               <>
                 <Ionicons name="logo-google" size={20} color="#EA4335" style={{ marginRight: 10 }} />
-                <Text style={[st.loginBtnText, { color: "#333" }]}>Google로 계속하기</Text>
+                <Text style={[st.loginBtnText, { color: "#333" }]}>Google 계정으로 계속</Text>
               </>
             )}
           </Pressable>
@@ -408,8 +409,8 @@ export default function SplashScreen() {
             disabled={isAnyLoading}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Ionicons name="person-outline" size={20} color="#fff" style={{ marginRight: 10 }} />
-            <Text style={[st.loginBtnText, { color: "#fff" }]}>일반 로그인</Text>
+            <Ionicons name="call-outline" size={20} color="#fff" style={{ marginRight: 10 }} />
+            <Text style={[st.loginBtnText, { color: "#fff" }]}>휴대폰 인증으로 계속</Text>
           </Pressable>
         </Animated.View>
 
@@ -486,6 +487,13 @@ const st = StyleSheet.create({
     fontSize: 18,
     color: "#000",
     letterSpacing: 0.5,
+  },
+  demoGuideText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "center",
+    marginTop: -4,
   },
   dividerRow: {
     flexDirection: "row",
