@@ -152,10 +152,11 @@ export default function SplashScreen() {
 
   const handleAppleLogin = async () => {
     if (appleLoading || !AppleAuthentication) return;
-    console.log("[Login] Apple login button pressed");
+    console.log("1. Apple 버튼 클릭");
     setAppleLoading(true);
 
     try {
+      console.log("2. Apple 로그인 요청 시작");
       const rawNonce = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
       const nonce = rawNonce;
 
@@ -167,8 +168,15 @@ export default function SplashScreen() {
         nonce,
       });
 
-      console.log("[Login] Apple auth success, user:", credential.user);
+      console.log("3. credential 수신:", JSON.stringify(credential, null, 2));
+      console.log("4. identityToken:", credential.identityToken);
+      console.log("5. user:", credential.user);
 
+      if (!credential.identityToken) {
+        console.log("❌ identityToken 없음");
+      }
+
+      console.log("6. 서버 로그인 처리 시작");
       const result = await api.authApple({
         identityToken: credential.identityToken ?? undefined,
         user: credential.user,
@@ -178,14 +186,17 @@ export default function SplashScreen() {
         email: credential.email,
       });
 
-      console.log("[Login] Apple server auth success, accountId:", result.accountId);
+      console.log("7. 서버 응답 수신:", JSON.stringify(result, null, 2));
+      console.log("8. 세션 복원 시작");
       await handleSocialAuthResult(result);
+      console.log("9. 로그인 완료 성공");
     } catch (e: any) {
       if (e?.code === "ERR_REQUEST_CANCELED") {
-        console.log("[Login] Apple login cancelled by user");
+        console.log("❌ Apple 로그인 사용자가 취소함");
       } else {
-        console.error("[Login] Apple login failed:", e);
-        Alert.alert("로그인 실패", "Apple 로그인에 실패했습니다. 다시 시도해주세요.");
+        console.error("❌ Apple 로그인 에러:", e);
+        console.error("❌ 에러 상세:", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+        Alert.alert("로그인 실패", `Apple 로그인 실패: ${e?.message || e}`);
       }
     } finally {
       setAppleLoading(false);
