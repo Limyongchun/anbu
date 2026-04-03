@@ -250,6 +250,17 @@ export default function SplashScreen() {
       return;
     }
 
+    const webRedirectUri = AuthSession.makeRedirectUri({ scheme: "anbu" });
+    const iosRedirectUri = iosClientId
+      ? `${iosClientId.split(".").reverse().join(".")}:/oauthredirect`
+      : "(iOS Client ID 없음)";
+
+    console.log("=== GOOGLE REDIRECT_URI 확인 ===");
+    console.log("REDIRECT_URI (web):", webRedirectUri);
+    console.log("REDIRECT_URI (ios):", iosRedirectUri);
+    console.log("Platform:", Platform.OS);
+    console.log("================================");
+
     setGoogleLoading(true);
 
     try {
@@ -259,17 +270,16 @@ export default function SplashScreen() {
 
       if (Platform.OS === "ios" && iosClientId) {
         clientId = iosClientId;
-        const reversedClientId = iosClientId.split(".").reverse().join(".");
-        redirectUri = `${reversedClientId}:/oauthredirect`;
+        redirectUri = iosRedirectUri;
         useCodeFlow = true;
       } else {
         clientId = webClientId;
-        redirectUri = AuthSession.makeRedirectUri({ scheme: "anbu" });
+        redirectUri = webRedirectUri;
         useCodeFlow = false;
       }
 
-      console.log("[Login] Google clientId:", clientId.substring(0, 20) + "...");
-      console.log("[Login] Google redirectUri:", redirectUri);
+      console.log("[Login] 최종 사용 clientId:", clientId.substring(0, 20) + "...");
+      console.log("[Login] 최종 사용 redirectUri:", redirectUri);
       console.log("[Login] Using code flow:", useCodeFlow);
 
       const discovery = {
