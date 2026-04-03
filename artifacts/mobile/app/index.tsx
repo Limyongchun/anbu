@@ -123,22 +123,31 @@ export default function SplashScreen() {
     email?: string | null;
     existingFamilies: any[];
   }) => {
-    await setAccountId(result.accountId);
+    try {
+      console.log("[SocialAuth] 세션 저장 시작, accountId:", result.accountId);
+      await setAccountId(result.accountId);
 
-    if (result.existingFamilies && result.existingFamilies.length > 0) {
-      const first = result.existingFamilies[0];
-      await connect(
-        first.familyCode,
-        first.memberName,
-        first.role as "parent" | "child",
-        first.childRole || undefined,
-        result.accountId,
-      );
-      for (let i = 1; i < result.existingFamilies.length; i++) {
-        await addExtraFamily(result.existingFamilies[i].familyCode);
+      if (result.existingFamilies && result.existingFamilies.length > 0) {
+        const first = result.existingFamilies[0];
+        console.log("[SocialAuth] 기존 가족 복원:", first.familyCode, first.role);
+        await connect(
+          first.familyCode,
+          first.memberName || "사용자",
+          first.role as "parent" | "child",
+          first.childRole || undefined,
+          result.accountId,
+        );
+        for (let i = 1; i < result.existingFamilies.length; i++) {
+          await addExtraFamily(result.existingFamilies[i].familyCode);
+        }
+        console.log("[SocialAuth] 홈 화면으로 이동");
+        router.replace(first.role === "parent" ? "/parent" : "/child");
+      } else {
+        console.log("[SocialAuth] 신규 사용자 → 언어 선택 화면으로 이동");
+        router.push("/lang-select");
       }
-      router.replace(first.role === "parent" ? "/parent" : "/child");
-    } else {
+    } catch (navError: any) {
+      console.error("[SocialAuth] 세션 복원/이동 실패:", navError);
       router.push("/lang-select");
     }
   };
@@ -169,24 +178,41 @@ export default function SplashScreen() {
       });
 
       console.log("3. credential 수신:", JSON.stringify(credential, null, 2));
-      console.log("4. identityToken:", credential.identityToken);
+      console.log("4. identityToken:", credential.identityToken ?? "(없음)");
       console.log("5. user:", credential.user);
 
-      if (!credential.identityToken) {
-        console.log("❌ identityToken 없음");
+      if (!credential.user) {
+        console.log("❌ Apple user ID 없음 - 로그인 불가");
+        Alert.alert("로그인 실패", "Apple 인증 정보를 받지 못했습니다. 다시 시도해주세요.");
+        return;
       }
 
-      console.log("6. 서버 로그인 처리 시작");
+      if (!credential.identityToken) {
+        console.log("⚠️ identityToken 없음 - user ID로 계속 진행");
+      }
+
+      const displayName = credential.fullName
+        ? [credential.fullName.familyName, credential.fullName.givenName].filter(Boolean).join("") || "사용자"
+        : "사용자";
+
+      console.log("6. 서버 로그인 처리 시작 (displayName:", displayName, ")");
       const result = await api.authApple({
         identityToken: credential.identityToken ?? undefined,
         user: credential.user,
         fullName: credential.fullName
           ? { givenName: credential.fullName.givenName ?? undefined, familyName: credential.fullName.familyName ?? undefined }
-          : null,
-        email: credential.email,
+          : { givenName: "사용자", familyName: undefined },
+        email: credential.email ?? undefined,
       });
 
       console.log("7. 서버 응답 수신:", JSON.stringify(result, null, 2));
+
+      if (!result || !result.accountId) {
+        console.log("❌ 서버 응답에 accountId 없음 - 강제 이동");
+        router.push("/lang-select");
+        return;
+      }
+
       console.log("8. 세션 복원 시작");
       await handleSocialAuthResult(result);
       console.log("9. 로그인 완료 성공");

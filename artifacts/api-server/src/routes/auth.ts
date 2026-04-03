@@ -136,9 +136,10 @@ router.post("/auth/apple", async (req, res) => {
 
   try {
     const name = fullName
-      ? [fullName.familyName, fullName.givenName].filter(Boolean).join("")
-      : null;
+      ? [fullName.familyName, fullName.givenName].filter(Boolean).join("") || "사용자"
+      : "사용자";
 
+    console.log("[auth/apple] name:", name, "email:", email ?? "(없음)", "hasToken:", !!identityToken);
     const result = await findOrCreateSocialAccount("apple", user, email, name);
     console.log("[auth/apple] success, accountId:", result.accountId);
     return res.json({ success: true, ...result });
