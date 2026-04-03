@@ -18,7 +18,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://anbu-family.replit.app/api",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "589055853445-2p9cqa4rnoc3n5bv90t3r91gjad2jjs5.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "589055853445-2p9cqa4rnoc3n5bv90t3r91gjad2jjs5.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -28,7 +28,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://anbu-family.replit.app/api",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "589055853445-2p9cqa4rnoc3n5bv90t3r91gjad2jjs5.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "589055853445-2p9cqa4rnoc3n5bv90t3r91gjad2jjs5.apps.googleusercontent.com"
       }
     }
   },
