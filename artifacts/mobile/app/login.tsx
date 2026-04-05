@@ -26,7 +26,6 @@ export default function LoginScreen() {
   const fadeIn = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(40)).current;
   const [demoLoading, setDemoLoading] = useState(false);
-  const [loginNotice, setLoginNotice] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -48,8 +47,7 @@ export default function LoginScreen() {
   };
 
   const handleDisabledLogin = () => {
-    setLoginNotice(true);
-    setTimeout(() => setLoginNotice(false), 3500);
+    alert("현재 로그인 기능은 준비 중입니다.\n체험모드를 이용해주세요.");
   };
 
   return (
@@ -133,15 +131,6 @@ export default function LoginScreen() {
             <Text style={st.disabledBtnText}>휴대폰 인증으로 계속</Text>
           </Pressable>
 
-          {loginNotice && (
-            <Animated.View style={st.noticeBox}>
-              <Ionicons name="information-circle" size={18} color="#D4843A" style={{ marginRight: 8 }} />
-              <Text style={st.noticeText}>
-                현재 로그인 기능은 준비 중입니다.{"\n"}
-                체험모드를 이용해주세요.
-              </Text>
-            </Animated.View>
-          )}
         </Animated.View>
       </ScrollView>
     </LinearGradient>
@@ -263,20 +252,5 @@ const st = StyleSheet.create({
   btnPressed: {
     opacity: 0.75,
     transform: [{ scale: 0.97 }],
-  },
-  noticeBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 6,
-  },
-  noticeText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "#555",
-    lineHeight: 20,
-    flex: 1,
   },
 });
