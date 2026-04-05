@@ -12,7 +12,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFamilyContext } from "@/context/FamilyContext";
 import { useGuestMode } from "@/context/GuestModeContext";
 
 const splashVideoModule = require("@/assets/splash-video.mp4");
@@ -70,7 +69,6 @@ function WebVideo() {
 }
 
 export default function SplashScreen() {
-  const { isConnected, myRole, loading } = useFamilyContext();
   const { isGuestMode } = useGuestMode();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 50 : insets.top;
@@ -83,14 +81,10 @@ export default function SplashScreen() {
   }, []);
 
   useEffect(() => {
-    if (isGuestMode && !loading) {
+    if (isGuestMode) {
       router.replace("/child");
-      return;
     }
-    if (!loading && isConnected && myRole) {
-      router.replace(myRole === "parent" ? "/parent" : "/child");
-    }
-  }, [loading, isConnected, myRole, isGuestMode]);
+  }, [isGuestMode]);
 
   const handleStart = () => {
     router.push("/login");
