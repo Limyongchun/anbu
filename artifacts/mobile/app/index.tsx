@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Asset } from "expo-asset";
 import { router } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -14,34 +14,72 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFamilyContext } from "@/context/FamilyContext";
 import { useGuestMode } from "@/context/GuestModeContext";
-import { useLang } from "@/context/LanguageContext";
-import type { Lang } from "@/lib/i18n";
 
+const splashVideoModule = require("@/assets/splash-video.mp4");
+const splashPoster = require("@/assets/splash-poster.jpg");
 const logoImage = require("@/assets/images/logo-anbu.png");
 
-const LANGUAGES: { code: Lang; label: string; flag: string }[] = [
-  { code: "ko", label: "한국어", flag: "🇰🇷" },
-  { code: "en", label: "English", flag: "🇺🇸" },
-  { code: "ja", label: "日本語", flag: "🇯🇵" },
-];
+function NativeVideo() {
+  const player = useVideoPlayer(splashVideoModule, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
 
-export default function LanguageSelectScreen() {
+  return (
+    <VideoView
+      player={player}
+      style={StyleSheet.absoluteFill}
+      contentFit="cover"
+      nativeControls={false}
+      allowsFullscreen={false}
+      allowsPictureInPicture={false}
+    />
+  );
+}
+
+function WebVideo() {
+  const [uri, setUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    const asset = Asset.fromModule(splashVideoModule);
+    asset.downloadAsync().then(() => {
+      setUri(asset.localUri || asset.uri);
+    });
+  }, []);
+
+  if (!uri) return null;
+
+  return (
+    <video
+      src={uri}
+      autoPlay
+      loop
+      muted
+      playsInline
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      } as any}
+    />
+  );
+}
+
+export default function SplashScreen() {
+  const { isConnected, myRole, loading } = useFamilyContext();
+  const { isGuestMode } = useGuestMode();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 50 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-  const { lang, setLang } = useLang();
-  const [selected, setSelected] = useState<Lang>(lang);
-  const { isConnected, myRole, loading } = useFamilyContext();
-  const { isGuestMode } = useGuestMode();
 
   const fadeIn = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: false }),
-      Animated.timing(slideUp, { toValue: 0, duration: 500, useNativeDriver: false }),
-    ]).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 800, useNativeDriver: false }).start();
   }, []);
 
   useEffect(() => {
@@ -54,135 +92,107 @@ export default function LanguageSelectScreen() {
     }
   }, [loading, isConnected, myRole, isGuestMode]);
 
-  const handleNext = () => {
-    setLang(selected);
-    router.push("/role-select");
+  const handleStart = () => {
+    router.push("/login");
   };
 
   return (
-    <LinearGradient
-      colors={["#D4843A", "#C4692E", "#A85528"]}
-      style={st.container}
-    >
-      <View style={[st.inner, { paddingTop: topInset + 40, paddingBottom: bottomInset + 24 }]}>
-        <Animated.View style={[st.content, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+    <View style={st.container}>
+      <Image
+        source={splashPoster}
+        style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+        resizeMode="cover"
+      />
+
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeIn, pointerEvents: "none" }]}>
+        {Platform.OS === "web" ? <WebVideo /> : <NativeVideo />}
+      </Animated.View>
+
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)", pointerEvents: "none" }]} />
+
+      <View style={[st.content, { paddingTop: topInset + 60, paddingBottom: bottomInset + 30 }]}>
+        <Animated.View style={[st.logoSection, { opacity: fadeIn }]}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
+          <Text style={st.tagline}>부모를 섬기는 시간.</Text>
+          <Text style={st.taglineEn}>Time to care for your parents</Text>
+        </Animated.View>
 
-          <Text style={st.title}>Select Language</Text>
-          <Text style={st.sub}>언어를 선택하세요</Text>
+        <Animated.View style={[st.bottomSection, { opacity: fadeIn }]}>
+          <Pressable
+            style={({ pressed }) => [st.startBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}
+            onPress={handleStart}
+          >
+            <Text style={st.startBtnText}>시작하기</Text>
+          </Pressable>
 
-          <View style={st.langList}>
-            {LANGUAGES.map((item) => {
-              const isActive = selected === item.code;
-              return (
-                <Pressable
-                  key={item.code}
-                  style={[st.langBtn, isActive && st.langBtnActive]}
-                  onPress={() => setSelected(item.code)}
-                >
-                  <Text style={st.langFlag}>{item.flag}</Text>
-                  <Text style={[st.langLabel, isActive && st.langLabelActive]}>{item.label}</Text>
-                  {isActive && (
-                    <View style={st.checkCircle}>
-                      <Text style={st.checkMark}>✓</Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
+          <View style={st.creditWrap}>
+            <Text style={st.creditText}>© ANBU Co., Ltd.</Text>
+            <Text style={st.creditText}>With Love, For Parents</Text>
           </View>
         </Animated.View>
-
-        <Animated.View style={{ opacity: fadeIn }}>
-          <Pressable style={st.nextBtn} onPress={handleNext}>
-            <Text style={st.nextBtnText}>다음</Text>
-          </Pressable>
-        </Animated.View>
-
-        <View style={st.creditWrap}>
-          <Text style={st.creditText}>© ANBU Co., Ltd.</Text>
-          <Text style={st.creditText}>With Love, For Parents</Text>
-        </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const st = StyleSheet.create({
-  container: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 28 },
-  content: { flex: 1, justifyContent: "center" },
-  logo: { width: 130, height: 46, marginBottom: 32 },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    color: "#FFFFFF",
-    marginBottom: 6,
-  },
-  sub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 16,
-    color: "rgba(255,255,255,0.7)",
-    marginBottom: 36,
-  },
-  langList: { gap: 12 },
-  langBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.15)",
-  },
-  langBtnActive: {
-    backgroundColor: "rgba(255,255,255,0.25)",
-    borderColor: "#FFD700",
-  },
-  langFlag: { fontSize: 28, marginRight: 16 },
-  langLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
-    color: "rgba(255,255,255,0.8)",
+  container: { flex: 1, backgroundColor: "#000" },
+  content: {
     flex: 1,
+    paddingHorizontal: 28,
+    justifyContent: "space-between",
   },
-  langLabelActive: {
+  logoSection: {
+    alignItems: "center",
+    marginTop: 40,
+  },
+  logo: {
+    width: 180,
+    height: 64,
+    marginBottom: 14,
+  },
+  tagline: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 24,
     color: "#FFFFFF",
+    letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  checkCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#FFD700",
-    alignItems: "center",
-    justifyContent: "center",
+  taglineEn: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 6,
   },
-  checkMark: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: "#000000",
+  bottomSection: {
+    width: "100%",
+    maxWidth: 400,
+    alignSelf: "center",
   },
-  nextBtn: {
-    backgroundColor: "#FFD700",
+  startBtn: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.4)",
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: "center",
   },
-  nextBtnText: {
+  startBtnText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#000000",
+    fontSize: 18,
+    color: "#FFFFFF",
+    letterSpacing: 1,
   },
   creditWrap: {
     alignItems: "center",
-    marginTop: 16,
-    paddingBottom: 10,
+    marginTop: 20,
   },
   creditText: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "rgba(255,255,255,0.55)",
+    color: "rgba(255,255,255,0.45)",
     lineHeight: 16,
   },
 });
