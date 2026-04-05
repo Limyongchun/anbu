@@ -138,8 +138,7 @@ export default function LoginScreen() {
               <Ionicons name="information-circle" size={18} color="#D4843A" style={{ marginRight: 8 }} />
               <Text style={st.noticeText}>
                 현재 로그인 기능은 준비 중입니다.{"\n"}
-                위 '체험모드로 시작하기'를 통해{"\n"}
-                앱의 주요 기능을 확인하실 수 있습니다.
+                체험모드를 이용해주세요.
               </Text>
             </Animated.View>
           )}
