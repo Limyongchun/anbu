@@ -51,7 +51,7 @@ export default function RoleSelectScreen() {
         <Animated.View style={[st.cardsRow, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Pressable
             style={({ pressed }) => [st.card, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push({ pathname: "/child-signup", params: { role: "child" } })}
+            onPress={() => router.push("/login")}
           >
             <View style={st.iconWrap}>
               <Ionicons name="person-outline" size={40} color="#D4843A" />
@@ -62,7 +62,7 @@ export default function RoleSelectScreen() {
 
           <Pressable
             style={({ pressed }) => [st.card, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push("/parent-permissions")}
+            onPress={() => router.push("/login")}
           >
             <View style={st.iconWrap}>
               <Ionicons name="people-outline" size={40} color="#D4843A" />
