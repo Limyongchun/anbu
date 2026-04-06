@@ -31,6 +31,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="lang-select" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="role-select" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="login" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="setup" options={{ animation: "slide_from_bottom" }} />

@@ -69,29 +69,30 @@ function WebVideo() {
 }
 
 export default function SplashScreen() {
-  const { isGuestMode } = useGuestMode();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 50 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const fadeIn = useRef(new Animated.Value(0)).current;
+  const blinkAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 800, useNativeDriver: false }).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 1200, useNativeDriver: false }).start();
+    
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkAnim, { toValue: 1, duration: 1000, useNativeDriver: false }),
+        Animated.timing(blinkAnim, { toValue: 0.3, duration: 1000, useNativeDriver: false }),
+      ])
+    ).start();
   }, []);
 
-  useEffect(() => {
-    if (isGuestMode) {
-      router.replace("/child");
-    }
-  }, [isGuestMode]);
-
   const handleStart = () => {
-    router.push("/login");
+    router.push("/lang-select");
   };
 
   return (
-    <View style={st.container}>
+    <Pressable style={st.container} onPress={handleStart}>
       <Image
         source={splashPoster}
         style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
@@ -102,30 +103,24 @@ export default function SplashScreen() {
         {Platform.OS === "web" ? <WebVideo /> : <NativeVideo />}
       </Animated.View>
 
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)", pointerEvents: "none" }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.35)", pointerEvents: "none" }]} />
 
-      <View style={[st.content, { paddingTop: topInset + 60, paddingBottom: bottomInset + 30 }]}>
+      <View style={[st.content, { paddingTop: topInset + 80, paddingBottom: bottomInset + 60 }]}>
         <Animated.View style={[st.logoSection, { opacity: fadeIn }]}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
-          <Text style={st.tagline}>부모를 섬기는 시간.</Text>
-          <Text style={st.taglineEn}>Time to care for your parents</Text>
-        </Animated.View>
-
-        <Animated.View style={[st.bottomSection, { opacity: fadeIn }]}>
-          <Pressable
-            style={({ pressed }) => [st.startBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}
-            onPress={handleStart}
-          >
-            <Text style={st.startBtnText}>시작하기</Text>
-          </Pressable>
-
-          <View style={st.creditWrap}>
-            <Text style={st.creditText}>© ANBU Co., Ltd.</Text>
-            <Text style={st.creditText}>With Love, For Parents</Text>
+          <View style={st.taglineArea}>
+            <Text style={st.tagline}>부모를 섬기는 시간.</Text>
+            <View style={st.line} />
+            <Text style={st.taglineEn}>Time to care for your parents</Text>
           </View>
         </Animated.View>
+
+        <Animated.View style={[st.bottomSection, { opacity: blinkAnim }]}>
+          <Text style={st.touchHint}>화면을 터치하세요</Text>
+          <Text style={st.touchHintEn}>Touch to start</Text>
+        </Animated.View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -145,48 +140,45 @@ const st = StyleSheet.create({
     height: 64,
     marginBottom: 14,
   },
+  taglineArea: {
+    alignItems: "center",
+    marginTop: 10,
+  },
   tagline: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 24,
+    fontSize: 26,
     color: "#FFFFFF",
-    letterSpacing: 1,
+    letterSpacing: 2,
     textShadowColor: "rgba(0,0,0,0.6)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
+  line: {
+    width: 30,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.4)",
+    marginVertical: 12,
+  },
   taglineEn: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 6,
+    color: "rgba(255,255,255,0.6)",
+    letterSpacing: 0.5,
   },
   bottomSection: {
-    width: "100%",
-    maxWidth: 400,
-    alignSelf: "center",
-  },
-  startBtn: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-    borderRadius: 16,
-    paddingVertical: 18,
     alignItems: "center",
   },
-  startBtnText: {
-    fontFamily: "Inter_700Bold",
+  touchHint: {
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: "#FFFFFF",
     letterSpacing: 1,
   },
-  creditWrap: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-  creditText: {
+  touchHintEn: {
     fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.45)",
-    lineHeight: 16,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
 });
