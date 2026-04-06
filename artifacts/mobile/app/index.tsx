@@ -74,15 +74,17 @@ export default function SplashScreen() {
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const fadeIn = useRef(new Animated.Value(0)).current;
-  const blinkAnim = useRef(new Animated.Value(0.3)).current;
+  const blinkAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 1200, useNativeDriver: false }).start();
+    // 로고 페이드인 (정적이고 고급스럽게)
+    Animated.timing(fadeIn, { toValue: 1, duration: 1500, useNativeDriver: false }).start();
     
+    // 은은한 깜빡임 (과하지 않은 주기)
     Animated.loop(
       Animated.sequence([
-        Animated.timing(blinkAnim, { toValue: 1, duration: 1000, useNativeDriver: false }),
-        Animated.timing(blinkAnim, { toValue: 0.3, duration: 1000, useNativeDriver: false }),
+        Animated.timing(blinkAnim, { toValue: 0.8, duration: 1500, useNativeDriver: false }),
+        Animated.timing(blinkAnim, { toValue: 0.4, duration: 1500, useNativeDriver: false }),
       ])
     ).start();
   }, []);
@@ -93,19 +95,22 @@ export default function SplashScreen() {
 
   return (
     <Pressable style={st.container} onPress={handleStart}>
+      {/* 백그라운드 영상 대비용 포스터 */}
       <Image
         source={splashPoster}
         style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
         resizeMode="cover"
       />
 
+      {/* 비디오 레이어 */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeIn, pointerEvents: "none" }]}>
         {Platform.OS === "web" ? <WebVideo /> : <NativeVideo />}
       </Animated.View>
 
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.35)", pointerEvents: "none" }]} />
+      {/* 시각적 깊이를 위한 다크 오버레이 */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)", pointerEvents: "none" }]} />
 
-      <View style={[st.content, { paddingTop: topInset + 80, paddingBottom: bottomInset + 60 }]}>
+      <View style={[st.content, { paddingTop: topInset + 80, paddingBottom: bottomInset + 80 }]}>
         <Animated.View style={[st.logoSection, { opacity: fadeIn }]}>
           <Image source={logoImage} style={st.logo} resizeMode="contain" />
           <View style={st.taglineArea}>
