@@ -108,10 +108,10 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "3045eabf-f1c9-4d48-acd2-b84484aa5c63",
+      projectId: "7d7a8a53-965d-49be-9c6c-d09df6180c6a",
     },
   },
-  owner: "atrees",
+  owner: "atrees_im",
 };
 
 export default ({ config: _config }: ConfigContext): ExpoConfig => config;
