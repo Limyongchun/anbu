@@ -1,0 +1,42 @@
+name: Preview
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'artifacts/mobile/**'
+      - 'lib/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  update:
+    name: EAS Update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Publish update
+        run: eas update --branch main --message "GitHub Action Auto Update"
+        working-directory: artifacts/mobile
